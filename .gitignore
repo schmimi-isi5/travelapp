@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# Infrastructure: generated secrets, backups, backup private keys
+docker/stack.secrets
+docker/backups/
+*.age.key
