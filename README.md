@@ -1,99 +1,55 @@
-# Shared CLAUDE.md Template
+# Namibia & Botswana – Unsere Reise. Unsere Geschichte.
 
-This repository contains the team's shared `CLAUDE.md` template — a starting point for every new project.
+Familien-Reise-PWA (Deutsch) für eine Namibia-/Botswana-Reise: Route, Unterkünfte mit Zahlungsstatus, Buchungen, Tagebuch mit Medien und Sprachmemos, KI-Hinweise, Safari-Tracker, Offline-Sync, Dokumenten-Tresor, Ausgaben je Währung, Familienrechte und ein exportierbares Erinnerungsarchiv.
 
-## What is CLAUDE.md?
+**Stand:** V1 läuft im Demo-Modus (keine Schlüssel) und im Produktivmodus mit selbst gehostetem Supabase in Docker (Anmeldung, Familien, Rechte per RLS, private Medien, Sync, Backups). Deployment auf Coolify ist vorbereitet, aber nicht ausgeführt. Details und bekannte Lücken: [`docs/IMPLEMENTATION_REPORT.md`](docs/IMPLEMENTATION_REPORT.md).
 
-`CLAUDE.md` is a conventions file that lives at the root of a project. It gives Claude (and developers) clear context about how the project works: its stack, structure, commands, and the conventions the team follows.
+## Schnellstart
 
-The file in this repo is a **template**. It captures our shared engineering principles, but it's designed to be adapted — not used as-is.
-
-## Repository Layout
-
-```
-.
-├── CLAUDE.md                          # Project-specific scaffolding (fill in per project)
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # CI template — fill in per project
-└── .claude/
-    ├── rules/
-    │   ├── naming-conventions.md      # always loaded
-    │   ├── coding-conventions.md      # always loaded
-    │   ├── git-version-control.md     # always loaded
-    │   ├── pull-requests-code-review.md # always loaded
-    │   ├── error-handling.md          # always loaded
-    │   ├── logging.md                 # always loaded
-    │   ├── security.md                # always loaded
-    │   ├── testing.md                 # path-scoped: test files only
-    │   ├── documentation.md           # path-scoped: .md / docs/ only
-    │   ├── dependency-management.md   # path-scoped: manifests & lock files only
-    │   └── environment-config.md      # path-scoped: .env / config files only
-    ├── agents/                        # placeholder for custom agent definitions
-    ├── commands/                      # placeholder for slash commands
-    └── skills/                        # placeholder for reusable skills
+```bash
+npm install
+npx playwright install chromium   # nur für E2E/Screenshots
+npm run dev                        # http://localhost:3000, Demo-Modus, keine Schlüssel nötig
 ```
 
-### How rules load
+Alle Daten im Demo-Modus sind fiktiv und liegen nur in deinem Browser (IndexedDB). Einstellungen → „Demo zurücksetzen“ lädt sie neu, „Alle lokalen Daten löschen“ entfernt sie.
 
-Rules in `.claude/rules/` are loaded by Claude Code automatically:
+## Befehle
 
-- **Always-loaded rules** (no frontmatter) enter the context window at session start, alongside `CLAUDE.md`. They apply to every file and every session.
-- **Path-scoped rules** (with a `paths:` YAML frontmatter block) load **only when Claude reads a file matching one of the listed glob patterns**. This keeps irrelevant conventions out of context and reduces noise.
+| Befehl | Zweck |
+|---|---|
+| `npm run lint` / `npm run typecheck` | ESLint, `tsc --noEmit` |
+| `npm test` | Vitest: Unit, Integration (fake-indexeddb), RLS-Tests gegen PGlite |
+| `npm run build && npm run test:e2e` | Produktions-Build, Playwright (Chromium, inkl. axe-Barrierefreiheit) |
+| `npm run screenshots` | Screenshots bei 390/768/1440 px nach `docs/screenshots/` (nach Build) |
+| `npm run stack:up` | lokaler Supabase-Stack in Docker (Gateway :18000, Mailpit :18025); `stack:down`, `stack:reset`, `stack:status` |
+| `bash scripts/stack.sh app-up` | zusätzlich die App als Docker-Container (:18080) |
+| `npm run test:backend` | Integrationstests gegen den echten Stack (RLS, Storage, Sync, Mail, Gateway) |
+| `npm run test:e2e:supabase` | Browser-Tests (Chromium, iPhone-WebKit) gegen App-Container + Stack |
+| `npm run screenshots:supabase` | Screenshots des Produktivmodus nach `docs/screenshots/supabase/` |
+| `bash scripts/verify-restore.sh` | isolierter Backup-/Restore-Test |
 
-For more detail see the [official `.claude/rules/` documentation](https://code.claude.com/docs/en/memory#organize-rules-with-claude-rules).
+## Konfiguration
 
-### Adapting path-scoped rules
+Alle Variablen stehen in `.env.example`. Ohne Werte läuft die App im Demo-Modus.
+Zusätzlich zu den dort aufgeführten Variablen (die Datei lässt sich mit den Projekt-Berechtigungen nicht automatisch ändern) gelten: `SUPABASE_INTERNAL_URL` (Gateway aus dem Docker-Netz), `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` (Einladungsmails der App), `REGISTER_RATE_LIMIT` (optional) und `KONTUROS_COMPLETIONS_PATH` (bewusst ohne Default, siehe [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md)). Für den Docker-Betrieb erzeugt `scripts/gen-secrets.mjs` die Werte (`docker/stack.secrets`, gitignored); alle Variablen mit Bedeutung stehen in `docs/DEPLOYMENT.md`.
 
-The glob patterns in `testing.md`, `documentation.md`, `dependency-management.md`, and `environment-config.md` are **language-agnostic defaults**. When copying this template to a project, verify the patterns match your stack — remove patterns for ecosystems you don't use and add any missing ones. For example, a Python project would not need `**/Cargo.toml` in `dependency-management.md`.
+| Variable | Bedeutung |
+|---|---|
+| `NEXT_PUBLIC_APP_MODE` | `demo` (Standard) oder `supabase`. Fehlen Zugangsdaten, fällt die App sichtbar auf Demo zurück |
+| `AI_PROVIDER` | `disabled` (Standard), `konturos`, `stub` (nur Tests) |
+| `NEXT_PUBLIC_MAP_STYLE_URL` | Optional, derzeit nicht ausgewertet (schematische SVG-Karte) |
 
-## How to Use
+Geheimnisse (`SUPABASE_SERVICE_ROLE_KEY`, `KONTUROS_API_KEY`) gehören nur in die Server-Umgebung.
 
-1. **Copy** this repository's files to the root of your project (or copy just the files you need).
-2. **Fill in the project-specific sections** in `CLAUDE.md`: Project Overview, Tech Stack, Project Structure, and Essential Commands.
-3. **Review the shared conventions** in `.claude/rules/` and adjust anything that doesn't fit your project's needs. Some principles may need rewording, tightening, or relaxing depending on the stack, the domain, or the team.
-4. **Adjust path-scoped glob patterns** in the four path-scoped rules files to match your project's layout and language ecosystem.
-5. **Add project-specific conventions** either directly in `CLAUDE.md` or as new files in `.claude/rules/`.
-6. **Commit everything** as part of your project's repository. From that point on, the project's copy is the source of truth for that repo.
+## Dokumentation
 
-## CI Template
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) technische Entscheidungen
+- [`docs/SUPABASE.md`](docs/SUPABASE.md) Schema, RLS, was die Tests beweisen und was nicht
+- [`docs/AI_INTEGRATION.md`](docs/AI_INTEGRATION.md) KI-Adapter und Datenschutz
+- [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md), [`ARCHITECTURE`](docs/ARCHITECTURE.md), [`DATA_CONTRACT`](docs/DATA_CONTRACT.md), [`DESIGN_SPEC`](docs/DESIGN_SPEC.md), [`ACCEPTANCE`](docs/ACCEPTANCE.md), [`IMPORT_POLICY`](docs/IMPORT_POLICY.md) Spezifikation
+- Engineering-Regeln des Teams: `.claude/rules/`
 
-`.github/workflows/ci.yml` ships as a scaffold with six standard jobs: **install → lint → format check → type check → test → build → dependency audit**. Every step is a placeholder (`echo "TODO: …"`) so CI is green out of the box before you fill anything in.
+## Deployment
 
-To adapt it for a project:
-1. Uncomment the runtime setup step for your language (Node, Python, Go, Java, …).
-2. Replace each `echo "TODO: …"` with the real command for your toolchain.
-3. Remove steps that don't apply (e.g. type check for a plain JS project, build for a pure library).
-
-## Branch Protection: Two Layers
-
-This template enforces a branch-before-edit workflow at two levels — one for AI sessions, one for everyone else.
-
-### Layer 1 — Claude Code hooks (AI sessions)
-
-`.claude/settings.json` ships with two `PreToolUse` hooks:
-
-| Hook script | Matcher | What it blocks |
-|---|---|---|
-| `bash-guard.sh` | `Bash` | `git commit` or `git push` targeting `main`/`master` |
-| `branch-guard.sh` | `Write\|Edit` | Any file edit when `HEAD` is `main`/`master` |
-
-Together they prevent Claude from writing a single file or committing before a branch exists. This is the AI layer.
-
-> **Requirement:** both scripts use `jq` (for `bash-guard.sh`) and standard POSIX tools. Install `jq` if it is not already on your `PATH`.
-
-### Layer 2 — GitHub branch protection (humans + all git pushes)
-
-The Claude Code hooks only cover AI sessions. To protect against direct pushes from any developer:
-
-1. Go to **Settings → Branches → Add branch protection rule**
-2. Branch name pattern: `main` (or `master`)
-3. Enable **Require a pull request before merging**
-4. Enable **Require status checks to pass** (if you have CI)
-5. Enable **Do not allow bypassing the above settings**
-
-Both layers together mean no one — human or AI — can push directly to your default branch.
-
-## The Right Mindset
-
-This template gives you a head start, not a rigid rulebook. A `CLAUDE.md` and its rules are most useful when they're specific and honest about how a project actually operates. A generic copy-paste helps no one — take the time to make it yours.
+Vorbereitet für Coolify (zwei Ressourcen: Supabase-Compose und App-Dockerfile), siehe [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/OPERATIONS.md`](docs/OPERATIONS.md) und [`docs/SECURITY.md`](docs/SECURITY.md). Es wurde nichts deployt; eine Produktivfreigabe erfolgt ausschließlich durch den Auftraggeber.
