@@ -83,13 +83,18 @@ export function activeLocalDatabaseName(): string {
   return localName;
 }
 
-/** Closes and deletes a local database including its media blobs. */
+/**
+ * Closes and deletes a local database including its media blobs. If it is the active one, the active name is switched
+ * first: otherwise a late query from the UI would call getLocalDb() and silently re-create the database we are deleting.
+ */
 export async function deleteLocalDatabase(name: string): Promise<void> {
-  if (name === localName) {
-    localDb?.close();
-    localDb = null;
+  if (name === localName) selectLocalDatabase(DEMO_DB_NAME);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await Dexie.delete(name);
+    if (!(await Dexie.exists(name))) return;
+    await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
   }
-  await Dexie.delete(name);
+  throw new Error(`Lokale Datenbank ${name} konnte nicht gelöscht werden`);
 }
 
 /** Deletes every per-user database except `keep`: other people's data must not linger on a shared device. */

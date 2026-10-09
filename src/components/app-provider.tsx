@@ -355,6 +355,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const supabase = getSupabase();
       const userId = session?.user.id;
+      // Lock the UI first so no effect or live query touches the database while it is being removed.
+      setReady(false);
+      setAuthStatus('signed_out');
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) await supabase.auth.signOut({ scope: 'local' });
       if (userId) await deleteLocalDatabase(`${USER_DB_PREFIX}${userId}`);
@@ -363,8 +366,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setMembership(null);
       setSupabaseRemote(null);
-      setReady(false);
-      setAuthStatus('signed_out');
       router.replace('/login');
       return { ok: true, pending: 0 };
     },
