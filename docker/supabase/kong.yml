@@ -1,0 +1,89 @@
+# Declarative Kong config (DB-less). Placeholders are rendered by kong-entrypoint.sh.
+# Only /auth/v1, /rest/v1 and /storage/v1 are routed. Everything else returns 404 from Kong.
+_format_version: "3.0"
+_transform: true
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: __ANON_KEY__
+  - username: service_role
+    keyauth_credentials:
+      - key: __SERVICE_ROLE_KEY__
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+services:
+  # Mail links (invite/recovery) hit /verify from the browser without an apikey header.
+  - name: auth-v1-open
+    url: http://auth:9999/verify
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths: [/auth/v1/verify]
+    plugins:
+      - name: cors
+        config: &cors
+          origins: ["__CORS_ORIGINS__"]
+          methods: [GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS]
+          headers: [Accept, Authorization, Content-Type, apikey, x-client-info, x-supabase-api-version, x-retry-count, x-upsert, Range, Prefer, Accept-Profile, Content-Profile, Cache-Control]
+          exposed_headers: [Content-Range, Content-Length, ETag]
+          credentials: true
+          max_age: 3600
+
+  - name: auth-v1
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths: [/auth/v1/]
+    plugins:
+      - name: cors
+        config: *cors
+      - name: key-auth
+        config: {hide_credentials: false}
+      - name: acl
+        config: {hide_groups_header: true, allow: [admin, anon]}
+
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: true
+        paths: [/rest/v1/]
+    plugins:
+      - name: cors
+        config: *cors
+      - name: key-auth
+        config: {hide_credentials: true}
+      - name: acl
+        config: {hide_groups_header: true, allow: [admin, anon]}
+
+  # Signed URLs are opened by the browser (<img src>) without headers; the token is validated by Storage itself.
+  - name: storage-v1-signed
+    url: http://storage:5000/object/sign/
+    routes:
+      - name: storage-v1-signed
+        strip_path: true
+        paths: [/storage/v1/object/sign/]
+    plugins:
+      - name: cors
+        config: *cors
+
+  - name: storage-v1
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-all
+        strip_path: true
+        paths: [/storage/v1/]
+    plugins:
+      - name: cors
+        config: *cors
+      - name: key-auth
+        config: {hide_credentials: false}
+      - name: acl
+        config: {hide_groups_header: true, allow: [admin, anon]}

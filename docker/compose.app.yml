@@ -1,0 +1,49 @@
+# The app built from the root Dockerfile, joined to the Supabase network (local stack / full-stack tests).
+# Used together with supabase/compose.yml, so relative paths resolve against docker/supabase/.
+# In Coolify the app is a separate "Dockerfile" resource instead (see docs/DEPLOYMENT.md).
+services:
+  app:
+    image: travelapp-app:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE:-supabase}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?}
+        NEXT_PUBLIC_MAP_STYLE_URL: ${NEXT_PUBLIC_MAP_STYLE_URL:-}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=10001,gid=10001
+    depends_on:
+      kong: {condition: service_healthy}
+    environment:
+      NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE:-supabase}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?}
+      SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-http://kong:8000}
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      KONTUROS_BASE_URL: ${KONTUROS_BASE_URL:-}
+      KONTUROS_API_KEY: ${KONTUROS_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    networks: [backend]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {memory: 256M, cpus: "1.0"}

@@ -1,0 +1,41 @@
+# Local test override. Everything is published on 127.0.0.1 only.
+#   docker compose --env-file ../stack.secrets -f compose.yml -f compose.local.yml up -d   (see scripts/stack.sh)
+name: travelapp-local
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:54329:5432"
+  kong:
+    ports:
+      - "127.0.0.1:18000:8000"
+  auth:
+    environment:
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_ADMIN_EMAIL: admin@travelapp.local
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    environment:
+      MP_MAX_MESSAGES: "200"
+    ports:
+      - "127.0.0.1:18025:8025"
+      - "127.0.0.1:11025:1025"
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: {memory: 64M, cpus: "0.25"}
+  studio:
+    ports:
+      - "127.0.0.1:18323:3000"
