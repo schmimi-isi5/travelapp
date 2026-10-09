@@ -1,0 +1,7 @@
+# Design System — Safari Travel Premium
+
+Referenzen unter `design/reference/*.png` sind Moodboards, **keine** Assets zum Ausschneiden einzelner fotografischer Motive. Mockup-Texte/-Daten sind synthetisch. Visuelle Richtung: tiefes Petrol, warme Sandtöne, Sonnenuntergangs-Akzent, großzügige Weißflächen, naturbezogene hochwertige Fotografien, Karten, weiche 16px Radien, klare Typohierarchie. Kein unlesbarer Script-Font für Fließtext; Schrift „Caveat“ nur Logo/kurze Überschrift und nur mit erlaubter Lizenz, Inter als UI-Font.
+
+Header: Branding links, Familie rechts; mobile 5er Tabbar. Startscreen: großflächiges Bildhero mit Overlay, „Dein nächster Reisetag“, offene Aufgaben, Erlebnisse-Kacheln. Stays: getrennte Akkordeons pro Hotel, klare `bezahlt/teilbezahlt/offen/unbekannt` Status, Geldangaben mit Currency Code und Bruttobetrag, PDF-Dokumente privat. Tagebuch: großzügige Bildkachel, Zeit/Ort/Autor, Audio-Player; Aufnahmebutton sticky mobile. Guide: Empfehlungen mit Quellen-/Verfügbarkeitsbadge. Leere Zustände ebenso sorgfältig stylen wie Demo-Daten.
+
+Medienbibliothek: `assets/reference` enthält Visuals; Produktion darf nur Rechte-geklärtes Material verwenden. Für Demo sind eigene generierte Heroillustration, SVG-Grafiken, Gradient-Placeholders und Originalreferenzboards möglich. Niemals unbekannte Fremdbilder blind ins Projekt kopieren. Bildeinsatz in App optimiert als WebP/AVIF, Alt-Text, lazy loading, Quellen-/Lizenzmetadaten.
