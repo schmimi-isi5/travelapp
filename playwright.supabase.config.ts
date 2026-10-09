@@ -9,6 +9,7 @@ export default defineConfig({
   timeout: 90_000,
   fullyParallel: false,
   workers: 1,
+  // Serial flow: a retry would re-run a failed step against changed state, so no retries here.
   reporter: [['list'], ['json', { outputFile: 'test-results/e2e-supabase.json' }]],
   use: { baseURL: process.env.APP_URL ?? 'http://localhost:18080', trace: 'retain-on-failure' },
   projects: [
