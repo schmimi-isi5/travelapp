@@ -266,8 +266,13 @@ test('Abmelden löscht die lokalen Daten, warnt bei ungesendeten Änderungen und
   await member.getByRole('button', { name: 'Abbrechen' }).click();
   await member.context().setOffline(false);
   await waitSynced(member);
+  // A slow logout call must not let the login page appear before the local data is gone.
+  await member.route('**/auth/v1/logout*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await route.continue();
+  });
   await member.getByRole('button', { name: 'Abmelden' }).first().click();
-  await expect(member).toHaveURL(/\/login/);
+  await expect(member).toHaveURL(/\/login/, { timeout: 20_000 });
   const leftovers = await member.evaluate(async () => ({
     dbs: (await indexedDB.databases()).map((d) => d.name).filter((n) => n?.startsWith('nb-sb-')),
     keys: Object.keys(localStorage).filter((k) => k.startsWith('nb-') && k !== 'nb-device-id'),

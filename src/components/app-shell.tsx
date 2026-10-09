@@ -62,9 +62,15 @@ export function AccountMenu() {
 
   async function logout(discard: boolean) {
     setBusy(true);
-    const result = await signOut({ discardUnsynced: discard });
-    setBusy(false);
-    setPending(result.ok ? null : result.pending);
+    try {
+      const result = await signOut({ discardUnsynced: discard });
+      setPending(result.ok ? null : result.pending);
+    } catch (cause) {
+      setPending(null);
+      window.alert(`Abmelden war nicht vollständig: ${cause instanceof Error ? cause.message : String(cause)}. Bitte schließe alle anderen Tabs dieser App und versuche es erneut.`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
