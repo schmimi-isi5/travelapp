@@ -1,0 +1,16 @@
+{
+  "name": "Namibia & Botswana – Unsere Reise",
+  "short_name": "Afrika-Reise",
+  "description": "Die gemeinsame Familien-Reise-App",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F5E6D3",
+  "theme_color": "#0F3D4E",
+  "lang": "de",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

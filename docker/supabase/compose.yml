@@ -1,0 +1,304 @@
+# Lean production-oriented Supabase stack for the travel app (Coolify "Docker Compose" resource).
+# Services: db (Postgres), kong (the ONLY entrypoint), auth (GoTrue), rest (PostgREST), storage (Storage API),
+# migrate (one-shot), optional meta+studio (profile "admin", never exposed).
+# No Realtime/Functions/Analytics/Vector/imgproxy.
+#
+# Relative paths resolve against THIS file's directory (docker/supabase/).
+# No container_name, no host ports here: in Coolify only Kong gets the public domain (port 8000).
+#
+# Postgres connection budget (max_connections = 60, superuser_reserved_connections = 3):
+#   rest 5 + auth 5 + storage 8 + meta 3 (profile admin) + migrate 1 + backup 2 + manual psql 5 = 29  <  57 usable
+#
+# Memory limits derive from measurements, see docs/OPERATIONS.md ("Ressourcen").
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: supabase/postgres:15.19.0.004
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - max_connections=60
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - log_min_messages=warning
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: "5432"
+      POSTGRES_PORT: "5432"
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - db-config:/etc/postgresql-custom
+      - ./db-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {memory: 512M, cpus: "1.5"}
+
+  auth:
+    image: supabase/gotrue:v2.197.0
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:?API_EXTERNAL_URL is required (public Kong URL)}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_DB_MAX_POOL_SIZE: "5"
+      GOTRUE_SITE_URL: ${SITE_URL:?SITE_URL is required (app origin)}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS:-}
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_PASSWORD_MIN_LENGTH: "10"
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "true"
+      GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL: "10"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "false"
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-localhost}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@example.invalid}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-Unsere Reise}
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    deploy:
+      resources:
+        limits: {memory: 128M, cpus: "0.5"}
+
+  rest:
+    image: postgrest/postgrest:v14.18
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_DB_POOL: "5"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "10"
+      PGRST_SERVER_HOST: 0.0.0.0
+      PGRST_SERVER_PORT: "3000"
+      PGRST_ADMIN_SERVER_PORT: "3001"
+    command: ["postgrest"]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "postgrest", "--ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    deploy:
+      resources:
+        limits: {memory: 384M, cpus: "0.5"}
+
+  storage:
+    image: supabase/storage-api:v1.80.2
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      db: {condition: service_healthy}
+      rest: {condition: service_healthy}
+    environment:
+      ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      DATABASE_MAX_CONNECTIONS: "8"
+      FILE_SIZE_LIMIT: "104857600"
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    volumes:
+      - storage-data:/var/lib/storage
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {memory: 384M, cpus: "1.0"}
+
+  kong:
+    image: kong:3.9.3
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      auth: {condition: service_healthy}
+      rest: {condition: service_healthy}
+      storage: {condition: service_healthy}
+    entrypoint: ["/bin/sh", "/usr/local/bin/kong-entrypoint.sh"]
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: cors,key-auth,acl
+      KONG_NGINX_WORKER_PROCESSES: "2"
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_PROXY_ACCESS_LOG: "off"
+      KONG_ADMIN_LISTEN: "off"
+      KONG_ANON_KEY: ${ANON_KEY}
+      KONG_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      KONG_CORS_ORIGINS: ${CORS_ORIGIN:-${SITE_URL}}
+    volumes:
+      - ./kong.yml:/home/kong/kong.tmpl.yml:ro
+      - ./kong-entrypoint.sh:/usr/local/bin/kong-entrypoint.sh:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits: {memory: 384M, cpus: "1.0"}
+
+  migrate:
+    # One-shot; idempotent. Applies ../../supabase/migrations/*.sql, see migrate.sh.
+    image: supabase/postgres:15.19.0.004
+    restart: "no"
+    logging: *default-logging
+    depends_on:
+      db: {condition: service_healthy}
+      auth: {condition: service_healthy}
+      storage: {condition: service_healthy}
+      rest: {condition: service_healthy}
+    entrypoint: ["/bin/bash", "/migrate.sh"]
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: postgres
+      PGUSER: supabase_admin
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MIGRATE_ROLE_PASSWORD: ${POSTGRES_PASSWORD}
+      MIGRATE_WAIT_SECONDS: ${MIGRATE_WAIT_SECONDS:-180}
+    volumes:
+      - ./migrate.sh:/migrate.sh:ro
+      - ../../supabase/migrations:/migrations:ro
+    networks: [backend]
+    deploy:
+      resources:
+        limits: {memory: 128M, cpus: "0.5"}
+
+  meta:
+    profiles: [admin]
+    image: supabase/postgres-meta:v0.100.0
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PG_META_PORT: "8080"
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: "5432"
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits: {memory: 256M, cpus: "0.5"}
+
+  studio:
+    profiles: [admin]
+    image: supabase/studio:2026.10.05-sha-94b8b06
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      meta: {condition: service_healthy}
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-${JWT_SECRET}}
+      DEFAULT_ORGANIZATION_NAME: Unsere Reise
+      DEFAULT_PROJECT_NAME: travelapp
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: ${API_EXTERNAL_URL}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOSTNAME: 0.0.0.0
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/platform/profile').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits: {memory: 512M, cpus: "1.0"}
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  db-data:
+  db-config:
+  storage-data:

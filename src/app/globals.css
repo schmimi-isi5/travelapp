@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-deep: #0f3d4e;
+  --color-deep-700: #14566d;
+  --color-deep-50: #e6f0f3;
+  --color-gold: #d4a373;
+  --color-sand: #f5e6d3;
+  --color-sand-50: #fbf6ee;
+  --color-clay: #c65a3a;
+  --color-clay-strong: #a8472b;
+  --color-olive: #5b6b3a;
+  --color-olive-strong: #4a5830;
+  --color-slate: #334155;
+  --color-ink: #1f2937;
+  --color-muted: #566376;
+  --color-ok: #15803d;
+  --color-warn: #b45309;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-line: #e5dccd;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-card: 0 8px 24px rgba(15, 61, 78, 0.08);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-sand-50);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  color: var(--color-deep);
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-info);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #efe4d3 0%, #f8f0e4 50%, #efe4d3 100%);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-md);
+}
+
+dialog::backdrop {
+  background: rgba(15, 61, 78, 0.55);
+}
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

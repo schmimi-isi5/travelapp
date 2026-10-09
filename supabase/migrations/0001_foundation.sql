@@ -1,0 +1,36 @@
+-- Foundation schema; Claude Code MUST extend RLS to all remaining domain tables, and test cross-family isolation.
+create extension if not exists pgcrypto;
+create type public.member_role as enum ('owner','adult','member','child');
+create type public.booking_status as enum ('unknown','requested','reserved','confirmed','cancelled');
+create table public.families(id uuid primary key default gen_random_uuid(),name text not null,owner_user_id uuid not null references auth.users(id),created_at timestamptz not null default now());
+create table public.family_members(family_id uuid not null references public.families(id) on delete cascade,user_id uuid not null references auth.users(id) on delete cascade,role public.member_role not null,status text not null default 'active',primary key(family_id,user_id));
+create table public.trips(id uuid primary key default gen_random_uuid(),family_id uuid not null references public.families(id) on delete cascade,title text not null,start_date date,end_date date,countries text[] not null default '{}',is_demo boolean not null default false,created_at timestamptz not null default now());
+create table public.trip_stops(id uuid primary key default gen_random_uuid(),trip_id uuid not null references public.trips(id) on delete cascade,title text not null,country text not null,latitude double precision,longitude double precision,arrive_at timestamptz,depart_at timestamptz,sequence integer not null,source_type text not null default 'user_entered',version bigint not null default 1,updated_at timestamptz not null default now());
+create table public.stays(id uuid primary key default gen_random_uuid(),trip_id uuid not null references public.trips(id) on delete cascade,stop_id uuid references public.trip_stops(id),name text not null,address text,check_in date,check_out date,status public.booking_status not null default 'unknown',price_minor bigint check(price_minor>=0),currency char(3),source_type text not null default 'user_entered',version bigint not null default 1,updated_at timestamptz not null default now());
+create table public.payments(id uuid primary key default gen_random_uuid(),stay_id uuid not null references public.stays(id) on delete cascade,amount_minor bigint not null check(amount_minor>0),currency char(3) not null,paid_at timestamptz,verification_status text not null default 'unverified' check(verification_status in ('unverified','verified','rejected')),source_reference text,created_at timestamptz not null default now());
+create table public.action_items(id uuid primary key default gen_random_uuid(),trip_id uuid not null references public.trips(id) on delete cascade,stay_id uuid references public.stays(id),title text not null,status text not null default 'open' check(status in ('open','done','blocked')),due_at timestamptz,created_at timestamptz not null default now());
+create index on public.trips(family_id);
+create index on public.trip_stops(trip_id,sequence);
+create index on public.stays(trip_id);
+create index on public.action_items(trip_id,status);
+create or replace function public.is_active_family_member(fid uuid) returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from public.family_members where family_id=fid and user_id=auth.uid() and status='active') or exists(select 1 from public.families where id=fid and owner_user_id=auth.uid()) $$;
+create or replace function public.is_adult_family_member(fid uuid) returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from public.family_members where family_id=fid and user_id=auth.uid() and status='active' and role in ('owner','adult')) or exists(select 1 from public.families where id=fid and owner_user_id=auth.uid()) $$;
+alter table public.families enable row level security;
+alter table public.family_members enable row level security;
+alter table public.trips enable row level security;
+alter table public.trip_stops enable row level security;
+alter table public.stays enable row level security;
+alter table public.payments enable row level security;
+alter table public.action_items enable row level security;
+create policy families_read on public.families for select using (public.is_active_family_member(id));
+create policy members_read on public.family_members for select using (public.is_active_family_member(family_id));
+create policy trips_read on public.trips for select using (public.is_active_family_member(family_id));
+create policy trips_write on public.trips for all using (public.is_adult_family_member(family_id)) with check (public.is_adult_family_member(family_id));
+create policy stops_read on public.trip_stops for select using (exists(select 1 from public.trips t where t.id=trip_id and public.is_active_family_member(t.family_id)));
+create policy stops_write on public.trip_stops for all using (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id))) with check (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id)));
+create policy stays_read on public.stays for select using (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id)));
+create policy stays_write on public.stays for all using (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id))) with check (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id)));
+create policy payments_adults on public.payments for all using (exists(select 1 from public.stays s join public.trips t on t.id=s.trip_id where s.id=stay_id and public.is_adult_family_member(t.family_id))) with check (exists(select 1 from public.stays s join public.trips t on t.id=s.trip_id where s.id=stay_id and public.is_adult_family_member(t.family_id)));
+create policy action_read on public.action_items for select using (exists(select 1 from public.trips t where t.id=trip_id and public.is_active_family_member(t.family_id)));
+create policy action_write on public.action_items for all using (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id))) with check (exists(select 1 from public.trips t where t.id=trip_id and public.is_adult_family_member(t.family_id)));
+-- NOTE: This is intentionally FOUNDATION, not a finished production schema. Claude Code extends it, writes role/tenant RLS tests, and audits privilege escalation before deployment.

@@ -7,105 +7,48 @@ on:
     branches: [main, master]
 
 jobs:
-  ci:
-    name: Lint, Format, Test, Build
+  quality:
+    name: Lint, Typecheck, Unit/RLS tests, Build, Demo E2E
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      # -- Runtime setup -------------------------------------------------------
-      # TODO: uncomment and configure the setup step for your language.
-      #
-      # Node.js
-      # - uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 22
-      #     cache: npm           # or: yarn | pnpm
-      #
-      # Python
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.12"
-      #
-      # Go
-      # - uses: actions/setup-go@v5
-      #   with:
-      #     go-version: "1.23"
-      #
-      # Java
-      # - uses: actions/setup-java@v4
-      #   with:
-      #     distribution: temurin
-      #     java-version: 21
-
-      # -- Install dependencies ------------------------------------------------
-      # TODO: replace with your package manager command.
-      #
-      # npm ci | yarn install --frozen-lockfile | pnpm install --frozen-lockfile
-      # pip install -r requirements.txt
-      # go mod download
-      # (Java/Gradle/Maven: handled by the build step below)
-      - name: Install dependencies
-        run: 'echo "TODO: install dependencies"'
-
-      # -- Lint ----------------------------------------------------------------
-      # TODO: replace with your linter command.
-      #
-      # npm run lint          (ESLint, Stylelint, ...)
-      # flake8 . / ruff check .
-      # golangci-lint run
-      # cargo clippy -- -D warnings
-      - name: Lint
-        run: 'echo "TODO: lint"'
-
-      # -- Format check --------------------------------------------------------
-      # TODO: replace with your formatter's check-only command (no auto-fix in CI).
-      #
-      # npx prettier --check .
-      # black --check . / ruff format --check .
-      # gofmt -l . | grep . && exit 1 || exit 0
-      # cargo fmt -- --check
-      - name: Format check
-        run: 'echo "TODO: format check"'
-
-      # -- Type check ----------------------------------------------------------
-      # TODO: replace with your type checker, or remove this step if not applicable.
-      #
-      # npx tsc --noEmit
-      # mypy .
-      # (Go and Rust are statically typed; the build step covers this.)
-      - name: Type check
-        run: 'echo "TODO: type check"'
-
-      # -- Test ----------------------------------------------------------------
-      # TODO: replace with your test command.
-      #
-      # npm test / npm run test:ci
-      # pytest
-      # go test ./...
-      # cargo test
-      # ./gradlew test / mvn test
-      - name: Test
-        run: 'echo "TODO: run tests"'
-
-      # -- Build ---------------------------------------------------------------
-      # TODO: replace with your build command, or remove if not applicable.
-      #
-      # npm run build
-      # go build ./...
-      # cargo build --release
-      # ./gradlew build / mvn package -DskipTests
-      - name: Build
-        run: 'echo "TODO: build"'
-
-      # -- Dependency audit ----------------------------------------------------
-      # TODO: replace with your audit command, or remove if not applicable.
-      # Catches known CVEs in your dependency tree.
-      #
-      # npm audit --audit-level=high
-      # pip-audit
-      # go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
-      # cargo audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e -- --project=chromium --project=webkit --project=mobile-chrome --project=mobile-safari
+      # Next.js 15 bundles a PostCSS with known advisories (build time only, see docs/SECURITY.md); fail on critical ones.
       - name: Dependency audit
-        run: 'echo "TODO: dependency audit"'
+        run: npm audit --omit=dev --audit-level=critical
+
+  backend:
+    name: Backend integration (self-hosted Supabase in Docker)
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start the Supabase stack and apply migrations
+        run: bash scripts/stack.sh up
+      - name: Backend tests (RLS, storage, sync, mail against the real stack)
+        run: npm run test:backend
+      - name: Build and start the app container
+        run: bash scripts/stack.sh app-up
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Browser tests against the full stack
+        run: npm run test:e2e:supabase
+      - name: Backup and restore drill (isolated project)
+        run: bash scripts/verify-restore.sh
+      - name: Stack logs on failure
+        if: failure()
+        run: bash scripts/stack.sh logs

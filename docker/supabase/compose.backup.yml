@@ -1,0 +1,78 @@
+# Scheduled encrypted backups (supercronic inside the container). Overlay for compose.yml:
+#   docker compose -f compose.yml -f compose.backup.yml up -d
+# Needs BACKUP_AGE_RECIPIENT (public key from scripts/gen-backup-key.sh). The PRIVATE key never goes to the server.
+# Restore: see docs/OPERATIONS.md (docker compose run --rm --no-deps -v <key>:/key:ro --entrypoint restore.sh backup ...).
+# Relative paths resolve against docker/supabase/ (first compose file).
+services:
+  backup:
+    build:
+      context: ../backup
+    image: travelapp-backup:pg15-1
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGHOST: db
+      PGUSER: supabase_admin
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: postgres
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required (age public key)}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-30 2 * * *}
+      BACKUP_RUN_ON_START: ${BACKUP_RUN_ON_START:-false}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-6}
+      BACKUP_S3_ENABLED: ${BACKUP_S3_ENABLED:-false}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-travelapp}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-}
+      BACKUP_S3_PROVIDER: ${BACKUP_S3_PROVIDER:-Other}
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - storage-data:/var/lib/storage:ro
+      # Named volume by default; set BACKUP_HOST_DIR to an absolute host path for a bind mount.
+      - ${BACKUP_HOST_DIR:-backup-data}:/backups
+      - ./:/config/supabase:ro
+      - ../../supabase/migrations:/config/migrations:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep supercronic >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits: {memory: 256M, cpus: "0.5"}
+
+  # One-shot restore (profile "restore"): docker compose --profile restore run --rm --no-deps -v /path/to/x.age.key:/key:ro restore latest
+  # Without RESTORE_TARGET_DB a NEW database restore_<timestamp> is created. Overwriting needs RESTORE_CONFIRM_OVERWRITE=<db name>.
+  restore:
+    profiles: [restore]
+    build:
+      context: ../backup
+    image: travelapp-backup:pg15-1
+    restart: "no"
+    entrypoint: ["/usr/local/bin/restore.sh"]
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGHOST: db
+      PGUSER: supabase_admin
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      BACKUP_AGE_IDENTITY: /key
+      RESTORE_TARGET_DB: ${RESTORE_TARGET_DB:-}
+      RESTORE_CONFIRM_OVERWRITE: ${RESTORE_CONFIRM_OVERWRITE:-}
+      RESTORE_STORAGE_DIR: ${RESTORE_STORAGE_DIR:-}
+    volumes:
+      - storage-data:/var/lib/storage
+      - ${BACKUP_HOST_DIR:-backup-data}:/backups
+    networks: [backend]
+
+volumes:
+  backup-data:
