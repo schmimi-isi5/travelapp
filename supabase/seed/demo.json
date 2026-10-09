@@ -1,0 +1,20 @@
+{
+  "mode": "demo",
+  "disclaimer": "Alle folgenden Daten sind fiktiv. Keine Buchung, Zahlung oder Öffnungszeit ist bestätigt.",
+  "trip": {"title":"Namibia & Botswana – Familienabenteuer", "start_date":"2026-10-13", "end_date":null, "countries":["Namibia","Botswana"]},
+  "family": ["Demo-Erwachsene A","Demo-Erwachsene B","Demo-Kind A","Demo-Kind B","Demo-Kind C"],
+  "stops": [
+    {"sequence":1,"title":"Windhoek","country":"Namibia","latitude":-22.5609,"longitude":17.0658,"status":"demo_example","dates":null},
+    {"sequence":2,"title":"Sossusvlei","country":"Namibia","latitude":-24.7333,"longitude":15.3000,"status":"demo_example","dates":null},
+    {"sequence":3,"title":"Swakopmund","country":"Namibia","latitude":-22.6784,"longitude":14.5258,"status":"demo_example","dates":null},
+    {"sequence":4,"title":"Etosha Nationalpark","country":"Namibia","latitude":-18.8550,"longitude":16.3293,"status":"demo_example","dates":null},
+    {"sequence":5,"title":"Kasane / Chobe","country":"Botswana","latitude":-17.8016,"longitude":25.1536,"status":"demo_example","dates":null},
+    {"sequence":6,"title":"Maun / Okavango","country":"Botswana","latitude":-19.9833,"longitude":23.4167,"status":"demo_example","dates":null}
+  ],
+  "stays": [
+    {"name":"Demo-Lodge Etosha", "booking_status":"unknown", "price_minor":null,"currency":null,"payment_status":"unknown","clarifications":["Angebot und Buchungsbestätigung prüfen","Zahlungsbeleg hinzufügen"]},
+    {"name":"Demo-Unterkunft Chobe", "booking_status":"unknown", "price_minor":null,"currency":null,"payment_status":"unknown","clarifications":["Check-in prüfen"]}
+  ],
+  "wildlife_species": ["Elefant","Giraffe","Löwe","Zebra","Springbock","Flusspferd","Büffel","Leopard"],
+  "tips": [{"stop":"Etosha Nationalpark","title":"Tierbeobachtung an Wasserlöchern","source_type":"demo","verified_at":null,"body":"Beispielhinweis; aktuelle Regeln und Öffnungszeiten vor Ort prüfen."}]
+}
