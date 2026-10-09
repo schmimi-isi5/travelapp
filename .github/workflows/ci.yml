@@ -38,6 +38,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Docker Hub occasionally times out on shared runners; retry the image pulls before starting the stack.
+      - name: Pull images (with retries)
+        run: |
+          bash scripts/stack.sh secrets
+          for attempt in 1 2 3 4; do
+            docker compose --env-file docker/stack.secrets -f docker/supabase/compose.yml -f docker/supabase/compose.local.yml pull --ignore-buildable && exit 0
+            echo "pull attempt $attempt failed, retrying"; sleep $((attempt * 20))
+          done
+          exit 1
       - name: Start the Supabase stack and apply migrations
         run: bash scripts/stack.sh up
       - name: Backend tests (RLS, storage, sync, mail against the real stack)
