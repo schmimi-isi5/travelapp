@@ -48,7 +48,8 @@ export default function GalleryPage() {
       try {
         await addMedia({ file, familyId, tripId, onProgress: (p) => setProgress(((i + p / 100) / files.length) * 100) });
       } catch (e) {
-        problems.push(e instanceof MediaError ? e.message : `„${file.name}“ konnte nicht gespeichert werden.`);
+        console.error(`Galerie-Upload von „${file.name}“ fehlgeschlagen`, e);
+        problems.push(e instanceof MediaError ? e.message : `„${file.name}“ konnte nicht gespeichert werden${e instanceof Error ? ` (${e.name}: ${e.message})` : ''}.`);
       }
     }
     setErrors(problems);
