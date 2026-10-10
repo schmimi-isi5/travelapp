@@ -17,8 +17,8 @@
 
 ```
 src/app/(main)/**       Seiten (Dashboard, route, stays, bookings, journal, gallery, guide, sightings, expenses, safety, family, archive, offline, settings, more)
-src/app/api/**          Server-Routen (ai/status, ai/generate, health, account/delete)
-src/components/**       AppShell, Navigation, UI-Primitive, SVG-Illustrationen, Karte
+src/app/api/**          Server-Routen (ai/status, ai/generate, health, account/delete, invitations/*, map/tiles)
+src/components/**       AppShell, Navigation, UI-Primitive, SVG-Illustrationen, Karte (MapLibre + SVG-Ersatz)
 src/features/**         Fachkomponenten je Modul
 src/lib/domain/**       Zod-Schemas, Geldlogik (Minor Units), Rollenpolicy, Tagesbriefing
 src/lib/db/**           Dexie, Repository (CRUD + Mutationsqueue), Medien, Dokumente, Seed

@@ -78,7 +78,7 @@ Nicht abgedeckt: Penetrationstest, MFA, Kontosperre, Last-/Missbrauchstests, Ima
 - Eine Person gehört in der Oberfläche genau einer Familie an; die Datenbank erlaubt mehrere, die App wählt die erste aktive.
 - Einladungs-Mailadressen bleiben bis zur Familienlöschung gespeichert; Backups enthalten gelöschte Daten bis zum Ablauf der Aufbewahrung.
 - Backend-Tests hinterlassen Testdaten im lokalen Stack (`scripts/stack.sh reset` räumt auf).
-- Karte schematisch, keine Transkription, keine Budget-Limits, kein Live-Wetter, kein Import der echten Reiseplanung, Konturos nicht aktiv.
+- Karte: OpenStreetMap-Kacheln bis Zoom 12 (Pisten und Wasserlöcher teils unvollständig), keine POI-Symbole, keine Navigation, keine Transkription, keine Budget-Limits, kein Live-Wetter, kein Import der echten Reiseplanung, Konturos nicht aktiv.
 - Allgemeine Reisehinweise sind nicht verifiziert (Aktualität/Quellen vor Reisebeginn prüfen).
 - Lighthouse „Best Practices 96“ auf der Anmeldeseite: CSP-Hinweis in Chrome, Ursache nicht abschließend geklärt.
 

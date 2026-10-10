@@ -1,83 +1,273 @@
 'use client';
 
 import clsx from 'clsx';
-import Link from 'next/link';
+import { Download, Trash2 } from 'lucide-react';
+import type { Feature, FeatureCollection } from 'geojson';
+import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { buildMapStyle } from '@/lib/map/style';
+import { areTilesAvailable, getOfflineMapState, removeOfflineMap, saveMapOffline, TripTileSource, type OfflineMapState } from '@/lib/map/tile-source';
 import type { Route, TripStop } from '@/lib/domain/schemas';
+import { SchematicTripMap } from './trip-map-schematic';
+import { Button, Notice, ProgressBar, Skeleton } from './ui';
 
-const WIDTH = 640;
-const HEIGHT = 420;
-const PADDING = 48;
-
-interface Point {
-  x: number;
-  y: number;
+interface TripMapProps {
+  stops: TripStop[];
+  routes: Route[];
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
+  className?: string;
 }
 
-function project(stops: TripStop[]): Map<string, Point> {
-  const located = stops.filter((s) => s.latitude !== null && s.longitude !== null);
-  const map = new Map<string, Point>();
-  if (located.length === 0) return map;
-  const lats = located.map((s) => s.latitude as number);
-  const lons = located.map((s) => s.longitude as number);
-  const [minLat, maxLat, minLon, maxLon] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
-  const spanLat = Math.max(maxLat - minLat, 0.5);
-  const spanLon = Math.max(maxLon - minLon, 0.5);
-  // Equirectangular projection scaled to keep the aspect ratio at this latitude.
-  const midLat = ((minLat + maxLat) / 2) * (Math.PI / 180);
-  const scale = Math.min((WIDTH - 2 * PADDING) / (spanLon * Math.cos(midLat)), (HEIGHT - 2 * PADDING) / spanLat);
-  const offsetX = (WIDTH - spanLon * Math.cos(midLat) * scale) / 2;
-  const offsetY = (HEIGHT - spanLat * scale) / 2;
-  for (const s of located) {
-    map.set(s.id, {
-      x: offsetX + ((s.longitude as number) - minLon) * Math.cos(midLat) * scale,
-      y: offsetY + (maxLat - (s.latitude as number)) * scale,
+const ROUTE_SOURCE = 'trip-routes';
+const MARKER_DEEP = '#0f3d4e';
+const MARKER_ACTIVE = '#a8472b';
+const MAX_FIT_ZOOM = 8;
+const TILES_SIZE_HINT = 'ca. 60 MB';
+
+let isProtocolRegistered = false;
+
+function hasLocation(stop: TripStop): stop is TripStop & { latitude: number; longitude: number } {
+  return stop.latitude !== null && stop.longitude !== null;
+}
+
+function markerElement(stop: TripStop, onSelect: ((id: string) => void) | undefined): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.href = `/route/${stop.id}`;
+  link.setAttribute('aria-label', `Station ${stop.sequence}: ${stop.title}`);
+  link.title = stop.title.split(' / ')[0] ?? stop.title;
+  link.textContent = String(stop.sequence);
+  Object.assign(link.style, {
+    display: 'flex',
+    width: '32px',
+    height: '32px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '9999px',
+    border: '3px solid #fff',
+    boxShadow: '0 1px 4px rgba(0,0,0,.35)',
+    background: MARKER_DEEP,
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: '700',
+    textDecoration: 'none',
+  });
+  link.addEventListener('click', (event) => {
+    if (!onSelect) return;
+    event.preventDefault();
+    onSelect(stop.id);
+  });
+  return link;
+}
+
+function routeFeatures(stops: TripStop[], routes: Route[]): FeatureCollection {
+  const byId = new Map(stops.filter(hasLocation).map((stop) => [stop.id, stop]));
+  const features: Feature[] = [];
+  for (const route of routes) {
+    const from = byId.get(route.from_stop_id);
+    const to = byId.get(route.to_stop_id);
+    if (!from || !to) continue;
+    features.push({
+      type: 'Feature',
+      properties: { id: route.id },
+      geometry: { type: 'LineString', coordinates: [[from.longitude, from.latitude], [to.longitude, to.latitude]] },
     });
   }
-  return map;
+  return { type: 'FeatureCollection', features };
+}
+
+function TileMap({ stops, routes, selectedId, onSelect, onFail }: TripMapProps & { onFail: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const markersRef = useRef<Map<string, { marker: Marker; element: HTMLAnchorElement }>>(new Map());
+  const onSelectRef = useRef(onSelect);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const markers = markersRef.current;
+    async function init() {
+      const [maplibregl, { Protocol, PMTiles }] = await Promise.all([import('maplibre-gl'), import('pmtiles')]);
+      if (isCancelled || !containerRef.current) return;
+      if (!isProtocolRegistered) {
+        maplibregl.setWorkerUrl('/map/worker/maplibre-gl-worker.mjs');
+        const protocol = new Protocol();
+        protocol.add(new PMTiles(new TripTileSource()));
+        maplibregl.addProtocol('pmtiles', protocol.tile);
+        isProtocolRegistered = true;
+      }
+      let map: MapLibreMap;
+      try {
+        map = new maplibregl.Map({
+          container: containerRef.current,
+          style: buildMapStyle(),
+          center: [18, -22],
+          zoom: 4,
+          minZoom: 3,
+          maxZoom: 14,
+          attributionControl: { compact: true },
+          dragRotate: false,
+          pitchWithRotate: false,
+        });
+      } catch {
+        onFail(); // typically: WebGL unavailable
+        return;
+      }
+      map.touchZoomRotate.disableRotation();
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+      map.on('load', () => {
+        map.addSource(ROUTE_SOURCE, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map.addLayer({
+          id: 'trip-routes-line',
+          type: 'line',
+          source: ROUTE_SOURCE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#c65a3a', 'line-width': 3, 'line-dasharray': [2, 1.5] },
+        });
+        setIsLoaded(true);
+      });
+      mapRef.current = map;
+    }
+    void init();
+    return () => {
+      isCancelled = true;
+      for (const { marker } of markers.values()) marker.remove();
+      markers.clear();
+      mapRef.current?.remove();
+      mapRef.current = null;
+      setIsLoaded(false);
+    };
+  }, [onFail]);
+
+  // Stops and routes: rebuild markers and the route line, then fit the view.
+  const stopKey = stops.map((s) => `${s.id}:${s.sequence}:${s.latitude}:${s.longitude}`).join('|');
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoaded) return;
+    let isCancelled = false;
+    (map.getSource(ROUTE_SOURCE) as { setData(data: FeatureCollection): void } | undefined)?.setData(routeFeatures(stops, routes));
+    import('maplibre-gl').then((maplibregl) => {
+      if (isCancelled) return;
+      for (const { marker } of markersRef.current.values()) marker.remove();
+      markersRef.current.clear();
+      const located = stops.filter(hasLocation);
+      for (const stop of located) {
+        const element = markerElement(stop, (id) => onSelectRef.current?.(id));
+        const marker = new maplibregl.Marker({ element }).setLngLat([stop.longitude, stop.latitude]).addTo(map);
+        markersRef.current.set(stop.id, { marker, element });
+      }
+      if (located.length === 1 && located[0]) {
+        map.jumpTo({ center: [located[0].longitude, located[0].latitude], zoom: MAX_FIT_ZOOM });
+      } else if (located.length > 1) {
+        const bounds = new maplibregl.LngLatBounds();
+        for (const stop of located) bounds.extend([stop.longitude, stop.latitude]);
+        map.fitBounds(bounds, { padding: 56, maxZoom: MAX_FIT_ZOOM, animate: false });
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+    // stopKey captures every field that changes the markers; routes only affect the line.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, stopKey, routes]);
+
+  useEffect(() => {
+    for (const [id, { element }] of markersRef.current) {
+      const isActive = id === selectedId;
+      element.style.background = isActive ? MARKER_ACTIVE : MARKER_DEEP;
+      element.style.zIndex = isActive ? '2' : '1';
+      element.style.transform = isActive ? 'scale(1.15)' : '';
+    }
+  }, [selectedId, isLoaded, stopKey]);
+
+  return <div ref={containerRef} role="group" aria-label="Routenkarte mit Stationen" className="h-[26rem] w-full bg-sand-50" />;
+}
+
+function OfflineMapControl() {
+  const [state, setState] = useState<OfflineMapState | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getOfflineMapState().then(setState);
+  }, []);
+
+  const save = useCallback(async () => {
+    setError(null);
+    setProgress(0);
+    try {
+      await saveMapOffline((loaded, total) => setProgress(total ? (loaded / total) * 100 : null));
+      setState('saved');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Die Karte konnte nicht gespeichert werden.');
+    } finally {
+      setProgress(null);
+    }
+  }, []);
+
+  const remove = useCallback(async () => {
+    await removeOfflineMap();
+    setState('not_saved');
+  }, []);
+
+  if (state === null || state === 'unsupported') return null;
+  const isSaving = progress !== null;
+  return (
+    <div className="border-t border-line bg-white px-3 py-2 text-sm">
+      {state === 'saved' ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>Karte ist auf diesem Gerät gespeichert und funktioniert ohne Netz.</span>
+          <Button size="sm" variant="ghost" onClick={remove}>
+            <Trash2 size={16} aria-hidden /> Entfernen
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Für unterwegs ohne Netz: Karte von Namibia und Botswana speichern ({TILES_SIZE_HINT}, am besten im WLAN).</span>
+            <Button size="sm" variant="secondary" onClick={save} disabled={isSaving}>
+              <Download size={16} aria-hidden /> {isSaving ? 'Wird gespeichert …' : 'Offline speichern'}
+            </Button>
+          </div>
+          {isSaving && progress !== null && <ProgressBar value={progress} label="Kartendownload" />}
+          {error && <Notice tone="danger">{error}</Notice>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
- * Self-contained SVG route map: pins and route lines from stop coordinates, no tile service needed, works offline.
- * With NEXT_PUBLIC_MAP_STYLE_URL a licensed tile map can replace it (see docs/DECISIONS.md).
+ * Route map: MapLibre with self-hosted OpenStreetMap tiles (Protomaps/PMTiles), usable offline once saved on the device.
+ * Falls back to the schematic SVG map when tiles or WebGL are unavailable (e.g. tiles not installed, first start offline).
  */
-export function TripMap({ stops, routes, selectedId, onSelect, className }: { stops: TripStop[]; routes: Route[]; selectedId?: string | null; onSelect?: (id: string) => void; className?: string }) {
-  const points = project(stops);
-  const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
+export function TripMap(props: TripMapProps) {
+  const [mode, setMode] = useState<'checking' | 'tiles' | 'fallback'>('checking');
+  const fallBack = useCallback(() => setMode('fallback'), []);
+
+  useEffect(() => {
+    let isCancelled = false;
+    void areTilesAvailable().then((isAvailable) => {
+      if (!isCancelled) setMode(isAvailable ? 'tiles' : 'fallback');
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  if (mode === 'fallback') return <SchematicTripMap {...props} />;
+  if (mode === 'checking') return <Skeleton className={clsx('h-[26rem] w-full rounded-lg', props.className)} />;
   return (
-    <div className={clsx('overflow-hidden rounded-lg border border-line bg-deep-50', className)}>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="group" aria-label="Routenkarte mit Stationen" className="block h-auto w-full">
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0H0V40" fill="none" stroke="#c9dde3" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width={WIDTH} height={HEIGHT} fill="url(#grid)" />
-        {routes.map((r) => {
-          const a = points.get(r.from_stop_id);
-          const b = points.get(r.to_stop_id);
-          if (!a || !b) return null;
-          return <line key={r.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#C65A3A" strokeWidth="3" strokeDasharray="8 6" strokeLinecap="round" />;
-        })}
-        {ordered.map((s) => {
-          const p = points.get(s.id);
-          if (!p) return null;
-          const active = selectedId === s.id;
-          return (
-            <g key={s.id} transform={`translate(${p.x} ${p.y})`}>
-              <Link href={`/route/${s.id}`} onClick={(e) => { if (onSelect) { e.preventDefault(); onSelect(s.id); } }} aria-label={`Station ${s.sequence}: ${s.title}`}>
-                <circle r={active ? 17 : 14} fill={active ? '#C65A3A' : '#0F3D4E'} stroke="#fff" strokeWidth="3" />
-                <text textAnchor="middle" dy="5" fontSize="13" fontWeight="700" fill="#fff">
-                  {s.sequence}
-                </text>
-                <text y={-22} textAnchor="middle" fontSize="13" fontWeight="600" fill="#0F3D4E" stroke="#fff" strokeWidth="4" paintOrder="stroke">
-                  {s.title.split(' / ')[0]}
-                </text>
-              </Link>
-            </g>
-          );
-        })}
-      </svg>
-      <p className="border-t border-line bg-white px-3 py-2 text-xs text-slate">Schematische Karte aus Stationskoordinaten (keine Navigation, keine Kartenkacheln).</p>
+    <div className={clsx('overflow-hidden rounded-lg border border-line', props.className)}>
+      <TileMap {...props} onFail={fallBack} />
+      <OfflineMapControl />
+      <p className="border-t border-line bg-white px-3 py-2 text-xs text-slate">Kartenübersicht, keine Navigation. Pisten und Wasserlöcher sind in den Kartendaten teils unvollständig.</p>
     </div>
   );
 }

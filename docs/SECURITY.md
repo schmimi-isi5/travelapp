@@ -44,7 +44,7 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 
 ## 6. Transport und Header
 - TLS endet an Coolify/Traefik; die App ist nur über HTTPS bereitzustellen (Anforderung an das Deployment, siehe `docs/DEPLOYMENT.md`).
-- Antwort-Header der App: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, Content-Security-Policy (siehe `next.config.ts`; `unsafe-inline` für Skripte ist wegen Next.js nötig und eine bekannte Schwäche).
+- Antwort-Header der App: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, Content-Security-Policy (siehe `next.config.ts`; `unsafe-inline` für Skripte ist wegen Next.js nötig und eine bekannte Schwäche; `worker-src` erlaubt `blob:` für den Kartenrenderer MapLibre).
 - CORS am Gateway (Kong) nur für die App-Herkunft.
 
 ## 7. Datenschutz

@@ -27,6 +27,7 @@ Alle Daten im Demo-Modus sind fiktiv und liegen nur in deinem Browser (IndexedDB
 | `npm run test:backend` | Integrationstests gegen den echten Stack (RLS, Storage, Sync, Mail, Gateway) |
 | `npm run test:e2e:supabase` | Browser-Tests (Chromium, iPhone-WebKit) gegen App-Container + Stack |
 | `npm run screenshots:supabase` | Screenshots des Produktivmodus nach `docs/screenshots/supabase/` |
+| `scripts/build-map-assets.sh` | Kartendaten (OSM-Auszug Namibia/Botswana, ca. 58 MB) nach `data/map/` und Kartenschriften erzeugen; braucht die `pmtiles`-CLI. Ohne Datei zeigt die App die schematische Karte |
 | `bash scripts/verify-restore.sh` | isolierter Backup-/Restore-Test |
 
 ## Konfiguration
@@ -38,7 +39,7 @@ Zusätzlich zu den dort aufgeführten Variablen (die Datei lässt sich mit den P
 |---|---|
 | `NEXT_PUBLIC_APP_MODE` | `demo` (Standard) oder `supabase`. Fehlen Zugangsdaten, fällt die App sichtbar auf Demo zurück |
 | `AI_PROVIDER` | `disabled` (Standard), `konturos`, `stub` (nur Tests) |
-| `NEXT_PUBLIC_MAP_STYLE_URL` | Optional, derzeit nicht ausgewertet (schematische SVG-Karte) |
+| `MAP_TILES_FILE` | Optional (Runtime), Pfad zur Kartendatei; Standard `data/map/namibia-botswana.pmtiles`. Erzeugen mit `scripts/build-map-assets.sh` (braucht die `pmtiles`-CLI) |
 
 Geheimnisse (`SUPABASE_SERVICE_ROLE_KEY`, `KONTUROS_API_KEY`) gehören nur in die Server-Umgebung.
 
