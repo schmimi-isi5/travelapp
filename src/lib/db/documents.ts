@@ -13,7 +13,7 @@ const PBKDF2_ITERATIONS = 250_000;
 
 export class DocumentError extends Error {
   constructor(
-    readonly code: 'TYPE_NOT_ALLOWED' | 'TOO_LARGE' | 'EMPTY' | 'WRONG_PASSPHRASE' | 'PASSPHRASE_REQUIRED' | 'NOT_FOUND',
+    readonly code: 'TYPE_NOT_ALLOWED' | 'TOO_LARGE' | 'EMPTY' | 'WRONG_PASSPHRASE' | 'PASSPHRASE_REQUIRED' | 'NOT_FOUND' | 'INSECURE_CONTEXT',
     message: string,
   ) {
     super(message);
@@ -27,6 +27,8 @@ export function validateDocument(file: { name: string; type: string; size: numbe
 }
 
 async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
+  // Web Crypto's subtle API is only exposed in secure contexts (HTTPS or localhost).
+  if (!globalThis.crypto?.subtle) throw new DocumentError('INSECURE_CONTEXT', 'Verschlüsselung ist nur über HTTPS oder localhost verfügbar. Bitte die App über eine https-Adresse öffnen.');
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt as BufferSource, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }

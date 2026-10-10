@@ -20,11 +20,19 @@ export type MediaKind = keyof typeof MEDIA_RULES;
 
 export class MediaError extends Error {
   constructor(
-    readonly code: 'TYPE_NOT_ALLOWED' | 'TOO_LARGE' | 'QUEUE_FULL' | 'EMPTY',
+    readonly code: 'TYPE_NOT_ALLOWED' | 'TOO_LARGE' | 'QUEUE_FULL' | 'EMPTY' | 'STORE_FAILED',
     message: string,
   ) {
     super(message);
   }
+}
+
+/** Human-readable reason for a failed local write; quota problems are the common case on phones. */
+function storeFailureMessage(fileName: string, cause: unknown): string {
+  const name = cause instanceof Error ? cause.name : '';
+  if (name === 'QuotaExceededError') return `„${fileName}“ passt nicht mehr in den Speicher dieses Browsers. Bitte Platz schaffen oder erst synchronisieren.`;
+  const detail = cause instanceof Error && cause.message ? ` (${name || 'Fehler'}: ${cause.message})` : '';
+  return `„${fileName}“ konnte nicht auf diesem Gerät gespeichert werden${detail}.`;
 }
 
 export function detectKind(mime: string): MediaKind | null {
@@ -130,27 +138,37 @@ export async function addMedia(options: AddMediaOptions): Promise<MediaAsset> {
   onProgress?.(40);
   const id = newId();
   const storagePath = `${options.familyId}/${options.tripId}/${id}-${safeFileName(fileName)}`;
-  await storeBlob(getLocalDb(), id, file, fileName);
+  try {
+    await storeBlob(getLocalDb(), id, file, fileName);
+  } catch (cause) {
+    throw new MediaError('STORE_FAILED', storeFailureMessage(fileName, cause));
+  }
   onProgress?.(80);
   const actor = getActor();
-  const asset = await create('media_assets', {
-    id,
-    family_id: options.familyId,
-    trip_id: options.tripId,
-    stop_id: options.stopId ?? null,
-    journal_entry_id: options.journalEntryId ?? null,
-    uploaded_by: actor.userId,
-    kind,
-    storage_path: storagePath,
-    original_name: fileName,
-    captured_at: capturedAt ?? nowIso(),
-    mime_type: file.type,
-    size_bytes: file.size,
-    caption: options.caption ?? '',
-    album: options.album ?? null,
-    visibility: options.visibility ?? 'family',
-    upload_state: 'queued',
-  });
+  let asset: MediaAsset;
+  try {
+    asset = await create('media_assets', {
+      id,
+      family_id: options.familyId,
+      trip_id: options.tripId,
+      stop_id: options.stopId ?? null,
+      journal_entry_id: options.journalEntryId ?? null,
+      uploaded_by: actor.userId,
+      kind,
+      storage_path: storagePath,
+      original_name: fileName,
+      captured_at: capturedAt ?? nowIso(),
+      mime_type: file.type,
+      size_bytes: file.size,
+      caption: options.caption ?? '',
+      album: options.album ?? null,
+      visibility: options.visibility ?? 'family',
+      upload_state: 'queued',
+    });
+  } catch (cause) {
+    await getLocalDb().blobs.delete(id); // no orphaned bytes when the row could not be written
+    throw new MediaError('STORE_FAILED', storeFailureMessage(fileName, cause));
+  }
   onProgress?.(100);
   return asset;
 }
