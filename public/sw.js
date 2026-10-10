@@ -1,10 +1,11 @@
 /* Offline shell cache. Strategy: precache every app page together with the scripts/styles it references, network-first for
-   pages (fresh when online), cache-first for static assets. User data lives in IndexedDB, never in these caches, so the
+   pages (fresh when online), cache-first for static assets. User data lives in IndexedDB, never in these caches (the saved map tiles live in their own 'nb-map-' cache, managed by the app), so the
    cache contains no personal data and survives sign-out without leaking anything.
    Dynamic pages (e.g. /route/<id>) are cached when first visited. */
-const VERSION = 'nb-shell-v2';
+const VERSION = 'nb-shell-v3';
 const PAGES = ['/', '/route', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/guide', '/sightings', '/expenses', '/safety', '/family', '/archive', '/offline', '/settings', '/more', '/login'];
-const STATIC = ['/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const MAP_FONT_FILES = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'].flatMap((font) => ['0-255', '256-511'].map((range) => `/map/fonts/${encodeURIComponent(font)}/${range}.pbf`));
+const STATIC = ['/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/map/worker/maplibre-gl-worker.mjs', ...MAP_FONT_FILES];
 // Route groups such as "(main)" put parentheses into chunk paths, so ")" must stay allowed.
 const ASSET_PATTERN = /\/_next\/static\/[^"'\\\s<>]+\.(?:js|css)/g;
 
@@ -26,7 +27,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('nb-shell-') && k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {

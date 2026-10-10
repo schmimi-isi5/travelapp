@@ -22,7 +22,7 @@ function buildContentSecurityPolicy(): string {
     `img-src ${withSupabase("'self'", 'data:', 'blob:')}`,
     `media-src ${withSupabase("'self'", 'blob:')}`,
     `connect-src ${withSupabase("'self'", ...(isDev ? ['ws:', 'wss:'] : []))}`,
-    "worker-src 'self'",
+    "worker-src 'self' blob:", // MapLibre runs its tile decoder in a blob worker
     "manifest-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

@@ -76,7 +76,7 @@ export default function RoutePage() {
                 </p>
               )}
               <div className="mt-3">
-                <Notice tone="info">Ohne lizenzierten Kartendienst zeigt die App eine schematische Karte. Offline-Kartenkacheln sind nicht enthalten.</Notice>
+                <Notice tone="info">Die Karte nutzt OpenStreetMap-Daten vom eigenen Server. Wer sie auf dem Gerät speichert, kann sie auch ohne Netz verwenden. Fehlen die Kartendaten, zeigt die App eine schematische Karte.</Notice>
               </div>
             </div>
           </section>

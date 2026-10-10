@@ -6,6 +6,6 @@ Repository-Muster `src/app/(main)/**`, `src/components/**`, `src/features/{trip,
 
 Datenschutz: separates Familien-Mandat pro Tabelle; Serverautorisierung, RLS, vorzeichenbare URLs; nicht an öffentlichen Bild-URLs leaken. Datenlöschung und Portabilität implementieren. Keine API-Schlüssel clientseitig. Offline-Speicherung sensibler Ausweisdateien nur nach explizitem Opt-in und verschlüsselt, andernfalls online-only. Wiederanmeldung für sensible Dokumente.
 
-Umgebungsvariablen: `NEXT_PUBLIC_APP_MODE=demo|supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (server only), `AI_PROVIDER=disabled|konturos`, `KONTUROS_BASE_URL`, `KONTUROS_API_KEY` (server only), `NEXT_PUBLIC_MAP_STYLE_URL` (nur lizenzierter Tile-Service), `NEXT_PUBLIC_SITE_URL`. Ohne externe Schlüssel muss `demo` funktionieren.
+Umgebungsvariablen: `NEXT_PUBLIC_APP_MODE=demo|supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (server only), `AI_PROVIDER=disabled|konturos`, `KONTUROS_BASE_URL`, `KONTUROS_API_KEY` (server only), `MAP_TILES_FILE` (Pfad zur PMTiles-Kartendatei), `NEXT_PUBLIC_SITE_URL`. Ohne externe Schlüssel muss `demo` funktionieren.
 
 Sync: `change_log` und `mutation_id` pro Mutation, optimistic UI, server acknowledgements; wiederholte Mutation idempotent; konflikthafte Buchungs-/Zahlungsupdates erzeugen `sync_conflict`, niemals letztes Schreiben blind gewinnen lassen. Offline-Bearbeitung von Zahlungstransaktionen ausdrücklich als `pending` markieren.
