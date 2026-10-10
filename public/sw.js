@@ -2,8 +2,8 @@
    pages (fresh when online), cache-first for static assets. User data lives in IndexedDB, never in these caches (the saved map tiles live in their own 'nb-map-' cache, managed by the app), so the
    cache contains no personal data and survives sign-out without leaking anything.
    Dynamic pages (e.g. /route/<id>) are cached when first visited. */
-const VERSION = 'nb-shell-v3';
-const PAGES = ['/', '/route', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/guide', '/sightings', '/expenses', '/safety', '/family', '/archive', '/offline', '/settings', '/more', '/login'];
+const VERSION = 'nb-shell-v4';
+const PAGES = ['/', '/route', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/guide', '/sightings', '/expenses', '/safety', '/family', '/followers', '/archive', '/offline', '/settings', '/more', '/login'];
 const MAP_FONT_FILES = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'].flatMap((font) => ['0-255', '256-511'].map((range) => `/map/fonts/${encodeURIComponent(font)}/${range}.pbf`));
 const STATIC = ['/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/map/worker/maplibre-gl-worker.mjs', ...MAP_FONT_FILES];
 // Route groups such as "(main)" put parentheses into chunk paths, so ")" must stay allowed.

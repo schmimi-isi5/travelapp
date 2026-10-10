@@ -56,6 +56,7 @@ async function run(label: string, sql: string, target: PGlite = db) {
 }
 
 async function admin(sql: string, params: unknown[] = []) {
+  await db.query(`select set_config('request.jwt.claim.sub', '', false)`); // maintenance access carries no user
   return db.query(sql, params);
 }
 
@@ -150,6 +151,7 @@ beforeAll(async () => {
   await run('0003_storage', readFileSync(join(MIGRATIONS, '0003_storage.sql'), 'utf8'));
   await run('0004_app_alignment', readFileSync(join(MIGRATIONS, '0004_app_alignment.sql'), 'utf8'));
   await run('0005_documents_ciphertext', readFileSync(join(MIGRATIONS, '0005_documents_ciphertext.sql'), 'utf8'));
+  await run('0006_follower_links', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -669,6 +671,105 @@ describe('migration 0004 (app alignment)', () => {
   it('is idempotent when applied twice', async () => {
     await run('0004_again', readFileSync(join(MIGRATIONS, '0004_app_alignment.sql'), 'utf8'));
     expect(await count(users.A.owner, `select 1 from public.wildlife_species where family_id is null and common_name_de='Elefant'`)).toBe(1);
+  });
+});
+
+describe('migration 0006 (follower links)', () => {
+  const hash = (c: string) => c.repeat(64);
+
+  /** Rows authored by the given role itself, so row-level security lets the role touch them and only the share trigger decides. */
+  async function ownRows(role: Role) {
+    const uid = users.A[role];
+    const entry = (await admin(`insert into public.journal_entries(trip_id, author_user_id, title) values ($1, $2, 'own') returning id`, [ids.A.trip, uid])).rows[0].id;
+    const media = (await admin(`insert into public.media_assets(family_id, trip_id, uploaded_by, kind, storage_path) values ($1, $2, $3, 'photo', $4) returning id`, [fam.A, ids.A.trip, uid, `${fam.A}/own-${role}.jpg`])).rows[0].id;
+    const sighting = (await admin(`insert into public.wildlife_sightings(trip_id, species_id, recorded_by) values ($1, $2, $3) returning id`, [ids.A.trip, ids.A.wildlife_species, uid])).rows[0].id;
+    return { entry, media, sighting };
+  }
+  const share = (uid: string, table: string, id: string, value = true) => as(uid, `update public.${table} set shared_with_followers = ${value} where id = $1 returning id`, [id]);
+
+  it('lets owner and adult publish their own journal entry, photo and sighting to followers', async () => {
+    for (const role of ['owner', 'adult'] as const) {
+      const rows = await ownRows(role);
+      expect((await share(users.A[role], 'journal_entries', rows.entry)).rows).toHaveLength(1);
+      expect((await share(users.A[role], 'media_assets', rows.media)).rows).toHaveLength(1);
+      expect((await share(users.A[role], 'wildlife_sightings', rows.sighting)).rows).toHaveLength(1);
+      expect((await share(users.A[role], 'journal_entries', rows.entry, false)).rows).toHaveLength(1);
+    }
+  });
+
+  it('refuses members and children publishing even their own content (an adult decides)', async () => {
+    for (const role of ['member', 'child'] as const) {
+      const rows = await ownRows(role);
+      await expectDenied(share(users.A[role], 'journal_entries', rows.entry));
+      await expectDenied(share(users.A[role], 'media_assets', rows.media));
+      await expectDenied(share(users.A[role], 'wildlife_sightings', rows.sighting));
+      await expectDenied(
+        as(users.A[role], `insert into public.journal_entries(trip_id, author_user_id, title, shared_with_followers) values ($1, $2, 'x', true)`, [ids.A.trip, users.A[role]]),
+      );
+    }
+    expect((await admin(`select count(*)::int c from public.journal_entries where shared_with_followers`)).rows[0].c).toBe(0);
+  });
+
+  it('lets an adult publish content of others, but never across families', async () => {
+    expect((await share(users.A.adult, 'journal_entries', ids.A.journal_entries)).rows).toHaveLength(1);
+    expect((await share(users.B.adult, 'journal_entries', ids.A.journal_entries, false)).rows).toHaveLength(0); // not visible to family B
+    expect((await admin(`select shared_with_followers s from public.journal_entries where id = $1`, [ids.A.journal_entries])).rows[0].s).toBe(true);
+    await admin(`update public.journal_entries set shared_with_followers = false where id = $1`, [ids.A.journal_entries]);
+  });
+
+  it('never publishes private entries or photos, and a shared row cannot be made private', async () => {
+    await expectDenied(admin(`update public.journal_entries set shared_with_followers = true where id = $1`, [ids.A.journal_private]));
+    await expectDenied(admin(`update public.media_assets set shared_with_followers = true where id = $1`, [ids.A.media_private]));
+    await admin(`update public.journal_entries set shared_with_followers = true where id = $1`, [ids.A.journal_entries]);
+    await expectDenied(as(users.A.member, `update public.journal_entries set visibility = 'private' where id = $1`, [ids.A.journal_entries]));
+    await admin(`update public.journal_entries set shared_with_followers = false where id = $1`, [ids.A.journal_entries]);
+  });
+
+  it('creates and revokes links only for owner/adult of the trip family', async () => {
+    const created = await as(users.A.adult, `select public.create_follower_link($1, '  Oma  ', $2, now() + interval '30 days') as id`, [ids.A.trip, hash('a')]);
+    const linkId = created.rows[0].id as string;
+    expect((await admin(`select label, family_id from public.follower_links where id = $1`, [linkId])).rows[0]).toMatchObject({ label: 'Oma', family_id: fam.A });
+    for (const role of ['member', 'child'] as const) {
+      await expectDenied(as(users.A[role], `select public.create_follower_link($1, 'x', $2)`, [ids.A.trip, hash('b')]));
+    }
+    await expectDenied(as(users.B.owner, `select public.create_follower_link($1, 'x', $2)`, [ids.A.trip, hash('b')]));
+    await expectDenied(as(users.B.owner, `select public.revoke_follower_link($1)`, [linkId]));
+    await expectDenied(as(users.A.member, `select public.revoke_follower_link($1)`, [linkId]));
+    await as(users.A.owner, `select public.revoke_follower_link($1)`, [linkId]);
+    expect((await admin(`select revoked_at from public.follower_links where id = $1`, [linkId])).rows[0].revoked_at).not.toBeNull();
+  });
+
+  it('rejects malformed hashes, duplicate tokens, empty labels and past expiry', async () => {
+    await expectDenied(as(users.A.owner, `select public.create_follower_link($1, 'x', 'not-a-hash')`, [ids.A.trip]), ['23514']);
+    await as(users.A.owner, `select public.create_follower_link($1, 'dup', $2)`, [ids.A.trip, hash('c')]);
+    await expectDenied(as(users.A.owner, `select public.create_follower_link($1, 'dup2', $2)`, [ids.A.trip, hash('c')]), ['23505']);
+    await expectDenied(as(users.A.owner, `select public.create_follower_link($1, '   ', $2)`, [ids.A.trip, hash('d')]), ['23514']);
+    await expectDenied(as(users.A.owner, `select public.create_follower_link($1, 'old', $2, now() - interval '1 day')`, [ids.A.trip, hash('e')]), ['22023']);
+  });
+
+  it('shows links to adults of the same family only and allows no direct writes', async () => {
+    await admin(`insert into public.follower_links(family_id, trip_id, label, token_hash) values ($1, $2, 'B link', $3)`, [fam.B, ids.B.trip, hash('f')]);
+    const own = await as(users.A.adult, `select label from public.follower_links`);
+    expect(own.rows.every((r) => r.label !== 'B link')).toBe(true);
+    expect(own.rows.length).toBeGreaterThan(0);
+    for (const role of ['member', 'child'] as const) expect(await count(users.A[role], `select 1 from public.follower_links`)).toBe(0);
+    expect(await count(outsider, `select 1 from public.follower_links`)).toBe(0);
+    await expectDenied(as(users.A.owner, `insert into public.follower_links(family_id, trip_id, label, token_hash) values ($1, $2, 'direct', $3)`, [fam.A, ids.A.trip, hash('9')]));
+    await expectDenied(as(users.A.owner, `update public.follower_links set label = 'x'`));
+    await expectDenied(as(users.A.owner, `delete from public.follower_links`));
+    await expectDenied(as(null, `select 1 from public.follower_links`, [], 'anon'));
+  });
+
+  it('keeps the view counter private to the server (not callable by users)', async () => {
+    const id = (await admin(`select id from public.follower_links where label = 'B link'`)).rows[0].id;
+    await expectDenied(as(users.B.owner, `select public.touch_follower_link($1)`, [id]));
+    await db.exec(`reset role`);
+    await as(null, `select public.touch_follower_link($1)`, [id], 'service_role');
+    expect((await admin(`select view_count::int c, last_seen_at is not null seen from public.follower_links where id = $1`, [id])).rows[0]).toEqual({ c: 1, seen: true });
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0006_again', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
   });
 });
 

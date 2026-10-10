@@ -4,6 +4,7 @@ import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2, Upload } from '
 import { useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Toolbar } from '@/components/ui';
+import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
 import { loadBlob } from '@/lib/db/blob-store';
@@ -98,6 +99,14 @@ export default function GalleryPage() {
           <div className="space-y-4">
             <div className="max-h-[55vh] overflow-hidden rounded-lg bg-black/5"><div className="aspect-[4/3] max-h-[55vh] w-full"><MediaBody asset={current} controls /></div></div>
             <p className="text-sm text-slate">{formatDateTime(current.captured_at)} · {stops.find((s) => s.id === current.stop_id)?.title ?? 'Keine Station'} · {current.album ?? 'Kein Album'}</p>
+            {current.kind === 'photo' && (
+              <FollowerShareToggle
+                checked={current.shared_with_followers}
+                label="Für Follower freigeben (Foto ohne Ortsdaten)"
+                blockedReason={current.visibility === 'private' ? 'Private Fotos lassen sich nicht freigeben.' : null}
+                onChange={async (next) => void (await update('media_assets', current.id, { shared_with_followers: next }))}
+              />
+            )}
             {currentUser && canEditOwnedRow(role, current.uploaded_by, currentUser.id) && (
               <Field label="Bildunterschrift">{(p) => <Input {...p} defaultValue={current.caption} key={current.id} onBlur={(e) => e.target.value !== current.caption && void update('media_assets', current.id, { caption: e.target.value })} />}</Field>
             )}

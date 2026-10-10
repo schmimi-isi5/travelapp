@@ -273,6 +273,25 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     expect(await getLocalDb().entity('documents').count()).toBe(0);
   });
 
+  it('syncs the follower-share flag from adults and shows a member\'s attempt as rejected instead of publishing', async () => {
+    const adult = new Device(fam.adult, fam).on();
+    const entry = await create('journal_entries', { trip_id: adult.tripId, author_user_id: fam.adult.id, entry_date: '2026-10-17', title: 'Für Follower', body: 'Sichtbar für Daheimgebliebene.' });
+    await adult.sync();
+    await update('journal_entries', entry.id, { shared_with_followers: true });
+    expect((await adult.sync()).failed).toBe(0);
+    expect((await admin.from('journal_entries').select('shared_with_followers').eq('id', entry.id).single()).data).toEqual({ shared_with_followers: true });
+
+    const member = new Device(fam.member, fam).on();
+    await member.sync();
+    const mine = await create('journal_entries', { trip_id: member.tripId, author_user_id: fam.member.id, entry_date: '2026-10-17', title: 'Mitglied', body: 'Ich möchte teilen.' });
+    await member.sync();
+    await update('journal_entries', mine.id, { shared_with_followers: true });
+    const summary = await member.sync();
+    expect(summary.failed + summary.conflicts).toBeGreaterThan(0);
+    expect((await admin.from('journal_entries').select('shared_with_followers').eq('id', mine.id).single()).data).toEqual({ shared_with_followers: false });
+    expect(await getLocalDb().sync_conflicts.count()).toBeGreaterThan(0);
+  });
+
   it('exports synced data with a complete manifest and leaves finance out for children', async () => {
     const owner = new Device(fam.owner, fam).on();
     await owner.sync();

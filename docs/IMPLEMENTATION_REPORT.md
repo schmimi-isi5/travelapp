@@ -17,6 +17,7 @@ Auftrag: V1 für den Betrieb auf Coolify mit selbst gehostetem Supabase vorberei
 | H Backup | `docker/backup/` + `compose.backup.yml`: `pg_dump -Fc` + Globals + Storage-Volume + Konfiguration, mit `age` verschlüsselt, SHA-256-Manifest, Aufbewahrung 7/4/6, Sperrdatei, JSON-Logs, optional S3; Restore in neue Datenbank, Überschreiben nur mit `RESTORE_CONFIRM_OVERWRITE`. |
 | I Tests | siehe B. |
 | J Design | Bestehende Gestaltung unverändert übernommen; neue Anmelde-/Einladungs-/Einrichtungsseiten im gleichen Stil; Screenshots aktualisiert. |
+| L Mitreisen (Follower) | Privater Link ohne Konto: Stationen bis heute, nur freigegebene Berichte, Fotos (ohne EXIF/GPS) und Tiersichtungen, Widerruf, Ablaufdatum, Verwaltung unter `/followers`, Demo-Vorschau `/f/demo`. Migration 0006, DECISIONS 32, SECURITY 6a. Stufe 2 offen: Grüße/Kommentare, E-Mail-Benachrichtigung, PIN. |
 | K Doku | `OPERATIONS.md`, `SUPABASE.md`, `DEPLOYMENT.md`, `SECURITY.md`, `DECISIONS.md` (18–30), `AI_INTEGRATION.md`, README, CLAUDE.md. |
 
 ## B. Testergebnisse (letzter Lauf, alle gegen den aktuellen Stand)
@@ -24,11 +25,11 @@ Auftrag: V1 für den Betrieb auf Coolify mit selbst gehostetem Supabase vorberei
 | Prüfung | Ergebnis |
 |---|---|
 | `npm run lint` / `npm run typecheck` | sauber (`supabase/tests` ist vom Typecheck ausgenommen) |
-| `npm test` | **151 bestanden** (55 Unit, 40 Integration mit fake-indexeddb, 56 RLS/Migrationen in PGlite) |
+| `npm test` | **177 bestanden** (Unit, Integration mit fake-indexeddb, 65 RLS/Migrationen in PGlite) |
 | `npm run build` | erfolgreich |
-| `npm run test:backend` (echter lokaler Supabase-Stack) | **41 bestanden**, 5 bewusst übersprungen (`not_configured`-Zweige, falls kein Stack läuft). Dateien: auth-family 13, storage 10, sync 10, mail 2, gateway 6. Dreimal hintereinander stabil. |
-| `npm run test:e2e:supabase` (App-Container + Stack) | **14 bestanden** (13 Chromium, 1 iPhone-WebKit), zweimal stabil |
-| `npm run test:e2e` Demo-Modus | **90 bestanden**: Chromium 41 (inkl. 17 axe-Prüfungen), WebKit 24, Pixel 7 21, iPhone 14 4 |
+| `npm run test:backend` (echter lokaler Supabase-Stack) | **50 bestanden** (inkl. 8 Follower-Link-Tests und 1 Sync-Test zur Freigabe), 5 bewusst übersprungen (`not_configured`-Zweige, falls kein Stack läuft). Dateien: auth-family 13, storage 10, sync 10, mail 2, gateway 6. Dreimal hintereinander stabil. |
+| `npm run test:e2e:supabase` (App-Container + Stack) | **15 bestanden** (14 Chromium inkl. Follower-Ablauf, 1 iPhone-WebKit) |
+| `npm run test:e2e` Demo-Modus | **107 bestanden**, 1 übersprungen (Offline-Karten-Test in WebKit): Chromium inkl. Karten-, Follower- und axe-Tests, WebKit, Pixel 7, iPhone 14 |
 | `scripts/verify-restore.sh` | bestanden (vom Infra-Agent und von mir erneut ausgeführt): Zeilenzahlen, SHA-256 eines Storage-Objekts und Login nach Totalverlust identisch |
 | Lighthouse 12 | Demo-Startseite: Barrierefreiheit 100, Best Practices 100, SEO 91. Anmeldeseite im Container: 100 / 96 / 100 (die 96: Chrome meldet einen CSP-Hinweis im Issues-Panel, vermutlich `unsafe-inline`, nicht weiter untersucht) |
 | Docker | Container healthy, Benutzer 10001, `docker stop` 0,13 s Exit 0, Speicherbedarf siehe `docs/OPERATIONS.md` |

@@ -8,12 +8,16 @@ const WIDTH = 640;
 const HEIGHT = 420;
 const PADDING = 48;
 
+/** The parts of a stop / leg the maps need; lets the follower view reuse the maps without app entities. */
+export type MapStop = Pick<TripStop, 'id' | 'title' | 'sequence' | 'latitude' | 'longitude'>;
+export type MapLeg = Pick<Route, 'id' | 'from_stop_id' | 'to_stop_id'>;
+
 interface Point {
   x: number;
   y: number;
 }
 
-function project(stops: TripStop[]): Map<string, Point> {
+function project(stops: MapStop[]): Map<string, Point> {
   const located = stops.filter((s) => s.latitude !== null && s.longitude !== null);
   const map = new Map<string, Point>();
   if (located.length === 0) return map;
@@ -40,7 +44,7 @@ function project(stops: TripStop[]): Map<string, Point> {
  * Fallback SVG route map (used when tile data or WebGL is unavailable): pins and route lines from stop coordinates.
  * The primary map is trip-map.tsx (MapLibre with self-hosted Protomaps tiles).
  */
-export function SchematicTripMap({ stops, routes, selectedId, onSelect, className }: { stops: TripStop[]; routes: Route[]; selectedId?: string | null; onSelect?: (id: string) => void; className?: string }) {
+export function SchematicTripMap({ stops, routes, selectedId, onSelect, className, readOnly = false }: { stops: MapStop[]; routes: MapLeg[]; selectedId?: string | null; onSelect?: (id: string) => void; className?: string; readOnly?: boolean }) {
   const points = project(stops);
   const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
   return (
@@ -62,9 +66,8 @@ export function SchematicTripMap({ stops, routes, selectedId, onSelect, classNam
           const p = points.get(s.id);
           if (!p) return null;
           const active = selectedId === s.id;
-          return (
-            <g key={s.id} transform={`translate(${p.x} ${p.y})`}>
-              <Link href={`/route/${s.id}`} onClick={(e) => { if (onSelect) { e.preventDefault(); onSelect(s.id); } }} aria-label={`Station ${s.sequence}: ${s.title}`}>
+          const pin = (
+            <>
                 <circle r={active ? 17 : 14} fill={active ? '#C65A3A' : '#0F3D4E'} stroke="#fff" strokeWidth="3" />
                 <text textAnchor="middle" dy="5" fontSize="13" fontWeight="700" fill="#fff">
                   {s.sequence}
@@ -72,7 +75,15 @@ export function SchematicTripMap({ stops, routes, selectedId, onSelect, classNam
                 <text y={-22} textAnchor="middle" fontSize="13" fontWeight="600" fill="#0F3D4E" stroke="#fff" strokeWidth="4" paintOrder="stroke">
                   {s.title.split(' / ')[0]}
                 </text>
-              </Link>
+            </>
+          );
+          return (
+            <g key={s.id} transform={`translate(${p.x} ${p.y})`}>
+              {readOnly ? (
+                <g role="img" aria-label={`Station ${s.sequence}: ${s.title}`}>{pin}</g>
+              ) : (
+                <Link href={`/route/${s.id}`} onClick={(e) => { if (onSelect) { e.preventDefault(); onSelect(s.id); } }} aria-label={`Station ${s.sequence}: ${s.title}`}>{pin}</Link>
+              )}
             </g>
           );
         })}
