@@ -1,4 +1,4 @@
-import { BedDouble, BookOpenText, CalendarCheck, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive } from 'lucide-react';
+import { BedDouble, BookOpenText, CalendarCheck, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive, Binoculars } from 'lucide-react';
 import type { Role } from '@/lib/domain/schemas';
 
 export interface NavItem {
@@ -25,6 +25,7 @@ export const MORE_NAV: NavItem[] = [
   { href: '/expenses', label: 'Ausgaben', icon: Wallet, description: 'Nach Währung & Kategorie', roles: ['owner', 'adult'] },
   { href: '/safety', label: 'Sicherheit', icon: ShieldCheck, description: 'Notfallkontakte & Dokumente' },
   { href: '/family', label: 'Familie', icon: Users, description: 'Mitglieder, Rollen & Einladungen' },
+  { href: '/followers', label: 'Mitreisen', icon: Binoculars, description: 'Privater Link für Daheimgebliebene', roles: ['owner', 'adult'] },
   { href: '/archive', label: 'Erinnerungen', icon: Archive, description: 'Suche & Export' },
   { href: '/offline', label: 'Offline & Sync', icon: WifiOff, description: 'Warteschlange & Konflikte' },
   { href: '/settings', label: 'Einstellungen', icon: Settings, description: 'Demo, KI & Datenschutz' },

@@ -156,6 +156,54 @@ test('Tagebuch mit zwei Fotos und Sprachmemo: andere Person sieht es mit signier
   expect(await card.locator('audio').getAttribute('src')).toMatch(/\/storage\/v1\/object\/sign\/media\//);
 });
 
+test('Follower-Link: Bericht und Foto freigeben, eine Person ohne Konto sieht nur das Freigegebene, bis der Link beendet wird', async ({ browser }) => {
+  await owner.goto('/journal');
+  const card = owner.getByTestId('journal-card').filter({ hasText: 'Erster Tag in Windhoek' });
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByLabel('Bericht und Fotos für Follower freigeben').check();
+  await expect(card.getByText('Für Follower freigegeben')).toBeVisible();
+  await waitSynced(owner);
+
+  await owner.goto('/followers');
+  await owner.getByLabel('Für wen ist der Link?').fill('Oma');
+  await owner.getByRole('button', { name: 'Link erstellen' }).click();
+  const link = (await owner.getByTestId('created-link').textContent())!.trim();
+  expect(link).toMatch(/\/f\/[A-Za-z0-9_-]{40,}$/);
+
+  // a person without an account opens the link in a fresh browser profile
+  const { context, page } = await newUserContext(browser);
+  await page.goto(new URL(link).pathname);
+  await expect(page.getByRole('heading', { level: 1, name: 'Namibia & Botswana' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 3, name: 'Erster Tag in Windhoek' })).toBeVisible();
+  await expect(page.getByText('Wir sind gelandet.')).toBeVisible();
+  const photos = page.getByRole('region', { name: 'Fotos' }).locator('img');
+  await expect(photos).toHaveCount(2);
+  await expect.poll(() => photos.first().evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  expect(await photos.first().getAttribute('src')).toMatch(/^\/api\/follow\/.+\/media\//); // never a storage URL
+  await expect(page.locator('body')).not.toContainText(/€|EUR|Preis|Buchung|Unterkunft/);
+  await expect(page).not.toHaveURL(/\/login/);
+  const res = await page.request.get(new URL(link).pathname.replace('/f/', '/api/follow/'));
+  expect(res.status()).toBe(200);
+  expect(res.headers()['x-robots-tag']).toContain('noindex');
+  expect(JSON.stringify(await res.json())).not.toMatch(/storage_path|token_hash|SUPABASE/);
+  // the app itself stays behind the login for that visitor
+  await page.goto('/stays');
+  await expect(page).toHaveURL(/\/login/);
+
+  // a family member without adult rights can neither manage links nor see the switch
+  await member.goto('/followers');
+  await expect(member.getByText('Links verwalten dürfen nur Inhaber und Erwachsene.')).toBeVisible();
+
+  // ending the link takes effect at once
+  await owner.goto('/followers');
+  await owner.getByTestId('follower-link').filter({ hasText: 'Oma' }).getByRole('button', { name: 'Beenden' }).click();
+  await owner.getByRole('dialog').getByRole('button', { name: 'Link beenden' }).click();
+  await expect(owner.getByTestId('follower-link').filter({ hasText: 'Oma' }).getByText('Beendet')).toBeVisible();
+  await page.goto(new URL(link).pathname);
+  await expect(page.getByRole('heading', { name: 'Dieser Link ist nicht (mehr) gültig' })).toBeVisible();
+  await context.close();
+});
+
 test('Kind-Konto: kein Zugriff auf Finanzdaten, auch nicht über die Datenbank-API', async () => {
   const token = await inviteViaUi(owner, childEmail, 'child');
   await waitSynced(owner);

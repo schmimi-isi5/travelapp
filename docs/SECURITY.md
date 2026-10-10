@@ -47,6 +47,17 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - Antwort-Header der App: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, Content-Security-Policy (siehe `next.config.ts`; `unsafe-inline` für Skripte ist wegen Next.js nötig und eine bekannte Schwäche; `worker-src` erlaubt `blob:` für den Kartenrenderer MapLibre).
 - CORS am Gateway (Kong) nur für die App-Herkunft.
 
+## 6a. Follower-Links (Lesezugriff ohne Konto)
+- Ein Follower-Link ist ein Geheimnis: 256-Bit-Token, in der Datenbank nur als SHA-256-Hash. Wer den Link hat, sieht die freigegebenen Inhalte; Weitergabe lässt sich nicht verhindern, nur beenden. Beenden wirkt sofort (Ansicht und Fotos antworten danach mit 404, getestet).
+- Unbekannte, abgelaufene und beendete Links sind von außen nicht zu unterscheiden (404). Rate-Limits je IP: 240 Abrufe / 10 Min., 30 Fehlversuche / 10 Min., 1200 Bilder / 10 Min. (in-memory, pro Instanz).
+- Follower greifen nie auf Supabase zu. Der App-Server liest mit dem Service-Role-Schlüssel nur Zeilen mit `shared_with_followers = true`, `visibility = 'family'` (Berichte: veröffentlicht), begrenzt auf 200 Berichte, 300 Fotos, 300 Sichtungen. `src/lib/follow/view.ts` wählt Felder explizit aus: nie Buchungen, Preise, Zahlungen, Dokumente, Unterkunftsadressen, GPS-Standort von Einträgen, Familienprofile (nur Vornamen der Autoren).
+- Freigabe ist eine Entscheidung von owner/adult (Datenbank-Trigger), standardmäßig aus, nicht für private Einträge oder Entwürfe.
+- Künftige Stationen sind unsichtbar (nur bis zum heutigen Tag, Zeitzone UTC+2), damit der Link nicht verrät, wann niemand zu Hause ist.
+- Fotos werden vor der Auslieferung neu kodiert: keine EXIF- und GPS-Daten, maximal 1600 px; höchstens 2 gleichzeitige Umwandlungen (Speicher des Containers, Limit 512 MB). Das Original bleibt im privaten Bucket.
+- Antworten tragen `Cache-Control: private, no-store` (Daten) und `X-Robots-Tag: noindex`; die Seite setzt `noindex` und `referrer: no-referrer`.
+- Der Klartext-Link liegt nur im `localStorage` des erstellenden Geräts (`nb-follow-token:<id>`) und wird beim Abmelden gelöscht.
+- Restrisiko: Der Token steht im URL-Pfad und damit in Zugriffsprotokollen des Reverse-Proxys (Coolify/Traefik). Protokolle nicht weitergeben; im Zweifel Link beenden und neu erstellen.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.
@@ -64,3 +75,4 @@ Stand `npm audit --omit=dev`: 2 Meldungen (1 moderat, 1 hoch), beide betreffen d
 - Die lokale Kopie der Daten (IndexedDB) ist nicht verschlüsselt (Ausnahme: sensible Dokumente). Wer ein entsperrtes Gerät besitzt, kann sie lesen; Geräte sperren.
 - Kein Penetrationstest, keine Last- oder Missbrauchstests, keine Prüfung gegen eine öffentlich erreichbare Instanz.
 - Löschen entfernt Daten aus der Live-Datenbank; bereits erstellte Backups enthalten sie bis zum Ablauf der Aufbewahrungsfrist (siehe `docs/OPERATIONS.md`).
+- Follower-Links: Weitergabe eines Links ist nicht kontrollierbar, es gibt keine PIN und keine Zugriffsprotokolle pro Person (nur Zähler und letzter Abruf je Link).

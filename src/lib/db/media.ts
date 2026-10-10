@@ -115,6 +115,8 @@ export interface AddMediaOptions {
   caption?: string;
   album?: string | null;
   visibility?: 'family' | 'private';
+  /** Publish a photo to follower links (adults only, never together with visibility 'private'). */
+  sharedWithFollowers?: boolean;
   readExif?: boolean;
   onProgress?: (percent: number) => void;
 }
@@ -163,6 +165,7 @@ export async function addMedia(options: AddMediaOptions): Promise<MediaAsset> {
       caption: options.caption ?? '',
       album: options.album ?? null,
       visibility: options.visibility ?? 'family',
+      shared_with_followers: Boolean(options.sharedWithFollowers) && kind === 'photo' && (options.visibility ?? 'family') === 'family',
       upload_state: 'queued',
     });
   } catch (cause) {

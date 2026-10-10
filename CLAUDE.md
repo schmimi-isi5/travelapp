@@ -10,17 +10,19 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0005 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0006 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure
 
 ```
+src/app/f/[token]       Öffentliche Follower-Ansicht (ohne Konto, nur Lesen)
 src/app/(main)/**       Seiten (Dashboard, route, stays, bookings, journal, gallery, guide, sightings, expenses, safety, family, archive, offline, settings, more)
-src/app/api/**          Server-Routen (ai/status, ai/generate, health, account/delete, invitations/*, map/tiles)
+src/app/api/**          Server-Routen (ai/status, ai/generate, health, account/delete, invitations/*, map/tiles, follow/*)
 src/components/**       AppShell, Navigation, UI-Primitive, SVG-Illustrationen, Karte (MapLibre + SVG-Ersatz)
 src/features/**         Fachkomponenten je Modul
 src/lib/domain/**       Zod-Schemas, Geldlogik (Minor Units), Rollenpolicy, Tagesbriefing
+src/lib/follow/**       Was Follower sehen dürfen (view.ts, einzige Entscheidungsstelle)
 src/lib/db/**           Dexie, Repository (CRUD + Mutationsqueue), Medien, Dokumente, Seed
 src/lib/offline/**      Netzstatus, Sync-Engine, Remote-Adapter (Demo, Supabase), Spalten-Mapper
 src/lib/auth|server/**  Einladungstoken, Passwortregeln; Logger, Mailer, Rate-Limit, Supabase-Admin (nur Server)
@@ -49,6 +51,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Migrationen: bereits angewendete Dateien nie ändern (der Runner prüft die Prüfsumme), neue Datei anlegen. Neue Tabellen immer mit RLS und Test in `supabase/tests` und `tests/backend`.
 - Der Service-Role-Key wird nur in `src/lib/server/**` und Server-Routen verwendet, nie im Client oder in Build-Args.
 - Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten.
+- Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
 - Offline: stabile UUIDs, Mutation-IDs, Versionsprüfung, Konflikte nie still überschreiben (Journal: append-first).
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.
 - Demo-Daten sind fiktiv, `is_demo = true`, `source_type = 'demo'`. Keine Fremdbilder, nur eigene SVG-Illustrationen.

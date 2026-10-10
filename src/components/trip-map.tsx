@@ -8,16 +8,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildMapStyle } from '@/lib/map/style';
 import { areTilesAvailable, getOfflineMapState, removeOfflineMap, saveMapOffline, TripTileSource, type OfflineMapState } from '@/lib/map/tile-source';
-import type { Route, TripStop } from '@/lib/domain/schemas';
-import { SchematicTripMap } from './trip-map-schematic';
+import { SchematicTripMap, type MapLeg, type MapStop } from './trip-map-schematic';
 import { Button, Notice, ProgressBar, Skeleton } from './ui';
 
 interface TripMapProps {
-  stops: TripStop[];
-  routes: Route[];
+  stops: MapStop[];
+  routes: MapLeg[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   className?: string;
+  /** Follower view: markers are plain labels (no links into the app) and the offline-download control is hidden. */
+  readOnly?: boolean;
 }
 
 const ROUTE_SOURCE = 'trip-routes';
@@ -28,13 +29,14 @@ const TILES_SIZE_HINT = 'ca. 60 MB';
 
 let isProtocolRegistered = false;
 
-function hasLocation(stop: TripStop): stop is TripStop & { latitude: number; longitude: number } {
+function hasLocation(stop: MapStop): stop is MapStop & { latitude: number; longitude: number } {
   return stop.latitude !== null && stop.longitude !== null;
 }
 
-function markerElement(stop: TripStop, onSelect: ((id: string) => void) | undefined): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.href = `/route/${stop.id}`;
+function markerElement(stop: MapStop, onSelect: ((id: string) => void) | undefined, readOnly: boolean): HTMLElement {
+  const link = document.createElement(readOnly ? 'span' : 'a');
+  if (link instanceof HTMLAnchorElement) link.href = `/route/${stop.id}`;
+  else link.setAttribute('role', 'img');
   link.setAttribute('aria-label', `Station ${stop.sequence}: ${stop.title}`);
   link.title = stop.title.split(' / ')[0] ?? stop.title;
   link.textContent = String(stop.sequence);
@@ -54,14 +56,14 @@ function markerElement(stop: TripStop, onSelect: ((id: string) => void) | undefi
     textDecoration: 'none',
   });
   link.addEventListener('click', (event) => {
-    if (!onSelect) return;
+    if (readOnly || !onSelect) return;
     event.preventDefault();
     onSelect(stop.id);
   });
   return link;
 }
 
-function routeFeatures(stops: TripStop[], routes: Route[]): FeatureCollection {
+function routeFeatures(stops: MapStop[], routes: MapLeg[]): FeatureCollection {
   const byId = new Map(stops.filter(hasLocation).map((stop) => [stop.id, stop]));
   const features: Feature[] = [];
   for (const route of routes) {
@@ -77,16 +79,27 @@ function routeFeatures(stops: TripStop[], routes: Route[]): FeatureCollection {
   return { type: 'FeatureCollection', features };
 }
 
-function TileMap({ stops, routes, selectedId, onSelect, onFail }: TripMapProps & { onFail: () => void }) {
+function paintMarkers(markers: Map<string, { element: HTMLElement }>, selectedId: string | null | undefined): void {
+  for (const [id, { element }] of markers) {
+    const isActive = id === selectedId;
+    element.style.background = isActive ? MARKER_ACTIVE : MARKER_DEEP;
+    element.style.zIndex = isActive ? '2' : '1';
+    element.style.transform = isActive ? 'scale(1.15)' : '';
+  }
+}
+
+function TileMap({ stops, routes, selectedId, onSelect, readOnly = false, onFail }: TripMapProps & { onFail: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const markersRef = useRef<Map<string, { marker: Marker; element: HTMLAnchorElement }>>(new Map());
+  const markersRef = useRef<Map<string, { marker: Marker; element: HTMLElement }>>(new Map());
   const onSelectRef = useRef(onSelect);
+  const selectedIdRef = useRef(selectedId);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
-  }, [onSelect]);
+    selectedIdRef.current = selectedId;
+  }, [onSelect, selectedId]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -158,10 +171,11 @@ function TileMap({ stops, routes, selectedId, onSelect, onFail }: TripMapProps &
       markersRef.current.clear();
       const located = stops.filter(hasLocation);
       for (const stop of located) {
-        const element = markerElement(stop, (id) => onSelectRef.current?.(id));
+        const element = markerElement(stop, (id) => onSelectRef.current?.(id), readOnly);
         const marker = new maplibregl.Marker({ element }).setLngLat([stop.longitude, stop.latitude]).addTo(map);
         markersRef.current.set(stop.id, { marker, element });
       }
+      paintMarkers(markersRef.current, selectedIdRef.current); // markers are created asynchronously, after the selection effect ran
       if (located.length === 1 && located[0]) {
         map.jumpTo({ center: [located[0].longitude, located[0].latitude], zoom: MAX_FIT_ZOOM });
       } else if (located.length > 1) {
@@ -175,15 +189,10 @@ function TileMap({ stops, routes, selectedId, onSelect, onFail }: TripMapProps &
     };
     // stopKey captures every field that changes the markers; routes only affect the line.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, stopKey, routes]);
+  }, [isLoaded, stopKey, routes, readOnly]);
 
   useEffect(() => {
-    for (const [id, { element }] of markersRef.current) {
-      const isActive = id === selectedId;
-      element.style.background = isActive ? MARKER_ACTIVE : MARKER_DEEP;
-      element.style.zIndex = isActive ? '2' : '1';
-      element.style.transform = isActive ? 'scale(1.15)' : '';
-    }
+    paintMarkers(markersRef.current, selectedId);
   }, [selectedId, isLoaded, stopKey]);
 
   return <div ref={containerRef} role="group" aria-label="Routenkarte mit Stationen" className="h-[26rem] w-full bg-sand-50" />;
@@ -266,7 +275,7 @@ export function TripMap(props: TripMapProps) {
   return (
     <div className={clsx('overflow-hidden rounded-lg border border-line', props.className)}>
       <TileMap {...props} onFail={fallBack} />
-      <OfflineMapControl />
+      {!props.readOnly && <OfflineMapControl />}
       <p className="border-t border-line bg-white px-3 py-2 text-xs text-slate">Kartenübersicht, keine Navigation. Pisten und Wasserlöcher sind in den Kartendaten teils unvollständig.</p>
     </div>
   );

@@ -4,10 +4,11 @@ import { Heart, PawPrint, Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, Dialog, EmptyState, Field, Input, PageHeader, Select, Textarea, Toolbar } from '@/components/ui';
+import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { MediaBody } from '@/features/media/media-tile';
 import { addMedia, MediaError } from '@/lib/db/media';
 import { useTable } from '@/lib/db/hooks';
-import { create, remove } from '@/lib/db/repo';
+import { create, remove, update } from '@/lib/db/repo';
 import { canEditOwnedRow } from '@/lib/domain/policy';
 import { formatDateTime } from '@/lib/formatting';
 
@@ -103,6 +104,7 @@ export default function SightingsPage() {
                   <p className="text-sm text-slate">{formatDateTime(s.seen_at)} · {stops.find((x) => x.id === s.stop_id)?.title ?? 'ohne Station'} · {members.find((m) => m.id === s.recorded_by)?.display_name ?? 'Unbekannt'}</p>
                   {s.notes && <p className="mt-1 text-sm">{s.notes}</p>}
                   {s.is_demo && <Badge tone="demo" className="mt-1">Demo</Badge>}
+                  <FollowerShareToggle checked={s.shared_with_followers} label="Für Follower freigeben" onChange={async (next) => void (await update('wildlife_sightings', s.id, { shared_with_followers: next }))} />
                 </div>
                 {currentUser && canEditOwnedRow(role, s.recorded_by, currentUser.id) && <Button size="sm" variant="ghost" onClick={() => void remove('wildlife_sightings', s.id)}>Löschen</Button>}
               </li>

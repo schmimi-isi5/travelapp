@@ -201,6 +201,8 @@ export const journalEntrySchema = z.object({
   body: z.string().default(''),
   visibility: z.enum(['family', 'private']).default('family'),
   status: z.enum(['draft', 'published']).default('published'),
+  /** Published to read-only follower links. Opt-in per item; only owner/adult may set it, never for private items. */
+  shared_with_followers: z.boolean().default(false),
   /** Opt-in only: lat/lon recorded when the author explicitly consented. */
   location: z.object({ latitude: z.number(), longitude: z.number() }).nullable().default(null),
   summary: z.object({ text: z.string(), provider: z.string(), generated_at: z.string(), is_ai: z.boolean() }).nullable().default(null),
@@ -224,6 +226,8 @@ export const mediaAssetSchema = z.object({
   visibility: z.enum(['family', 'private']).default('family'),
   album: z.string().nullable().default(null),
   is_favorite: z.boolean().default(false),
+  /** Published to read-only follower links. Opt-in per item; only owner/adult may set it, never for private items. */
+  shared_with_followers: z.boolean().default(false),
   /** Upload state in the local queue; remote objects are always `uploaded`. */
   upload_state: z.enum(['uploaded', 'queued']).default('uploaded'),
 });
@@ -253,6 +257,8 @@ export const wildlifeSightingSchema = z.object({
   count: z.number().int().positive().nullable().default(null),
   notes: z.string().default(''),
   media_id: z.string().nullable().default(null),
+  /** Published to read-only follower links. Opt-in per item; only owner/adult may set it, never for private items. */
+  shared_with_followers: z.boolean().default(false),
 });
 
 export const sightingFavoriteSchema = z.object({ ...baseShape, species_id: z.string(), user_id: z.string() });
