@@ -114,6 +114,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lastSync, setLastSync] = useState<SyncSummary | null>(null);
   const [neverSynced, setNeverSynced] = useState(false);
   const membershipRef = useRef<Membership | null>(null);
+  // True while an intentional sign-out cleans up: the auth event must not redirect before the local data is gone.
+  const signingOutRef = useRef(false);
 
   const online = useSyncExternalStore(subscribeNetwork, isOnline, () => true);
   const simulatedOffline = useSyncExternalStore(subscribeNetwork, isSimulatedOffline, () => false);
@@ -225,7 +227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return next;
         });
       }
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' && !signingOutRef.current) {
         // Session ended (expired refresh token or explicit sign-out): lock the UI but keep unsynced local data.
         setSession(null);
         setReady(false);
@@ -355,17 +357,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const supabase = getSupabase();
       const userId = session?.user.id;
-      // Lock the UI first so no effect or live query touches the database while it is being removed.
+      // Lock the UI (skeleton, no redirect yet) and ignore the auth event until the local data is removed, so the
+      // login page only appears once nothing of this user is left on the device.
+      signingOutRef.current = true;
       setReady(false);
+      try {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) await supabase.auth.signOut({ scope: 'local' });
+        if (userId) await deleteLocalDatabase(`${USER_DB_PREFIX}${userId}`);
+        selectLocalDatabase(DEMO_DB_NAME);
+        clearAppStorage();
+        setSession(null);
+        setMembership(null);
+        setSupabaseRemote(null);
+      } finally {
+        signingOutRef.current = false;
+      }
       setAuthStatus('signed_out');
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) await supabase.auth.signOut({ scope: 'local' });
-      if (userId) await deleteLocalDatabase(`${USER_DB_PREFIX}${userId}`);
-      selectLocalDatabase(DEMO_DB_NAME);
-      clearAppStorage();
-      setSession(null);
-      setMembership(null);
-      setSupabaseRemote(null);
       router.replace('/login');
       return { ok: true, pending: 0 };
     },

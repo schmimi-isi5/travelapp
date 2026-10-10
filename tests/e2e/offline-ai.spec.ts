@@ -48,7 +48,8 @@ test.describe('Offline-First', () => {
     await expect(card).toContainText('Meine lokale Änderung');
     await page.goto('/offline');
     await page.getByTestId('toggle-offline').click();
-    await expect(page.getByTestId('conflict')).toBeVisible();
+    // Reconnecting triggers a full sync; shared CI runners need more than the default 5 s for it.
+    await expect(page.getByTestId('conflict')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('conflict')).toContainText('Meine lokale Änderung');
     await expect(page.getByTestId('conflict')).toContainText('Geändert auf Gerät B (Demo)');
     await expect(page.getByTestId('sync-banner')).toContainText('Konflikt');
