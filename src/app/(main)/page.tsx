@@ -4,14 +4,17 @@ import { FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
 import { MORE_NAV, PRIMARY_NAV, visibleFor } from '@/components/nav-items';
+import { DestinationHero } from '@/components/destination-image';
 import { Scene, sceneNameFromPath } from '@/components/scene';
 import { Badge, Card } from '@/components/ui';
 import { ActionChecklist } from '@/features/common/action-checklist';
+import { useDestinationLibrary } from '@/features/media/use-destination-library';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable } from '@/lib/db/hooks';
 import { isAdult } from '@/lib/domain/policy';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
 import { formatDate } from '@/lib/formatting';
+import { imagesForStop } from '@/lib/media/places';
 
 export default function DashboardPage() {
   const { today, role, hasDemoDateOverride } = useApp();
@@ -28,6 +31,11 @@ export default function DashboardPage() {
   const featured = briefing.featuredStop;
   const latestMedia = [...media].sort((a, b) => (b.captured_at ?? '').localeCompare(a.captured_at ?? '')).slice(0, 4);
   const adult = isAdult(role);
+  // The hero photo follows the current or next station; a station without a library photo (e.g. the departure airport)
+  // hands over to the next one that has a photo, so the first screen is never an illustration when real photos exist.
+  const library = useDestinationLibrary();
+  const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
+  const heroStop = ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0)).find((s) => imagesForStop(s, library).hero) ?? featured;
 
   const unclearBookings = bookings.filter((b) => b.booking_status === 'unknown').length + stays.filter((s) => s.booking_status === 'unknown').length;
   const docsFor = new Set(documents.flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
@@ -44,10 +52,9 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <section aria-labelledby="hero-title" className="relative overflow-hidden rounded-xl bg-deep text-white shadow-card">
-        <div className="absolute inset-0 opacity-90">{featured ? <Scene name={sceneForStop(featured)} label="" className="" /> : <Scene name="savanna" label="" />}</div>
-        <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/70 to-deep/10" aria-hidden />
-        <div className="relative flex min-h-[340px] flex-col justify-end gap-3 p-6 md:min-h-[400px] md:p-10">
+      <section aria-labelledby="hero-title" className="overflow-hidden rounded-xl text-white shadow-card">
+        <DestinationHero stop={heroStop} fallback={featured ? sceneForStop(featured) : 'savanna'}>
+        <div className="flex flex-col gap-3 p-6 pb-3 pt-24 md:p-10 md:pb-4">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-gold-200">Dein nächster Reisetag</span>
           <h1 id="hero-title" className="max-w-2xl !text-white text-3xl font-bold md:text-5xl">
             {heading}
@@ -69,6 +76,7 @@ export default function DashboardPage() {
           </div>
           {hasDemoDateOverride && <Badge tone="demo" className="w-fit">Demo-Datum: {formatDate(today)}</Badge>}
         </div>
+        </DestinationHero>
       </section>
 
       <section aria-label="Eckdaten" className="grid gap-4 sm:grid-cols-3">

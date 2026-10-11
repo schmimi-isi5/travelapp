@@ -10,6 +10,7 @@ import { PaymentStatusBadge } from '@/features/finance/payment-badge';
 import { addDocument, DocumentError, openDocument } from '@/lib/db/documents';
 import { create, remove, update } from '@/lib/db/repo';
 import { computeStayFinancials, formatMinor, parseAmountToMinor } from '@/lib/domain/money';
+import { StayRegionThumb } from '@/components/destination-image';
 import { isAdult } from '@/lib/domain/policy';
 import type { ActionItem, DocumentRecord, Payment, Stay, TripStop } from '@/lib/domain/schemas';
 import { formatDate } from '@/lib/formatting';
@@ -97,12 +98,15 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
       defaultOpen={defaultOpen}
       id={`stay-${stay.id}`}
       title={
-        <div data-testid="stay-card">
+        <div data-testid="stay-card" className="flex items-start gap-3">
+          <StayRegionThumb stop={stop} />
+          <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-bold">{stay.name}</h3>
             {stay.is_demo && <Badge tone="demo">Demo</Badge>}
           </div>
           <p className="text-sm text-slate">{stop?.title ?? 'Keine Station'} · {nightCount !== null ? formatNights(nightCount) : 'Nächte unbekannt'} · {formatDate(stay.check_in, { day: '2-digit', month: 'short' })} – {formatDate(stay.check_out, { day: '2-digit', month: 'short' })}</p>
+          </div>
         </div>
       }
       summary={adult ? <PaymentStatusBadge state={fin.state} /> : <Badge>{STATUS_LABEL[stay.booking_status]}</Badge>}

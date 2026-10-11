@@ -2,7 +2,10 @@
    pages (fresh when online), cache-first for static assets. User data lives in IndexedDB, never in these caches (the saved map tiles live in their own 'nb-map-' cache, managed by the app), so the
    cache contains no personal data and survives sign-out without leaking anything.
    Dynamic pages (e.g. /route/<id>) are cached when first visited. */
-const VERSION = 'nb-shell-v4';
+const VERSION = 'nb-shell-v5';
+// Library photos of the destinations: immutable, content-addressed files, kept in their own cache so that shell updates do not drop them.
+const IMAGE_CACHE = 'nb-images-v1';
+const IMAGE_PREFIX = '/media/destination/';
 const PAGES = ['/', '/route', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/guide', '/sightings', '/expenses', '/safety', '/family', '/followers', '/archive', '/offline', '/settings', '/more', '/login'];
 const MAP_FONT_FILES = ['Noto Sans Regular', 'Noto Sans Medium', 'Noto Sans Italic'].flatMap((font) => ['0-255', '256-511'].map((range) => `/map/fonts/${encodeURIComponent(font)}/${range}.pbf`));
 const STATIC = ['/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/map/worker/maplibre-gl-worker.mjs', ...MAP_FONT_FILES];
@@ -34,6 +37,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith(IMAGE_PREFIX)) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE).then((cache) =>
+        cache.match(request).then((hit) => hit || fetch(request).then((res) => { if (res.ok) cache.put(request, res.clone()); return res; })),
+      ),
+    );
+    return;
+  }
   const isStatic = url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/');
   if (isStatic) {
     event.respondWith(caches.match(request).then((hit) => hit || fetch(request).then((res) => { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(request, copy)); return res; })));

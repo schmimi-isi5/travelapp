@@ -4,10 +4,12 @@ import { ArrowLeft, BedDouble, Phone, Plane } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Scene } from '@/components/scene';
+import { DestinationHero, ImageAttribution, ResponsiveTravelImage } from '@/components/destination-image';
 import { Badge, Card, EmptyState, PageHeader } from '@/components/ui';
+import { STATUS_LABEL } from '@/features/bookings/booking-form';
 import { ActionChecklist } from '@/features/common/action-checklist';
 import { TipCard } from '@/features/ai/tip-card';
+import { useStopImages } from '@/features/media/use-destination-library';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable, useTips } from '@/lib/db/hooks';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
@@ -25,6 +27,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
   const tips = useTips().rows;
   const contacts = useTable('emergency_contacts').rows;
   const stop = stops.find((s) => s.id === stopId);
+  const photos = useStopImages(stop);
 
   if (!stop) {
     return (
@@ -44,7 +47,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <Link href="/route" className="inline-flex items-center gap-1 font-semibold text-deep"><ArrowLeft size={16} aria-hidden /> Route</Link>
-      <div className="h-48 overflow-hidden rounded-xl md:h-64"><Scene name={sceneForStop(stop)} label={`Illustration zu ${stop.title}`} /></div>
+      <DestinationHero stop={stop} fallback={sceneForStop(stop)} className="rounded-xl" minHeight="h-56 md:h-80" />
       <PageHeader title={stop.title} subtitle={`${stop.country} · ${stop.arrive_at ? `${formatDate(stop.arrive_at)} bis ${formatDate(stop.depart_at)}` : 'Datum unbekannt'}`} />
       <div className="flex flex-wrap gap-2">
         {isToday && <Badge tone="ok">Heute hier</Badge>}
@@ -52,6 +55,22 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
         {!stop.verified_at && <Badge tone="warn">Angaben nicht geprüft</Badge>}
       </div>
       {stop.summary && <p className="max-w-3xl text-slate">{stop.summary}</p>}
+
+      {photos.gallery.length > 0 && (
+        <section aria-label="Bilder der Region" data-testid="stop-gallery">
+          <h2 className="mb-3 text-lg font-bold">Bilder aus {stop.title.split('/').pop()?.trim()}</h2>
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {photos.gallery.map((image) => (
+              <li key={image.id}>
+                <figure>
+                  <div className="aspect-[4/3] overflow-hidden rounded-lg border border-line bg-sand"><ResponsiveTravelImage image={image} kind="gallery" sizes="(min-width: 768px) 33vw, 50vw" /></div>
+                  <figcaption className="mt-1"><ImageAttribution image={image} /></figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -68,7 +87,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
           <h2 className="mb-2 text-lg font-bold">Fahrtstrecke</h2>
           {incoming && from && driveSummary(incoming.distance_km, incoming.duration_minutes) ? (
             <p className="text-slate">
-              Von <strong>{from.title}</strong>: {driveSummary(incoming.distance_km, incoming.duration_minutes)}.{' '}
+              Von <strong>{from.title}</strong>: {driveSummary(incoming.distance_km, incoming.duration_minutes)}{' '}
               <span className="text-muted">{incoming.duration_source === 'offline_estimate' ? 'Grobe Offline-Schätzung aus Luftlinie, keine Verkehrs- oder Navigationsdaten. Schotterpisten und Grenzen können deutlich länger dauern.' : (durationSourceLabel[incoming.duration_source] ?? '')}</span>
             </p>
           ) : (
@@ -102,7 +121,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
             <p key={s.id}><Link href="/stays" className="font-semibold text-deep underline">{s.name}</Link> · {formatDate(s.check_in)} – {formatDate(s.check_out)}</p>
           ))}
           <h3 className="mb-1 mt-4 flex items-center gap-2 font-bold"><Plane size={16} aria-hidden /> Geplante Aktivitäten &amp; Buchungen</h3>
-          {activities.length === 0 ? <p className="text-slate">Keine erfasst.</p> : <ul className="list-disc pl-5">{activities.map((b) => <li key={b.id}>{b.title} <Badge>{b.booking_status}</Badge></li>)}</ul>}
+          {activities.length === 0 ? <p className="text-slate">Keine erfasst.</p> : <ul className="list-disc pl-5">{activities.map((b) => <li key={b.id}>{b.title} <Badge>{STATUS_LABEL[b.booking_status] ?? b.booking_status}</Badge></li>)}</ul>}
         </Card>
         <Card>
           <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Phone size={18} aria-hidden /> Kontakte</h2>

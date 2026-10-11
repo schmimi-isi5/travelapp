@@ -18,6 +18,7 @@ Auftrag: V1 für den Betrieb auf Coolify mit selbst gehostetem Supabase vorberei
 | I Tests | siehe B. |
 | J Design | Bestehende Gestaltung unverändert übernommen; neue Anmelde-/Einladungs-/Einrichtungsseiten im gleichen Stil; Screenshots aktualisiert. |
 | L Mitreisen (Follower) | Privater Link ohne Konto: Stationen bis heute, nur freigegebene Berichte, Fotos (ohne EXIF/GPS) und Tiersichtungen, Widerruf, Ablaufdatum, Verwaltung unter `/followers`, Demo-Vorschau `/f/demo`. Migration 0006, DECISIONS 32, SECURITY 6a. Stufe 2 offen: Grüße/Kommentare, E-Mail-Benachrichtigung, PIN. |
+| M Ortsfotos | Zentrale Bibliothek lizenzierter Fotos (Wikimedia Commons), Importpipeline mit Lizenz- und Ortsprüfung, WebP-Varianten, Auslieferung über die eigene Origin, Offline-Cache; Dashboard-Hero, Stationskarten, Stationsseiten mit Galerie und Bildnachweis, Regionsmotive an Unterkünften. Dokumentation: `docs/media-system/`. |
 | K Doku | `OPERATIONS.md`, `SUPABASE.md`, `DEPLOYMENT.md`, `SECURITY.md`, `DECISIONS.md` (18–30), `AI_INTEGRATION.md`, README, CLAUDE.md. |
 
 ## B. Testergebnisse (letzter Lauf, alle gegen den aktuellen Stand)
