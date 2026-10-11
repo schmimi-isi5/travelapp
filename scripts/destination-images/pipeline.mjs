@@ -1,10 +1,10 @@
 // Reproducible import: stops -> places -> candidates (Commons) -> licence/location gate -> ranking -> optimised variants ->
 // storage + library rows -> report. Idempotent: existing roles are not refilled and known files are not downloaded again.
 import { createHash } from 'node:crypto';
-import { altTextFor, chooseRoles, checkLocation, classifyLicense, highlightQueries, isUsableCandidate, namesPlace, placeFromStop, scoreCandidate, TRAVEL_REGION, VARIANT_PLAN, stripHtml } from './lib.mjs';
+import { altTextFor, chooseRoles, checkLocation, classifyLicense, highlightQueries, isUsableCandidate, namesPlace, placeFromStop, regionMotifFits, scoreCandidate, TRAVEL_REGION, VARIANT_PLAN, stripHtml } from './lib.mjs';
 
 export const BUCKET = 'destination-media';
-const GALLERY_TARGET = 3;
+export const GALLERY_TARGET = 10;
 
 /** Groups stops by place key; stops outside the travel region (e.g. the departure airport) are skipped, stops without a title too. */
 export function placesFromStops(stops, { allCountries = false } = {}) {
@@ -34,13 +34,13 @@ const bump = (counter, reason) => {
   counter[reason] = (counter[reason] ?? 0) + 1;
 };
 
-export async function importPlace({ place, admin, commons, makeVariants, log, force = false, dryRun = false, usedSources = new Set() }) {
+export async function importPlace({ place, admin, commons, pixabay = null, makeVariants, log, force = false, dryRun = false, usedSources = new Set(), galleryTarget = GALLERY_TARGET }) {
   const report = emptyReport(place);
   const { data: existing, error } = await admin.from('destination_images').select('role, source_id, content_hash, approved').eq('place_key', place.key);
   if (error) throw new Error(`library lookup ${place.key}: ${error.message}`);
   const have = { hero: 0, card: 0, gallery: 0 };
   for (const row of existing ?? []) if (row.approved) have[row.role] += 1;
-  const needs = { hero: Math.max(0, 1 - have.hero), card: Math.max(0, 1 - have.card), gallery: Math.max(0, GALLERY_TARGET - have.gallery) };
+  const needs = { hero: Math.max(0, 1 - have.hero), card: Math.max(0, 1 - have.card), gallery: Math.max(0, galleryTarget - have.gallery) };
   if (!force && needs.hero + needs.card + needs.gallery === 0) return { ...report, status: 'complete_skipped' };
 
   const knownSources = new Set((existing ?? []).map((r) => r.source_id));
@@ -49,10 +49,22 @@ export async function importPlace({ place, admin, commons, makeVariants, log, fo
   const byId = new Map();
   for (const query of queries) {
     try {
-      for (const c of await commons.search(query, 20)) if (!byId.has(c.id)) byId.set(c.id, c);
+      for (const c of await commons.search(query, 20)) if (!byId.has(c.id)) byId.set(c.id, { ...c, client: commons });
     } catch (cause) {
       log('warn', `search failed (${query}): ${cause.message}`);
       bump(report.rejected, 'search_error');
+    }
+  }
+  if (pixabay) {
+    // stock photos: the place name must be in the query and later in the tags (see namesPlace)
+    const country = place.country === 'Botswana' ? 'Botswana' : 'Namibia';
+    for (const query of [place.queries[0], ...place.queries.slice(1, 3), ...place.highlightQueries.slice(0, 2), `${country} landscape`, `${country} sunset`, `${country} safari wildlife`, `${country} nature`].filter(Boolean)) {
+      try {
+        for (const c of await pixabay.search(query, 40)) if (!byId.has(c.id)) byId.set(c.id, { ...c, client: pixabay });
+      } catch (cause) {
+        log('warn', `pixabay search failed (${query}): ${cause.message}`);
+        bump(report.rejected, 'search_error');
+      }
     }
   }
   report.candidates = byId.size;
@@ -62,13 +74,15 @@ export async function importPlace({ place, admin, commons, makeVariants, log, fo
     if (knownSources.has(c.title)) { bump(report.rejected, 'already_in_library'); continue; }
     const usable = isUsableCandidate(c);
     if (!usable.ok) { bump(report.rejected, usable.reason); continue; }
-    const licence = classifyLicense(c.meta);
+    const licence = c.licence ?? classifyLicense(c.meta);
     if (!licence.ok) { bump(report.rejected, licence.reason.split(':')[0]); continue; }
     const location = checkLocation(place, c.coords);
     if (location.basis === 'file_coordinates_too_far') { bump(report.rejected, 'location_mismatch'); continue; }
-    if (!location.verified && !namesPlace(place, c)) { bump(report.rejected, 'no_place_evidence'); continue; }
-    const loc = location.verified ? location : { verified: false, basis: 'title_or_category_names_place', distanceKm: null };
-    scored.push({ ...c, licence, location: loc, scores: ['hero', 'card', 'gallery'].reduce((acc, role) => ({ ...acc, [role]: scoreCandidate(role, c, loc, { reused: usedSources.has(c.title) }) }), {}) });
+    const namesThePlace = namesPlace(place, c);
+    const isCountryMotif = !location.verified && !namesThePlace && c.provider === 'pixabay' && regionMotifFits(place, c);
+    if (!location.verified && !namesThePlace && !isCountryMotif) { bump(report.rejected, 'no_place_evidence'); continue; }
+    const loc = location.verified ? location : { verified: false, basis: namesThePlace ? 'title_or_category_names_place' : 'country_tag_plausible_motif', distanceKm: null };
+    scored.push({ ...c, licence, location: loc, scores: ['hero', 'card', 'gallery'].reduce((acc, role) => ({ ...acc, [role]: scoreCandidate(role, c, loc, { reused: usedSources.has(c.title) }) + (c.popularity ?? 0) }), {}) });
   }
 
   const picks = chooseRoles(scored, needs);
@@ -79,7 +93,7 @@ export async function importPlace({ place, admin, commons, makeVariants, log, fo
     const entry = { role, file: item.title, license: item.licence.type, photographer: item.licence.photographer, locationVerified: item.location.verified, locationBasis: item.location.basis, score: item.scores[role], sourceUrl: item.pageUrl };
     if (dryRun) { report.selected.push({ ...entry, stored: false }); continue; }
     try {
-      const bytes = await commons.download(item.thumbUrl);
+      const bytes = await item.client.download(item.thumbUrl);
       const hash = createHash('sha256').update(bytes).digest('hex');
       if ((existing ?? []).some((r) => r.role === role && r.content_hash === hash)) { bump(report.rejected, 'duplicate_content'); continue; }
       const variants = await makeVariants(bytes, VARIANT_PLAN[role]);
@@ -91,13 +105,13 @@ export async function importPlace({ place, admin, commons, makeVariants, log, fo
         paths[v.key] = path;
       }
       const largest = variants[0];
-      const attribution = `${item.licence.photographer ?? 'Unbekannt'} / Wikimedia Commons / ${item.licence.type}${item.licence.attributionRequired ? ' (verkleinert und zugeschnitten)' : ''}`;
+      const attribution = `${item.licence.photographer ?? 'Unbekannt'} / ${item.providerLabel ?? 'Wikimedia Commons'} / ${item.licence.type}${item.licence.attributionRequired ? ' (verkleinert und zugeschnitten)' : ''}`;
       const row = {
         place_key: place.key, place_label: place.label, country: place.country, latitude: place.latitude, longitude: place.longitude, radius_km: place.radiusKm, role, variants: paths,
-        width: largest.width, height: largest.height, alt_text: altTextFor(place, role, item), source_provider: 'wikimedia_commons', source_id: item.title, source_url: item.pageUrl,
+        width: largest.width, height: largest.height, alt_text: altTextFor(place, role, item), source_provider: item.provider ?? 'wikimedia_commons', source_id: item.title, source_url: item.pageUrl,
         photographer: item.licence.photographer, license_type: item.licence.type, license_url: item.licence.licenseUrl, attribution_text: attribution, attribution_required: item.licence.attributionRequired,
         license_verified: true, location_verified: item.location.verified, location_basis: item.location.basis, score: item.scores[role], content_hash: hash,
-        review_note: item.location.verified ? `Koordinaten der Datei liegen ${Math.round(item.location.distanceKm)} km vom Ort entfernt.` : 'Ortszuordnung nicht durch Koordinaten belegt (Titel/Kategorie nennt den Ort): als Regionsmotiv kennzeichnen.',
+        review_note: item.location.verified ? `Koordinaten der Datei liegen ${Math.round(item.location.distanceKm)} km vom Ort entfernt.` : item.location.basis === 'country_tag_plausible_motif' ? 'Stockfoto ohne Ortsangabe, nur das Land ist getaggt und das Motiv passt zur Gegend: Regionsmotiv, kein Beleg für genau diesen Ort.' : 'Ortszuordnung nicht durch Koordinaten belegt (Titel/Kategorie nennt den Ort): als Regionsmotiv kennzeichnen.',
         approved: true,
       };
       const ins = await admin.from('destination_images').upsert(row, { onConflict: 'place_key,role,content_hash', ignoreDuplicates: true });

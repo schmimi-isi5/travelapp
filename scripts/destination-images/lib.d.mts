@@ -22,3 +22,4 @@ export function scoreCandidate(role: 'hero' | 'card' | 'gallery', candidate: Can
 export function altTextFor(place: Place, role: string, candidate: { description?: string }): string;
 export function chooseRoles(scored: Scored[], needs?: { hero?: number; card?: number; gallery?: number }): { role: 'hero' | 'card' | 'gallery'; item: Scored }[];
 export function namesPlace(place: Place, candidate: { title: string; categories?: string }): boolean;
+export function regionMotifFits(place: Place, candidate: { title: string; categories?: string }): boolean;

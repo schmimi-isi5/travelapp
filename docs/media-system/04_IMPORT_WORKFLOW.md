@@ -4,7 +4,7 @@
 SUPABASE_URL=https://api.reise.<domain> SUPABASE_SERVICE_ROLE_KEY=<Secret> \
   node scripts/destination-images/import.mjs [--trip <id>] [--dry-run] [--force] [--all-countries] [--report <datei>]
 ```
-Läuft auf einem vertrauenswürdigen Rechner mit Repo-Checkout und `npm ci` (nutzt `sharp` und `@supabase/supabase-js`). Der Schlüssel wird nie ausgegeben.
+Optional `PIXABAY_API_KEY=<Schlüssel>` setzen, dann kommen Stockfotos von Pixabay als zweite Quelle dazu (siehe 02). Läuft auf einem vertrauenswürdigen Rechner mit Repo-Checkout und `npm ci` (nutzt `sharp` und `@supabase/supabase-js`). Der Schlüssel wird nie ausgegeben.
 
 ## Schritte
 1. **Route lesen:** alle Stationen (optional einer Reise) aus `trip_stops`; Stationen außerhalb Namibias/Botswanas (Abflug in Frankfurt) und ohne Titel werden übersprungen (`--all-countries` hebt das auf). Nichts wird erfunden.
@@ -12,7 +12,7 @@ Läuft auf einem vertrauenswürdigen Rechner mit Repo-Checkout und `npm ci` (nut
 3. **Suchbegriffe:** `<Ort> <Land>`, `<Ort> landscape`, `<Ort> <Land> nature`, englische Übersetzung der Zusätze (Wüste → desert) sowie benannte Sehenswürdigkeiten aus den Highlights der Station (Beispiel „Popa Falls (N.P.) + Bwabwata (N.P.)“ → `Popa Falls Namibia`, `Bwabwata Namibia`; Tätigkeiten wie „Relaxen am Pool“ werden ausgefiltert).
 4. **Kandidaten holen:** Commons-API, gedrosselt (siehe 02).
 5. **Prüfen und bewerten:** Format/Kategorie-Filter, Lizenz-Schranke, Ortsbeleg, dann Wertung (Qualität bis 45, Ortsbeleg bis 35, Rollenpassung bis 15, Motiv −40…+12, Featured-Bonus, Abzug bei Wiederverwendung in Nachbarorten). Mindestwerte je Rolle (Hero 55, Karte 45, Galerie 35): darunter bleibt die Rolle leer.
-6. **Rollen verteilen:** je Ort 1 Hero, 1 Karte, 3 Galeriebilder; keine Datei doppelt je Ort. Hero braucht mindestens 1920 px Breite und Seitenverhältnis 1,4 bis 2,2.
+6. **Rollen verteilen:** je Ort 1 Hero, 1 Karte, bis zu 10 Galeriebilder (`GALLERY_TARGET`); keine Datei doppelt je Ort. Hero braucht mindestens 1920 px Breite und Seitenverhältnis 1,4 bis 2,2.
 7. **Optimieren:** WebP-Varianten (Hero: 1920×1080, 1200×800, 800×700; Karte: 800×600, 320×240; Galerie: 1200 px breit, 320×240), Zuschnitt auf den Bildausschnitt mit der meisten Aufmerksamkeit, ohne EXIF/GPS.
 8. **Speichern:** Pfad `<ort>/<hash12>-<rolle>-<variante>.webp` (inhaltsadressiert, daher unveränderlich), `upsert` der Tabellenzeile mit `ignoreDuplicates`.
 9. **Verknüpfen:** über `place_key` und Koordinaten zur Laufzeit (siehe 01), keine Stations-IDs in der Bibliothek.

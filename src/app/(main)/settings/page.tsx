@@ -113,7 +113,7 @@ export default function SettingsPage() {
           <div className="flex flex-wrap gap-3"><Button variant="secondary" onClick={() => setConfirm('reset')}>Demo zurücksetzen</Button><Button variant="danger" onClick={() => setConfirm('wipe')}>Alle lokalen Daten löschen</Button></div>
         )}
       </Card>
-      <Card><h2 className="mb-2 text-lg font-bold">Weiteres</h2><ul className="list-disc pl-5"><li><Link href="/settings/design-system" className="font-semibold text-deep underline">Design-System ansehen</Link></li><li>Bewegungsreduktion: wird über die Systemeinstellung „Bewegung reduzieren“ respektiert.</li></ul></Card>
+      <Card><h2 className="mb-2 text-lg font-bold">Weiteres</h2><ul className="list-disc pl-5"><li><Link href="/settings/design-system" className="font-semibold text-deep underline">Design-System ansehen</Link></li><li><Link href="/settings/credits" className="font-semibold text-deep underline">Bildnachweise</Link></li><li>Bewegungsreduktion: wird über die Systemeinstellung „Bewegung reduzieren“ respektiert.</li></ul></Card>
       <ConfirmationDialog open={confirm !== null} title={confirm === 'wipe' ? 'Alle lokalen Daten löschen?' : 'Demo zurücksetzen?'} message={confirm === 'wipe' ? 'Alle Einträge, Medien und Dokumente auf diesem Gerät werden gelöscht. Die App startet danach ohne Daten.' : 'Eigene Änderungen gehen verloren, die Demo-Daten werden neu geladen.'} confirmLabel={confirm === 'wipe' ? 'Endgültig löschen' : 'Zurücksetzen'} tone={confirm === 'wipe' ? 'danger' : 'primary'} onCancel={() => setConfirm(null)} onConfirm={() => confirm && void run(confirm)} />
     </div>
   );

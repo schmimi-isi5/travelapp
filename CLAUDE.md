@@ -56,7 +56,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Der Service-Role-Key wird nur in `src/lib/server/**` und Server-Routen verwendet, nie im Client oder in Build-Args.
 - Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten.
 - Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
-- Ortsfotos: nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
+- Ortsfotos: Quellenzeilen nicht unter den Fotos, sondern gesammelt auf `/settings/credits` (Lizenzpflicht); nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
 - Offline: stabile UUIDs, Mutation-IDs, Versionsprüfung, Konflikte nie still überschreiben (Journal: append-first).
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.
 - Demo-Daten sind fiktiv, `is_demo = true`, `source_type = 'demo'`. Keine Fremdbilder, nur eigene SVG-Illustrationen.

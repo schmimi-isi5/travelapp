@@ -7,8 +7,10 @@ Etikette: eigener `User-Agent`, höchstens eine Anfrage alle 1,6 Sekunden, Wiede
 
 Kein Scraping, keine Bildersuche über andere Dienste, kein Hotlinking.
 
-## Pexels (nicht umgesetzt)
-Der Auftrag nennt Pexels als optionalen Adapter. Er ist nicht integriert: Es liegt kein API-Schlüssel vor, und Pexels-Fotos tragen keine belastbaren Ortsmetadaten, die unser Ortsbeleg verlangt (ein Treffer für „Etosha“ beweist nicht, dass das Foto dort entstand). Die Pipeline ist anbieterneutral: Ein Anbieter muss `search(query, limit)` mit denselben Feldern und `download(url)` liefern (siehe `commons.mjs`). Ein Pexels-Adapter dürfte nur Bilder als `location_verified = false` (Regionsmotiv) liefern und müsste die API-Bedingungen (Attribution, Limits, keine Weitergabe als Konkurrenzdienst) einhalten.
+## Pixabay (umgesetzt, optional)
+Offizielle API `https://pixabay.com/api/`, nur aktiv, wenn `PIXABAY_API_KEY` in der Umgebung des Importlaufs gesetzt ist (der Schlüssel wird nie gespeichert oder ausgegeben, nur Umgebungsvariable). Stockfotos unter der Pixabay Content License (freie Nutzung, Veränderung erlaubt, keine Namensnennung nötig; Urheber und Link stehen trotzdem auf der Seite Bildnachweise). Gesucht wird `image_type=photo`, waagerecht, mindestens 1200 px, `safesearch`, nach Beliebtheit; KI-generierte Bilder (Tags „AI generated“ o. ä.) werden verworfen. Geliefert wird `largeImageURL` mit 1280 px: gilt als Breite 1280 und reicht daher nie für ein Hero-Bild, nur für Karte und Galerie. Die Dateien werden in den eigenen Speicher kopiert (kein Hotlinking). Höchstens eine Anfrage pro Sekunde (Limit der API: 100 pro Minute).
+
+Pixabay liefert keine Koordinaten, daher ist jedes Pixabay-Foto ein **Regionsmotiv** (`location_verified = false`). Zulässig ist es nur, wenn (a) die Tags den Ort nennen, oder (b) die Tags nur das Land nennen **und** das Motiv zum Ort passt (`regionMotifFits`: kein Meer im Busch, keine Dünen am Fluss, keine Safaritiere in der Stadt, keine Gebäude oder Nahaufnahmen). Fall (b) hat `location_basis = country_tag_plausible_motif` und steht so im Prüfvermerk.
 
 ## Bewusst nicht genutzt
 Google Images, Social-Media-Bilder, Hotelportale und Buchungsplattformen (keine Lizenz zur Weiterverwendung), KI-generierte Bilder als vermeintliche Ortsfotos.

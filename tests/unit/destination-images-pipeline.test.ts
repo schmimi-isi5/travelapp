@@ -68,7 +68,7 @@ const noise = [
 describe('destination image import pipeline', () => {
   it('stores only licensed, located, suitable photos: hero, card and three gallery images with credits and variants', async () => {
     const { admin, rows, objects } = fakeAdmin();
-    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([...valid, ...noise]), makeVariants });
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([...valid, ...noise]), makeVariants, galleryTarget: 3 });
     expect(report).toMatchObject({ place: 'sossusvlei', status: 'complete', missing: [] });
     expect(rows.map((r) => r.role).sort()).toEqual(['card', 'gallery', 'gallery', 'gallery', 'hero']);
     for (const row of rows) {
@@ -87,10 +87,10 @@ describe('destination image import pipeline', () => {
 
   it('is idempotent: a second run neither searches, downloads nor writes anything', async () => {
     const { admin, rows, objects } = fakeAdmin();
-    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid), makeVariants });
+    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid), makeVariants, galleryTarget: 3 });
     const before = { rows: rows.length, objects: objects.size };
     const commons = fakeCommons(valid);
-    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants });
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants, galleryTarget: 3 });
     expect(report!.status).toBe('complete_skipped');
     expect(commons.search).not.toHaveBeenCalled();
     expect(commons.download).not.toHaveBeenCalled();
@@ -99,10 +99,10 @@ describe('destination image import pipeline', () => {
 
   it('refills only what is missing and never reuses a stored file', async () => {
     const { admin, rows } = fakeAdmin();
-    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid), makeVariants });
+    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid), makeVariants, galleryTarget: 3 });
     rows.splice(0, rows.length, ...rows.filter((r) => r.role !== 'gallery')); // someone removed the gallery
     const commons = fakeCommons([...valid, file(7), file(8), file(9)]);
-    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants });
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants, galleryTarget: 3 });
     expect(report!.selected.map((s) => s.role)).toEqual(['gallery', 'gallery', 'gallery']);
     expect(report!.rejected.already_in_library).toBeGreaterThanOrEqual(2);
     const sources = rows.map((r) => r.source_id);
@@ -113,7 +113,7 @@ describe('destination image import pipeline', () => {
     const { admin, rows, objects } = fakeAdmin();
     const commons = fakeCommons(valid);
     commons.search.mockRejectedValueOnce(new Error('HTTP 429'));
-    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants, dryRun: true });
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons, makeVariants, dryRun: true, galleryTarget: 3 });
     expect(report!.rejected.search_error).toBe(1);
     expect(report!.selected.length).toBe(5);
     expect(report!.selected.every((s) => s.stored === false)).toBe(true);
@@ -123,7 +123,7 @@ describe('destination image import pipeline', () => {
 
   it('leaves roles empty instead of forcing doubtful photos, and reports what is missing', async () => {
     const { admin, rows } = fakeAdmin();
-    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([file(1), file(2, { width: 800, height: 600 })]), makeVariants });
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([file(1), file(2, { width: 800, height: 600 })]), makeVariants, galleryTarget: 3 });
     expect(rows.length).toBeLessThan(5);
     expect(report!.status).toBe('partial');
     expect(report!.missing.length).toBeGreaterThan(0);
@@ -131,9 +131,42 @@ describe('destination image import pipeline', () => {
 
   it('marks photos without coordinates as unverified regional motifs', async () => {
     const { admin, rows } = fakeAdmin();
-    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid.map((c) => ({ ...c, coords: null }))), makeVariants });
+    await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons(valid.map((c) => ({ ...c, coords: null }))), makeVariants, galleryTarget: 3 });
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.location_verified === false && r.location_basis === 'title_or_category_names_place')).toBe(true);
+    expect(String(rows[0]!.review_note)).toMatch(/Regionsmotiv/);
+  });
+
+  it('adds stock photos from Pixabay as regional motifs with their own licence, up to ten gallery images', async () => {
+    const { admin, rows } = fakeAdmin();
+    const stock = (n: number, tags = 'sossusvlei, namibia, dune') => ({
+      id: `pixabay-${n}`, title: `Pixabay ${n} ${tags}.jpg`, width: 1280, height: 853, thumbUrl: `https://cdn.pixabay.example/${n}.jpg`, pageUrl: `https://pixabay.example/photos/${n}`,
+      categories: tags.replace(/, /g, '|'), description: '', coords: null, meta: {}, provider: 'pixabay', providerLabel: 'Pixabay', popularity: 2,
+      licence: { ok: true, type: 'Pixabay Content License', licenseUrl: 'https://pixabay.com/service/license-summary/', photographer: `Autor ${n}`, attributionRequired: false },
+    });
+    const pixabay = fakeCommons([...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => stock(n) as unknown as FakeFile), stock(20, 'safari, africa, lion') as unknown as FakeFile]);
+    const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([]), pixabay, makeVariants });
+    const gallery = rows.filter((r) => r.role === 'gallery');
+    expect(gallery).toHaveLength(10);
+    expect(rows.filter((r) => r.role === 'hero')).toHaveLength(0); // 1280 px is too small for a hero
+    expect(gallery.every((r) => r.source_provider === 'pixabay' && r.location_verified === false && r.attribution_required === false)).toBe(true);
+    expect(String(gallery[0]!.attribution_text)).toMatch(/Autor \d+ \/ Pixabay \/ Pixabay Content License/);
+    expect(report!.rejected.no_place_evidence).toBe(1); // no place or country in the tags: 'safari, africa, lion'
+    expect(pixabay.download).toHaveBeenCalledWith(expect.stringContaining('cdn.pixabay.example'));
+  });
+
+  it('accepts country-tagged stock photos only when the motif fits the place (no sea in the bush, no dunes at the river)', async () => {
+    const { admin, rows } = fakeAdmin();
+    const stock = (n: number, tags: string) => ({
+      id: `pixabay-${n}`, title: `Pixabay ${n} ${tags}.jpg`, width: 1280, height: 853, thumbUrl: `https://cdn.pixabay.example/${n}.jpg`, pageUrl: `https://pixabay.example/photos/${n}`,
+      categories: tags.replace(/, /g, '|'), description: '', coords: null, meta: {}, provider: 'pixabay', providerLabel: 'Pixabay', popularity: 0,
+      licence: { ok: true, type: 'Pixabay Content License', licenseUrl: 'https://pixabay.com/service/license-summary/', photographer: 'Autor', attributionRequired: false },
+    }) as unknown as FakeFile;
+    const etosha = { id: 's', title: 'Etosha Nationalpark', country: 'Namibia', latitude: -18.8, longitude: 16.9 };
+    const pixabay = fakeCommons([stock(1, 'namibia, elephant, savannah'), stock(2, 'namibia, beach, ocean'), stock(3, 'namibia, dune, desert'), stock(4, 'namibia, hotel, building')]);
+    const dbg = await runImport({ stops: [etosha], admin, commons: fakeCommons([]), pixabay, makeVariants, log: (l, m) => console.log(l, m) }); console.log(JSON.stringify(dbg));
+    expect(rows.map((r) => r.source_id)).toEqual([expect.stringContaining('elephant')]);
+    expect(rows[0]).toMatchObject({ location_verified: false, location_basis: 'country_tag_plausible_motif' });
     expect(String(rows[0]!.review_note)).toMatch(/Regionsmotiv/);
   });
 });

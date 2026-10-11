@@ -213,3 +213,27 @@ export function namesPlace(place, candidate) {
     .filter((token) => token.length > 3)
     .some((token) => haystack.includes(token));
 }
+
+const COAST_TERMS = /beach|coast|ocean|\bsea\b|küste|strand|harbou?r|\bpier\b|\bdock\b|lighthouse|seal/i;
+const DESERT_TERMS = /dune|düne|desert|wüste|sossus|\bnamib\b|deadvlei|\bpan\b/i;
+const WATER_TERMS = /river|fluss|delta|okavango|zambezi|chobe|waterfall|falls|wetland|hippo|crocodile/i;
+const SAFARI_PLACES = new Set(['etosha', 'chobe', 'kasane', 'divundu', 'nata', 'maun', 'rundu']);
+const DESERT_PLACES = new Set(['sossusvlei', 'swakopmund']);
+const WATER_PLACES = new Set(['chobe', 'kasane', 'divundu', 'maun', 'rundu']);
+const COAST_PLACES = new Set(['swakopmund']);
+const SAFARI_TERMS = /elephant|elefant|lion|löwe|giraffe|zebra|antelope|oryx|springbok|kudu|rhino|buffalo|leopard|wildlife|safari|savanna|savannah|waterhole/i;
+
+/**
+ * Stock photos carry no coordinates. A photo whose tags name the country (but not the place) may still serve as a regional motif when
+ * its subject is plausible for this place: no sea for the bush, no dunes for the river, no safari animals in town. Never a verified place.
+ */
+export function regionMotifFits(place, candidate) {
+  const text = `${candidate.title} ${candidate.categories ?? ''}`;
+  if (!slugify(text).includes(slugify(place.country))) return false;
+  if (POOR_SUBJECT.test(text) || MACRO.test(text) || !SCENIC.test(text)) return false;
+  if (COAST_TERMS.test(text) && !COAST_PLACES.has(place.key)) return false;
+  if (DESERT_TERMS.test(text) && !DESERT_PLACES.has(place.key)) return false;
+  if (WATER_TERMS.test(text) && !WATER_PLACES.has(place.key)) return false;
+  if (SAFARI_TERMS.test(text) && !SAFARI_PLACES.has(place.key)) return false;
+  return true;
+}

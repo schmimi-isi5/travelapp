@@ -1,7 +1,6 @@
 'use client';
 
 import clsx from 'clsx';
-import { ExternalLink } from 'lucide-react';
 import { Scene, type SceneName } from '@/components/scene';
 import { useStopImages } from '@/features/media/use-destination-library';
 import type { TripStop } from '@/lib/domain/schemas';
@@ -17,17 +16,10 @@ export function ResponsiveTravelImage({ image, kind, sizes, priority = false, cl
   return <img src={imageUrl(src as string)} srcSet={srcSetFor(image, SRC_KEYS[kind])} sizes={sizes} width={image.width} height={image.height} alt={image.alt_text} loading={priority ? 'eager' : 'lazy'} decoding="async" fetchPriority={priority ? 'high' : 'auto'} className={clsx('h-full w-full object-cover', className)} />;
 }
 
-/** Credit line: author, licence, link to the source. Photos whose place is not proven by coordinates say so. */
-export function ImageAttribution({ image, tone = 'light', className }: { image: DestinationImage; tone?: 'light' | 'dark'; className?: string }) {
-  return (
-    <p className={clsx('text-xs leading-snug', tone === 'dark' ? 'text-white/85' : 'text-muted', className)} data-testid="image-attribution">
-      {!image.location_verified && <span className="mr-1 font-semibold">Regionsmotiv:</span>}
-      Foto: {image.attribution_text}{' '}
-      <a href={image.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline" aria-label={`Quelle zum Foto: ${image.place_label}`}>
-        Quelle <ExternalLink size={11} aria-hidden />
-      </a>
-    </p>
-  );
+/** Small label for photos whose place is not proven by coordinates; credits are listed on the page "Bildnachweise", not under each photo. */
+export function RegionMotifBadge({ image, className }: { image: DestinationImage; className?: string }) {
+  if (image.location_verified) return null;
+  return <span className={clsx('rounded bg-deep/80 px-1.5 py-0.5 text-xs font-semibold text-white', className)} data-testid="region-motif">Regionsmotiv</span>;
 }
 
 /** Full-bleed background for a stop: its hero photo with a readable overlay, or the vector illustration when there is none. */
@@ -40,7 +32,7 @@ export function DestinationHero({ stop, fallback, children, className, minHeight
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/55 to-deep/10" aria-hidden />
       <div className="relative z-10 mt-auto">{children}</div>
-      {hero && <ImageAttribution image={hero} tone="dark" className="relative z-10 px-4 pb-2 pt-1 text-right md:px-6" />}
+      {hero && !hero.location_verified && <div className="relative z-10 px-4 pb-2 pt-1 text-right md:px-6"><RegionMotifBadge image={hero} /></div>}
     </div>
   );
 }
