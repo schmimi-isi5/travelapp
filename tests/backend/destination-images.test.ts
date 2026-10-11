@@ -34,7 +34,7 @@ describe.skipIf(!available)('destination image library (real Supabase: table, RL
       return photo(Number(url.split('/').pop()?.replace('.jpg', '')));
     },
   };
-  const run = () => runImport({ stops: [stop], admin, commons, makeVariants });
+  const run = () => runImport({ stops: [stop], admin, commons, makeVariants, galleryTarget: 3 });
 
   beforeAll(async () => {
     user = await createUser('bilder');
