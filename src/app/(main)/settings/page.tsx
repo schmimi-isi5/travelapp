@@ -6,6 +6,7 @@ import { useApp } from '@/components/app-provider';
 import { Badge, Button, Card, ConfirmationDialog, Field, Input, Notice, PageHeader } from '@/components/ui';
 import { fetchProviderStatus, getAiConsent, setAiConsent } from '@/lib/ai/client';
 import type { ProviderStatus } from '@/lib/ai/types';
+import { isResizeEnabled, setResizeEnabled } from '@/lib/db/image-resize';
 import { clearAllLocalData, resetDemo } from '@/lib/db/seed';
 import { update } from '@/lib/db/repo';
 import { getSupabase } from '@/lib/supabase/client';
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [name, setName] = useState('');
   const [familyDelete, setFamilyDelete] = useState('');
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [resizePhotos, setResizePhotos] = useState(true);
 
   useEffect(() => {
     if (currentUser) setName(currentUser.display_name);
@@ -39,6 +41,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setConsent(getAiConsent());
+    setResizePhotos(isResizeEnabled());
     void fetchProviderStatus().then(setStatus);
   }, [online]);
 
@@ -64,6 +67,13 @@ export default function SettingsPage() {
         <h2 className="mb-2 text-lg font-bold">KI-Funktionen</h2>
         <label className="flex items-start gap-3"><input type="checkbox" className="mt-1 size-5" checked={consent} onChange={(e) => { setConsent(e.target.checked); setAiConsent(e.target.checked); }} /><span><strong>Texte an den KI-Dienst senden dürfen</strong><br /><span className="text-sm text-slate">Nur ausdrücklich ausgewählte Texte (Frage, Tagebuchtext). Nie Dokumente, Ausweise oder Zahlungsdaten. Ohne Freigabe arbeitet die App rein lokal.</span></span></label>
         <p className="mt-3 text-sm" data-testid="ai-status">Provider: <strong>{status ? `${status.provider} (${status.state})` : 'nicht erreichbar'}</strong>{status ? `: ${status.detail}` : ''}</p>
+      </Card>
+      <Card>
+        <h2 className="mb-2 text-lg font-bold">Fotos</h2>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" className="mt-1 size-5" checked={resizePhotos} onChange={(e) => { setResizePhotos(e.target.checked); setResizeEnabled(e.target.checked); }} />
+          <span><strong>Fotos vor dem Hochladen verkleinern (empfohlen)</strong><br /><span className="text-sm text-slate">Große Fotos werden auf dem Gerät auf höchstens 2560 Pixel an der langen Kante verkleinert. Das spart Datenvolumen und Wartezeit bei schlechtem Netz, die Originale bleiben in der Fotos-App deines Handys. Ortsdaten im Foto werden dabei entfernt.</span></span>
+        </label>
       </Card>
       {isSupabase && (
         <Card>
