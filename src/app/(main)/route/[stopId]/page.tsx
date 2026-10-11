@@ -4,7 +4,7 @@ import { ArrowLeft, BedDouble, Phone, Plane } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
 import { useApp } from '@/components/app-provider';
-import { DestinationHero, ImageAttribution, ResponsiveTravelImage } from '@/components/destination-image';
+import { DestinationHero, ResponsiveTravelImage } from '@/components/destination-image';
 import { Badge, Card, EmptyState, PageHeader } from '@/components/ui';
 import { STATUS_LABEL } from '@/features/bookings/booking-form';
 import { ActionChecklist } from '@/features/common/action-checklist';
@@ -60,12 +60,12 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
       {photos.gallery.length > 0 && (
         <section aria-label="Bilder der Region" data-testid="stop-gallery">
           <h2 className="mb-3 text-lg font-bold">Bilder aus {stop.title.split('/').pop()?.trim()}</h2>
+          {photos.gallery.some((image) => !image.location_verified) && <p className="mb-3 text-sm text-slate">Einige Bilder sind Regionsmotive: Landschaft und Tiere der Gegend, nicht zwingend genau dieser Ort.</p>}
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {photos.gallery.map((image) => (
               <li key={image.id}>
                 <figure>
                   <div className="aspect-[4/3] overflow-hidden rounded-lg border border-line bg-sand"><ResponsiveTravelImage image={image} kind="gallery" sizes="(min-width: 768px) 33vw, 50vw" /></div>
-                  <figcaption className="mt-1"><ImageAttribution image={image} /></figcaption>
                 </figure>
               </li>
             ))}

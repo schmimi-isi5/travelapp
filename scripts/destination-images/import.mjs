@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createCommonsClient } from './commons.mjs';
+import { createPixabayClient } from './pixabay.mjs';
 import { makeVariants } from './makeVariants.mjs';
 import { runImport } from './pipeline.mjs';
 
@@ -25,7 +26,10 @@ if (error) throw new Error(`Stationen lesen: ${error.message}`);
 const log = (level, message) => console.error(`[${level}] ${message}`);
 const commons = createCommonsClient({ userAgent: 'NamibiaBotswanaTravelApp/1.0 (private family trip app; contact via repository owner)' });
 
-const reports = await runImport({ stops: stops ?? [], admin, commons, makeVariants, log, force: flag('--force'), dryRun: flag('--dry-run'), allCountries: flag('--all-countries') });
+// optional second source: stock photos (key only from the environment, never as an argument)
+const userAgent = 'NamibiaBotswanaTravelApp/1.0 (private family trip app; contact via repository owner)';
+const pixabay = process.env.PIXABAY_API_KEY ? createPixabayClient({ apiKey: process.env.PIXABAY_API_KEY, userAgent }) : null;
+const reports = await runImport({ stops: stops ?? [], admin, commons, pixabay, makeVariants, log, force: flag('--force'), dryRun: flag('--dry-run'), allCountries: flag('--all-countries') });
 const summary = reports.map((r) => `${r.label.padEnd(16)} ${r.status.padEnd(16)} ${r.selected.map((s) => `${s.role}${s.locationVerified ? '' : '~'}`).join(' ') || '-'}  (Kandidaten ${r.candidates})`);
 console.log(summary.join('\n'));
 const file = option('--report');

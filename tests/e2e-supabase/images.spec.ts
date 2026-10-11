@@ -68,11 +68,10 @@ test('Dashboard, Route und Station zeigen die Bibliotheksfotos mit Bildnachweis 
   await expect(hero).toHaveAttribute('data-image', 'photo', { timeout: 30_000 });
   await expect.poll(() => loaded(page, '[data-testid=destination-hero] img')).toBe(true);
   await expect(hero.locator('img')).toHaveAttribute('src', new RegExp(`^/media/destination/${key}/`)); // same origin, never a storage or third-party URL
-  await expect(hero.getByTestId('image-attribution')).toContainText('Fotograf 1 / Wikimedia Commons / CC BY-SA 4.0');
-  await expect(hero.getByRole('link', { name: /Quelle zum Foto/ })).toHaveAttribute('href', /commons\.wikimedia\.org/);
-  await expect(hero.getByTestId('image-attribution')).not.toContainText('Regionsmotiv'); // location proven
+  await expect(page.getByTestId('image-attribution')).toHaveCount(0); // credits are not printed under the photos
+  await expect(hero.getByTestId('region-motif')).toHaveCount(0); // location proven
   const axe = async () => (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`);
-  expect(await axe()).toEqual([]); // photo hero with overlay, alt texts and credit links
+  expect(await axe()).toEqual([]); // photo hero with overlay and alt texts
 
   await page.goto('/route');
   const cover = page.getByTestId('stop-cover').first();
@@ -85,9 +84,17 @@ test('Dashboard, Route und Station zeigen die Bibliotheksfotos mit Bildnachweis 
   await expect(page.getByTestId('destination-hero')).toHaveAttribute('data-image', 'photo');
   const gallery = page.getByTestId('stop-gallery');
   await expect(gallery.locator('img')).toHaveCount(2);
-  await expect(gallery.getByTestId('image-attribution')).toHaveCount(2);
+  await expect(gallery.getByTestId('image-attribution')).toHaveCount(0);
   await expect.poll(() => loaded(page, '[data-testid=stop-gallery] img')).toBe(true);
-  expect(await axe()).toEqual([]); // station page with hero, gallery and credits
+  await expect(page).toHaveTitle(/Namibia/);
+  expect(await axe()).toEqual([]); // station page with hero and gallery
+
+  await page.goto('/settings/credits');
+  const credits = page.getByTestId('credits-list');
+  await expect(credits).toContainText('Fotograf 1 / Wikimedia Commons / CC BY-SA 4.0', { timeout: 30_000 });
+  await expect(credits.getByRole('link', { name: /Quelle zum Foto/ }).first()).toHaveAttribute('href', /commons\.wikimedia\.org/);
+  await expect(page).toHaveTitle(/Namibia/);
+  expect(await axe()).toEqual([]);
   await context.close();
 });
 
