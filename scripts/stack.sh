@@ -31,13 +31,14 @@ CORE_SERVICES=(db auth rest storage kong mailpit)
 
 run_migrate() {
   compose rm -f -s migrate >/dev/null 2>&1 || true
+  compose build migrate >/dev/null # migrations are baked into the image
   compose run --rm --no-deps -T migrate
 }
 
 cmd_up() {
   cmd_secrets
   log "starting stack (waits for healthy services and the migrate job)"
-  compose up -d --wait "${CORE_SERVICES[@]}"
+  compose up -d --build --wait "${CORE_SERVICES[@]}"
   run_migrate
   log "stack healthy, migrations applied. API: http://localhost:18000  Mailpit: http://localhost:18025  Postgres: 127.0.0.1:54329"
 }
@@ -57,7 +58,7 @@ cmd_logs() { require_secrets; compose --profile admin logs --tail=200 "$@"; }
 
 cmd_migrate() {
   require_secrets
-  compose up -d --wait db auth rest storage
+  compose up -d --build --wait db auth rest storage
   run_migrate
 }
 

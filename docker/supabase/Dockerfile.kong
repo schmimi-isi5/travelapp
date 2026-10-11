@@ -1,0 +1,4 @@
+# Kong with the declarative config template and entrypoint baked in (secrets are rendered at start, never baked).
+FROM kong:3.9.3
+COPY --chown=kong:kong docker/supabase/kong.yml /home/kong/kong.tmpl.yml
+COPY --chmod=0755 docker/supabase/kong-entrypoint.sh /usr/local/bin/kong-entrypoint.sh

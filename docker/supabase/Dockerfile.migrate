@@ -1,0 +1,4 @@
+# One-shot migration job: the runner script and all SQL migrations are part of the image.
+FROM supabase/postgres:15.19.0.004
+COPY --chmod=0755 docker/supabase/migrate.sh /migrate.sh
+COPY supabase/migrations /migrations

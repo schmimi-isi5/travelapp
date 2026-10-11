@@ -1,0 +1,3 @@
+*
+!docker/supabase/kong.yml
+!docker/supabase/kong-entrypoint.sh
