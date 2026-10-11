@@ -3,7 +3,8 @@
 # migrate (one-shot), optional meta+studio (profile "admin", never exposed).
 # No Realtime/Functions/Analytics/Vector/imgproxy.
 #
-# Relative paths resolve against THIS file's directory (docker/supabase/).
+# Config files are baked into small images (Dockerfile.db/.kong/.migrate) instead of bind-mounted: Coolify runs
+# compose from a helper container, where relative bind mounts point at paths that do not exist on the host.
 # No container_name, no host ports here: in Coolify only Kong gets the public domain (port 8000).
 #
 # Postgres connection budget (max_connections = 60, superuser_reserved_connections = 3):
@@ -19,7 +20,7 @@ x-logging: &default-logging
 
 services:
   db:
-    image: supabase/postgres:15.19.0.004
+    build: {context: ../.., dockerfile: docker/supabase/Dockerfile.db}
     restart: unless-stopped
     logging: *default-logging
     command:
@@ -51,7 +52,6 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - db-config:/etc/postgresql-custom
-      - ./db-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
     networks: [backend]
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
@@ -177,7 +177,7 @@ services:
         limits: {memory: 384M, cpus: "1.0"}
 
   kong:
-    image: kong:3.9.3
+    build: {context: ../.., dockerfile: docker/supabase/Dockerfile.kong}
     restart: unless-stopped
     logging: *default-logging
     depends_on:
@@ -197,9 +197,6 @@ services:
       KONG_ANON_KEY: ${ANON_KEY}
       KONG_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       KONG_CORS_ORIGINS: ${CORS_ORIGIN:-${SITE_URL}}
-    volumes:
-      - ./kong.yml:/home/kong/kong.tmpl.yml:ro
-      - ./kong-entrypoint.sh:/usr/local/bin/kong-entrypoint.sh:ro
     networks: [backend]
     healthcheck:
       test: ["CMD", "kong", "health"]
@@ -212,8 +209,8 @@ services:
         limits: {memory: 384M, cpus: "1.0"}
 
   migrate:
-    # One-shot; idempotent. Applies ../../supabase/migrations/*.sql, see migrate.sh.
-    image: supabase/postgres:15.19.0.004
+    # One-shot; idempotent. Applies supabase/migrations/*.sql (baked into the image), see migrate.sh.
+    build: {context: ../.., dockerfile: docker/supabase/Dockerfile.migrate}
     restart: "no"
     logging: *default-logging
     depends_on:
@@ -230,9 +227,6 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       MIGRATE_ROLE_PASSWORD: ${POSTGRES_PASSWORD}
       MIGRATE_WAIT_SECONDS: ${MIGRATE_WAIT_SECONDS:-180}
-    volumes:
-      - ./migrate.sh:/migrate.sh:ro
-      - ../../supabase/migrations:/migrations:ro
     networks: [backend]
     deploy:
       resources:

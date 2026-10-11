@@ -25,7 +25,7 @@ COPY . .
 # Self-hosted map tiles (OpenStreetMap via Protomaps, ~60 MB). Skipped when data/map already holds an archive. A failed
 # download does not fail the build: the app then shows the schematic route map (see docs/DEPLOYMENT.md, "Karte").
 ARG PMTILES_VERSION=1.31.2
-ARG PMTILES_SHA256_X86_64=3ed7dbf4ec2e6ffe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f
+ARG PMTILES_SHA256_X86_64=3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f
 ARG PMTILES_SHA256_ARM64=f8bd47e7ea866863489cad588fbaf2f31f42e5821f7a03f009b3769f05801cb1
 ARG MAP_BUILD=
 RUN if [ ! -f data/map/namibia-botswana.pmtiles ]; then \

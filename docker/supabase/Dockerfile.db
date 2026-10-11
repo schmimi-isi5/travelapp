@@ -1,0 +1,4 @@
+# Postgres with the role-setup init script baked in. Coolify runs compose from a helper container, so bind-mounting
+# repo files into services does not work there; building them into small images works everywhere.
+FROM supabase/postgres:15.19.0.004
+COPY --chmod=0644 docker/supabase/db-roles.sql /docker-entrypoint-initdb.d/init-scripts/99-roles.sql
