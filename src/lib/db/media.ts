@@ -1,5 +1,6 @@
 import { getActor } from './actor';
 import { newId, nowIso } from './ids';
+import { isResizeEnabled, resizeForUpload } from './image-resize';
 import { loadBlob, storeBlob } from './blob-store';
 import { getLocalDb } from './local';
 import { create } from './repo';
@@ -118,6 +119,8 @@ export interface AddMediaOptions {
   /** Publish a photo to follower links (adults only, never together with visibility 'private'). */
   sharedWithFollowers?: boolean;
   readExif?: boolean;
+  /** Shrink large photos before queuing (default: on, switchable in the settings). */
+  resize?: boolean;
   onProgress?: (percent: number) => void;
 }
 
@@ -138,10 +141,19 @@ export async function addMedia(options: AddMediaOptions): Promise<MediaAsset> {
     capturedAt = readExifCaptureDate(await file.arrayBuffer());
   }
   onProgress?.(40);
+  let stored: Blob = file;
+  let uploadName = fileName;
+  if (kind === 'photo' && options.resize !== false && isResizeEnabled()) {
+    const smaller = await resizeForUpload(file);
+    if (smaller) {
+      stored = smaller;
+      uploadName = fileName.replace(/\.[^.]+$/, '') + '.jpg';
+    }
+  }
   const id = newId();
-  const storagePath = `${options.familyId}/${options.tripId}/${id}-${safeFileName(fileName)}`;
+  const storagePath = `${options.familyId}/${options.tripId}/${id}-${safeFileName(uploadName)}`;
   try {
-    await storeBlob(getLocalDb(), id, file, fileName);
+    await storeBlob(getLocalDb(), id, stored, uploadName);
   } catch (cause) {
     throw new MediaError('STORE_FAILED', storeFailureMessage(fileName, cause));
   }
@@ -160,8 +172,8 @@ export async function addMedia(options: AddMediaOptions): Promise<MediaAsset> {
       storage_path: storagePath,
       original_name: fileName,
       captured_at: capturedAt ?? nowIso(),
-      mime_type: file.type,
-      size_bytes: file.size,
+      mime_type: stored.type || file.type,
+      size_bytes: stored.size,
       caption: options.caption ?? '',
       album: options.album ?? null,
       visibility: options.visibility ?? 'family',

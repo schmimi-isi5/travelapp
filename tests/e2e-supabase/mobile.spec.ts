@@ -11,6 +11,15 @@ test('Anmeldung, Einrichtung und Navigation auf dem Smartphone', async ({ page }
   await page.getByRole('button', { name: 'Reise anlegen' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('navigation', { name: 'Tab-Leiste' })).toBeVisible();
+  // iPhone in Safari (not installed): the one-time hint explains the home-screen install and can be dismissed for good
+  const hint = page.getByTestId('install-hint');
+  await expect(hint).toBeVisible();
+  await expect(hint).toContainText('Zum Home-Bildschirm');
+  await hint.getByRole('button', { name: 'Verstanden' }).click();
+  await expect(hint).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('navigation', { name: 'Tab-Leiste' })).toBeVisible();
+  await expect(page.getByTestId('install-hint')).toHaveCount(0);
   for (const path of ['/', '/route', '/stays', '/journal', '/more', '/family']) {
     await page.goto(path);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), path).toBeLessThanOrEqual(1);

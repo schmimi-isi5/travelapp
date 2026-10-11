@@ -5,6 +5,7 @@ import { RefreshCw, TriangleAlert, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from './app-provider';
+import { InstallHint, usePersistentStorage } from './install-hint';
 import { isActive, MOBILE_TABS, MORE_NAV, PRIMARY_NAV, visibleFor } from './nav-items';
 import { useState } from 'react';
 import { Badge, Button, ConfirmationDialog, Notice, Select, Skeleton } from './ui';
@@ -108,6 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { ready, error, members, currentUser, switchUser, role, isSupabase } = useApp();
   const sideItems = [...visibleFor(PRIMARY_NAV, role), ...visibleFor(MORE_NAV, role)];
+  usePersistentStorage(ready && isSupabase);
 
   return (
     <div className="min-h-dvh">
@@ -179,7 +181,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Skeleton className="h-32 w-full" />
             </div>
           ) : (
-            children
+            <>
+              <InstallHint />
+              {children}
+            </>
           )}
         </main>
       </div>

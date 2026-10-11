@@ -74,7 +74,7 @@ Nicht abgedeckt: Penetrationstest, MFA, Kontosperre, Last-/Missbrauchstests, Ima
 ## G. Bekannte Einschränkungen
 - Kein Test auf Coolify, in GitHub Actions, in Firefox, auf amd64.
 - Sitzungstoken liegt in `localStorage` (nötig für Offline-First); CSP erlaubt `unsafe-inline`; Rate-Limit nur pro Instanz im Speicher; kein MFA.
-- Uploads sind nicht fortsetzbar (Abbruch startet die Datei neu), Fortschrittsanzeige stufenweise, keine Thumbnails.
+- Uploads sind nicht fortsetzbar (Abbruch startet die Datei neu), Fortschrittsanzeige stufenweise, keine Thumbnails. Große Fotos werden auf dem Gerät auf 2560 px verkleinert (Einstellung). Kein Teilen-Ziel auf dem iPhone (Safari unterstützt `share_target` nicht, DECISIONS 34).
 - Erster Start auf einem neuen Gerät braucht Internet (Hydrierung); Seiten, die offline erstmals geöffnet werden, funktionieren, weil alle Hauptseiten vorab gecacht werden, dynamische Detailseiten (`/route/<id>`) erst nach dem ersten Besuch.
 - Eine Person gehört in der Oberfläche genau einer Familie an; die Datenbank erlaubt mehrere, die App wählt die erste aktive.
 - Einladungs-Mailadressen bleiben bis zur Familienlöschung gespeichert; Backups enthalten gelöschte Daten bis zum Ablauf der Aufbewahrung.
