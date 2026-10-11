@@ -9,6 +9,7 @@ import { Badge, Card, EmptyState, PageHeader } from '@/components/ui';
 import { STATUS_LABEL } from '@/features/bookings/booking-form';
 import { ActionChecklist } from '@/features/common/action-checklist';
 import { TipCard } from '@/features/ai/tip-card';
+import { StationRecommendations } from '@/features/tips/station-recommendations';
 import { useStopImages } from '@/features/media/use-destination-library';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable, useTips } from '@/lib/db/hooks';
@@ -71,6 +72,8 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
           </ul>
         </section>
       )}
+
+      <StationRecommendations stop={stop} stays={stopStays} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

@@ -27,6 +27,10 @@ test.describe('Demo, Route und Dashboard', () => {
     await expect(page.getByText('Tagesbriefing')).toBeVisible();
     await expect(page.getByText('Grobe Offline-Schätzung aus Luftlinie')).toBeVisible();
     await expect(page.getByTestId('tip-card').first()).toContainText('Aktualität nicht geprüft');
+    // recommendations for the station: place-based advice without weather in the demo, honest about the missing weather
+    await expect(page.getByTestId('station-recommendations')).toContainText('Empfehlungen für diese Station');
+    await expect(page.getByText('Wetterdaten gibt es nur in der Live-Version')).toBeVisible();
+    await expect(page.locator('[data-testid=station-tip][data-tip-id="etosha-waterholes"]')).toBeVisible();
   });
 
   test('Tagesbriefing zeigt die korrekte Station und offene Aufgaben für das Demo-Datum', async ({ page }) => {

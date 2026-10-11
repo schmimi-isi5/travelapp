@@ -23,6 +23,8 @@ src/components/**       AppShell, Navigation, UI-Primitive, SVG-Illustrationen, 
 src/features/**         Fachkomponenten je Modul
 src/lib/domain/**       Zod-Schemas, Geldlogik (Minor Units), Rollenpolicy, Tagesbriefing
 src/lib/follow/**       Was Follower sehen dürfen (view.ts, einzige Entscheidungsstelle)
+src/lib/tips/**         Regelbasierte Empfehlungen je Station (Wetter, Unterkunftsart, Ort)
+src/lib/weather/**      Wetterdaten je Station (Client, Zwischenspeicher); Server: src/lib/server/weather.ts
 src/lib/media/**        Bildbibliothek der Reiseziele (Zuordnung Station → Foto, Laden, Vorwärmen)
 scripts/destination-images/  Importpipeline für lizenzierte Ortsfotos (siehe docs/media-system/)
 src/lib/db/**           Dexie, Repository (CRUD + Mutationsqueue), Medien, Dokumente, Seed
