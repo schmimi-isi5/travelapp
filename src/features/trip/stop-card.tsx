@@ -1,6 +1,9 @@
+'use client';
+
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { Scene, type SceneName } from '@/components/scene';
+import { StopCover } from '@/components/destination-image';
+import type { SceneName } from '@/components/scene';
 import { Badge } from '@/components/ui';
 import type { TripStop } from '@/lib/domain/schemas';
 import { formatShortDate } from '@/lib/formatting';
@@ -17,7 +20,7 @@ export function StopCard({ stop, isCurrent, isDemo }: { stop: TripStop; isCurren
   return (
     <Link href={`/route/${stop.id}`} className="group flex overflow-hidden rounded-lg border border-line bg-white shadow-card transition-shadow hover:shadow-lg">
       <div className="h-auto w-28 shrink-0 sm:w-40">
-        <Scene name={sceneForStop(stop)} label={`Illustration zu ${stop.title}`} />
+        <StopCover stop={stop} fallback={sceneForStop(stop)} label={`Illustration zu ${stop.title}`} />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
         <div className="min-w-0 flex-1">

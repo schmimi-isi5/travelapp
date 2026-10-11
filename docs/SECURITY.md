@@ -62,6 +62,11 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - `/api/ai/generate` verlangt im Produktivmodus eine gültige Anmeldung (401 sonst) und die ausdrückliche Einwilligung im Request; Kontingente je Nutzer und gesamt (429). Der API-Schlüssel des Anbieters liegt nur in der Server-Umgebung. Fehlerprotokolle enthalten den HTTP-Status, nie den Antworttext.
 - An den Anbieter gehen nur die gewählten Texte, nie Dokumente, Ausweise oder Zahlungsdaten. Die Kontingente sind in-memory je Instanz; das Ausgabenlimit beim Anbieter ist die harte Grenze.
 
+## 6c. Bildbibliothek (Ortsfotos)
+- Öffentliche Referenzfotos (`destination-media`, `destination_images`) sind getrennt von den privaten Familienmedien. Angemeldete Nutzer lesen nur freigegebene Zeilen; geschrieben wird ausschließlich vom Import mit dem Service-Role-Schlüssel (Tabelle und Bucket, kein Client-Schreibrecht, getestet).
+- `approved` ist per Constraint nur mit geprüfter Lizenz möglich. Die Auslieferung erfolgt über `/media/destination/…` mit strengem Pfadmuster (`<ort>/<hash12>-<rolle>-<variante>.webp`), kein Hotlinking zu Wikimedia, Abgleich der Pfade verhindert Zugriff auf andere Buckets oder Verzeichnisse.
+- An Wikimedia gehen nur Suchbegriffe aus Ortsnamen, keine personenbezogenen Daten. Der Import läuft nur auf einem vertrauenswürdigen Rechner, nicht im Browser und nicht über eine öffentliche Route.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.

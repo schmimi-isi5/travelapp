@@ -1,0 +1,1 @@
+export function createCommonsClient(options: { userAgent: string; fetchImpl?: typeof fetch; delayMs?: number; sleep?: (ms: number) => Promise<void> }): { search(query: string, limit?: number): Promise<unknown[]>; download(url: string): Promise<Buffer> };

@@ -1,0 +1,801 @@
+{
+  "generatedAt": "2026-10-11T13:54:23.342Z",
+  "places": [
+    {
+      "place": "windhoek",
+      "label": "Windhoek",
+      "queries": [
+        "Windhoek Namibia",
+        "Windhoek landscape",
+        "Windhoek Namibia nature"
+      ],
+      "candidates": 48,
+      "rejected": {
+        "no_place_evidence": 16,
+        "category_excluded": 1,
+        "title_excluded": 1
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Tintenpalast, Windhoek, Namibia, 2018-08-04, DD 04.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 68,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tintenpalast,_Windhoek,_Namibia,_2018-08-04,_DD_04.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Windhoek Landscape.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Pekondjelo Himufe",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Windhoek_Landscape.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Tree trunk at Avis dam.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Martha Ndapandula Samuel",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 90,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tree_trunk_at_Avis_dam.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Estación de ferrocarril, Windhoek, Namibia, 2018-08-04, DD 13.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 63,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Estaci%C3%B3n_de_ferrocarril,_Windhoek,_Namibia,_2018-08-04,_DD_13.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Driving toward Windhoek.JPG",
+          "license": "CC BY-SA 4.0",
+          "photographer": "T. Hengl",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 62.94,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Driving_toward_Windhoek.JPG",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "sossusvlei",
+      "label": "Sossusvlei",
+      "queries": [
+        "Sossusvlei Namibia",
+        "Sossusvlei landscape",
+        "Sossusvlei Namibia nature",
+        "Sossusvlei Namibia"
+      ],
+      "candidates": 38,
+      "rejected": {
+        "license_not_allowed": 1
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Duna en Sossusvlei, Namibia, 2018-08-06, DD 002.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 117,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Duna_en_Sossusvlei,_Namibia,_2018-08-06,_DD_002.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Dead Vlei, Sossusvlei, Namibia, 2018-08-06, DD 086.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 117,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dead_Vlei,_Sossusvlei,_Namibia,_2018-08-06,_DD_086.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Sossusvlei, Namibia, 2018-08-06, DD 017.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sossusvlei,_Namibia,_2018-08-06,_DD_017.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Sossusvlei, Namibia, 2018-08-06, DD 040.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Diego Delso",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sossusvlei,_Namibia,_2018-08-06,_DD_040.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Sossusvlei Dune Rippled cropped.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Daniel Kraft",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sossusvlei_Dune_Rippled_cropped.jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "swakopmund",
+      "label": "Swakopmund",
+      "queries": [
+        "Swakopmund Namibia",
+        "Swakopmund landscape",
+        "Swakopmund Namibia nature",
+        "Living Desert Tour Namibia"
+      ],
+      "candidates": 58,
+      "rejected": {
+        "license_not_allowed": 2
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Dorob National Park near Swakopmund.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Olga Ernst",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 100,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dorob_National_Park_near_Swakopmund.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Swakopmund Dune.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Daniel Kraft",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Swakopmund_Dune.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Swakopmund Jetty HDR.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Daniel Kraft",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 90,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Swakopmund_Jetty_HDR.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Alte Kaserne, Swakopmund (Namibia).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Olga Ernst",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Alte_Kaserne,_Swakopmund_(Namibia).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Swakopmunder Buchhandlung, Swakopmund (Namibia).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Olga Ernst",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Swakopmunder_Buchhandlung,_Swakopmund_(Namibia).jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "erongo",
+      "label": "Erongo",
+      "queries": [
+        "Erongo Namibia",
+        "Erongo landscape",
+        "Erongo Namibia nature",
+        "Felsmalerei, Bushwalk Namibia"
+      ],
+      "candidates": 51,
+      "rejected": {
+        "category_excluded": 1,
+        "location_mismatch": 34,
+        "no_place_evidence": 6,
+        "format_not_supported": 1,
+        "license_not_recognised": 2
+      },
+      "selected": [
+        {
+          "role": "card",
+          "file": "File:Central-Namib, Erongo-Mountains.JPG",
+          "license": "CC BY-SA 2.5",
+          "photographer": "Peter Stenglein",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 55.76,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Central-Namib,_Erongo-Mountains.JPG",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Akwamaryna, syderyt, skaleń - Erongo, Namibia..JPG",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Lech Darski",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 48,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Akwamaryna,_syderyt,_skale%C5%84_-_Erongo,_Namibia..JPG",
+          "stored": true
+        }
+      ],
+      "status": "partial",
+      "missing": [
+        "hero",
+        "gallery"
+      ]
+    },
+    {
+      "place": "etosha",
+      "label": "Etosha",
+      "queries": [
+        "Etosha Namibia",
+        "Etosha landscape",
+        "Etosha Namibia nature",
+        "Etosha Namibia"
+      ],
+      "candidates": 42,
+      "rejected": {
+        "license_not_allowed": 1,
+        "location_mismatch": 1,
+        "license_not_recognised": 1,
+        "format_not_supported": 4
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:079 Herd of African bush elephants drinking in Etosha National Park Photo by Giles Laurent.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Giles Laurent",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 117,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:079_Herd_of_African_bush_elephants_drinking_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:096 Juvenile Springbok jumping in Etosha National Park Photo by Giles Laurent.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Giles Laurent",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 117,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:096_Juvenile_Springbok_jumping_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:101 African bush elephant face close-up in Etosha National Park Photo by Giles Laurent.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Giles Laurent",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:101_African_bush_elephant_face_close-up_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:150 Purple roller in Etosha National Park Photo by Giles Laurent.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Giles Laurent",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:150_Purple_roller_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:151 Purple roller in flight in Etosha National Park Photo by Giles Laurent.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Giles Laurent",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:151_Purple_roller_in_flight_in_Etosha_National_Park_Photo_by_Giles_Laurent.jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "rundu",
+      "label": "Rundu",
+      "queries": [
+        "Rundu Namibia",
+        "Rundu landscape",
+        "Rundu Namibia nature"
+      ],
+      "candidates": 31,
+      "rejected": {
+        "category_excluded": 4,
+        "no_place_evidence": 8
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Rundu, Namibia, Okavango-River, Angola (2018).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rundu,_Namibia,_Okavango-River,_Angola_(2018).jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Rundu aerial view (03).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rundu_aerial_view_(03).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Rundu aerial view (02).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rundu_aerial_view_(02).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Rundu (2019).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 90,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rundu_(2019).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Mataratara, Namibia (2019).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Kurt Zoller & Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 90,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mataratara,_Namibia_(2019).jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "divundu",
+      "label": "Divundu",
+      "queries": [
+        "Divundu Namibia",
+        "Divundu landscape",
+        "Divundu Namibia nature",
+        "Popa Falls Namibia",
+        "Bwabwata Namibia"
+      ],
+      "candidates": 49,
+      "rejected": {
+        "no_place_evidence": 23,
+        "location_mismatch": 7,
+        "category_excluded": 2
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Aerial view of Popa Falls.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Aerial_view_of_Popa_Falls.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Popa Falls 2022 (02).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Popa_Falls_2022_(02).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Popa Falls 2022 (01).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Popa_Falls_2022_(01).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Popa Falls 2022 (03).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Popa_Falls_2022_(03).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Popa Falls 2022 (05).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Popa_Falls_2022_(05).jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "chobe",
+      "label": "Chobe",
+      "queries": [
+        "Chobe Botswana",
+        "Chobe landscape",
+        "Chobe Botswana nature",
+        "Chobe N.P. Botswana"
+      ],
+      "candidates": 71,
+      "rejected": {
+        "location_mismatch": 13,
+        "no_place_evidence": 2,
+        "category_excluded": 1
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Giraffes in Chobe National Park 04.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Bernard Gagnon",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Giraffes_in_Chobe_National_Park_04.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Lion (Panthera leo) old male Chobe.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Charles J. Sharp",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Lion_(Panthera_leo)_old_male_Chobe.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Brown-hooded Kingfisher, Chobe National Park, Botswana.jpg",
+          "license": "CC BY-SA 2.0",
+          "photographer": "Christoph Strässler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Brown-hooded_Kingfisher,_Chobe_National_Park,_Botswana.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Greater kudu in Chobe National Park 01.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Bernard Gagnon",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Greater_kudu_in_Chobe_National_Park_01.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Hippopotamus in Chobe National Park 09.jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Bernard Gagnon",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_100km",
+          "score": 102,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hippopotamus_in_Chobe_National_Park_09.jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "kasane",
+      "label": "Kasane",
+      "queries": [
+        "Kasane Botswana",
+        "Kasane landscape",
+        "Kasane Botswana nature",
+        "Chobe N.P. Botswana",
+        "Victoria Falls Botswana"
+      ],
+      "candidates": 61,
+      "rejected": {
+        "no_place_evidence": 25,
+        "category_excluded": 1,
+        "location_mismatch": 13
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Kasane aerial view (2019).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Christine Scholer & Hp.Baumeler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kasane_aerial_view_(2019).jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Chobe River Safari, Kasane (20260520-P1076204).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Matti Blume",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 107,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chobe_River_Safari,_Kasane_(20260520-P1076204).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Řeka Chobe River v Kasane, hranice Botswany a Namibie - Botswana - panoramio.jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 96,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:%C5%98eka_Chobe_River_v_Kasane,_hranice_Botswany_a_Namibie_-_Botswana_-_panoramio.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Red-billed oxpecker (Buphagus erythrorhynchus) on impala (Aepyceros melampus).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Charles J. Sharp",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 95,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Red-billed_oxpecker_(Buphagus_erythrorhynchus)_on_impala_(Aepyceros_melampus).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Chobe Land Safari, Kasane (20260520-P1075918).jpg",
+          "license": "CC BY-SA 4.0",
+          "photographer": "Matti Blume",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 90,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chobe_Land_Safari,_Kasane_(20260520-P1075918).jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "nata",
+      "label": "Nata",
+      "queries": [
+        "Nata Botswana",
+        "Nata landscape",
+        "Nata Botswana nature"
+      ],
+      "candidates": 41,
+      "rejected": {
+        "no_place_evidence": 7,
+        "location_mismatch": 16,
+        "category_excluded": 2,
+        "file_has_restrictions": 1
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Chestnutbandedplover.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Anand Karthik Sarma",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 81,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chestnutbandedplover.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Nata, Botswana - panoramio.jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 75,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nata,_Botswana_-_panoramio.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Nata, Botswana - panoramio (1).jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nata,_Botswana_-_panoramio_(1).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Nata, Botswana - panoramio (2).jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nata,_Botswana_-_panoramio_(2).jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Stigmatopelia senegalensis -Nata, Botswana-8.jpg",
+          "license": "CC BY-SA 2.0",
+          "photographer": "Joachim Huber",
+          "locationVerified": false,
+          "locationBasis": "title_or_category_names_place",
+          "score": 51.05,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Stigmatopelia_senegalensis_-Nata,_Botswana-8.jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    },
+    {
+      "place": "maun",
+      "label": "Maun",
+      "queries": [
+        "Maun Botswana",
+        "Maun landscape",
+        "Maun Botswana nature",
+        "Nxai Pan Botswana",
+        "Baobab Botswana"
+      ],
+      "candidates": 62,
+      "rejected": {
+        "category_excluded": 3,
+        "license_not_allowed": 1,
+        "location_mismatch": 12,
+        "no_place_evidence": 29,
+        "title_excluded": 1
+      },
+      "selected": [
+        {
+          "role": "hero",
+          "file": "File:Surroundings of Maun to the Delta - Botswana - panoramio.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "diego_cue",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 80,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Surroundings_of_Maun_to_the_Delta_-_Botswana_-_panoramio.jpg",
+          "stored": true
+        },
+        {
+          "role": "card",
+          "file": "File:Cessna 182 Maun Botswana 28.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "Graf-flugplatz",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 77.96,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Cessna_182_Maun_Botswana_28.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Hoopoes in Maun - Botswana - panoramio.jpg",
+          "license": "CC BY-SA 3.0",
+          "photographer": "diego_cue",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hoopoes_in_Maun_-_Botswana_-_panoramio.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Maun - Botswana - panoramio.jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Maun_-_Botswana_-_panoramio.jpg",
+          "stored": true
+        },
+        {
+          "role": "gallery",
+          "file": "File:Maun - Botswana - panoramio (1).jpg",
+          "license": "CC BY 3.0",
+          "photographer": "Pavel Špindler",
+          "locationVerified": true,
+          "locationBasis": "file_coordinates_within_30km",
+          "score": 84,
+          "sourceUrl": "https://commons.wikimedia.org/wiki/File:Maun_-_Botswana_-_panoramio_(1).jpg",
+          "stored": true
+        }
+      ],
+      "status": "complete",
+      "missing": []
+    }
+  ]
+}

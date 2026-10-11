@@ -1,0 +1,1 @@
+export function makeVariants(buffer: Buffer, plan: { key: string; width: number; height: number | null; quality: number }[]): Promise<{ key: string; buffer: Buffer; width: number; height: number }[]>;

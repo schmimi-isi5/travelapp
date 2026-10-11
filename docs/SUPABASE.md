@@ -9,6 +9,7 @@ Apply in order (Supabase CLI `supabase db push` / `supabase db reset`, or SQL ed
 4. `supabase/migrations/0004_app_alignment.sql` (columns the app writes, document class `confirmation`, optional scientific species name, global species catalogue, overview views with `version`)
 5. `supabase/migrations/0005_documents_ciphertext.sql` (documents bucket accepts `application/octet-stream` for client-side encrypted files)
 6. `supabase/migrations/0006_follower_links.sql` (opt-in flag `shared_with_followers` on journal entries, photos and sightings with an adult-only trigger, table `follower_links` with RPCs to create/revoke/count visits)
+7. `supabase/migrations/0007_destination_images.sql` (library of destination photographs: table `destination_images` with licence evidence, public bucket `destination-media` for WebP variants, read-only for signed-in users)
 
 In the self-hosted stack the one-shot `migrate` job applies all files in order, records name and SHA-256 in `public.schema_migrations`, and refuses to continue when an applied file changed (`docs/DEPLOYMENT.md`). Migrations 0003 and later need the `storage` schema, which the Storage API creates on first start; the job waits for it.
 

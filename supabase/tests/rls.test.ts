@@ -152,6 +152,7 @@ beforeAll(async () => {
   await run('0004_app_alignment', readFileSync(join(MIGRATIONS, '0004_app_alignment.sql'), 'utf8'));
   await run('0005_documents_ciphertext', readFileSync(join(MIGRATIONS, '0005_documents_ciphertext.sql'), 'utf8'));
   await run('0006_follower_links', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
+  await run('0007_destination_images', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -577,7 +578,8 @@ describe('storage (against a stub storage schema, not real Supabase Storage)', (
     admin(`insert into storage.objects(bucket_id,name,owner_id) values($1,$2,$3)`, [bucket, name, owner]);
 
   it('creates private buckets with size limits and mime allow-lists', async () => {
-    const r = await admin(`select id, public, file_size_limit, allowed_mime_types from storage.buckets order by id`);
+    // family data lives in private buckets; the only public bucket is the reference-photo library of migration 0007
+    const r = await admin(`select id, public, file_size_limit, allowed_mime_types from storage.buckets where id <> 'destination-media' order by id`);
     expect(r.rows.map((x: any) => x.id)).toEqual(['documents', 'media']);
     expect(r.rows.every((x: any) => x.public === false)).toBe(true);
     expect(Number(r.rows[0].file_size_limit)).toBe(20 * 1024 * 1024);
@@ -770,6 +772,50 @@ describe('migration 0006 (follower links)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0006_again', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0007 (destination image library)', () => {
+  const base = (over: Record<string, unknown> = {}) => ({
+    place_key: 'sossusvlei', place_label: 'Sossusvlei', country: 'Namibia', role: 'hero', variants: JSON.stringify({ desktop: 'sossusvlei/abc-hero-desktop.webp' }), width: 1920, height: 1080,
+    alt_text: 'Dünen', source_provider: 'wikimedia_commons', source_id: 'File:Dune.jpg', source_url: 'https://commons.wikimedia.org/wiki/File:Dune.jpg', license_type: 'CC BY-SA 4.0',
+    attribution_text: 'A / Wikimedia Commons / CC BY-SA 4.0', license_verified: true, content_hash: 'h1', approved: true, ...over,
+  });
+  const insert = (row: Record<string, unknown>) => admin(`insert into public.destination_images(${Object.keys(row).join(',')}) values (${Object.keys(row).map((_, i) => `$${i + 1}`).join(',')}) returning id`, Object.values(row));
+
+  it('shows approved images to every signed-in user and hides unapproved ones and everything from anonymous visitors', async () => {
+    await insert(base());
+    await insert(base({ role: 'card', content_hash: 'h2', approved: false, license_verified: false }));
+    for (const role of ROLES) expect(await count(users.A[role], `select 1 from public.destination_images`)).toBe(1);
+    expect(await count(users.B.child, `select 1 from public.destination_images`)).toBe(1);
+    await expectDenied(as(null, `select 1 from public.destination_images`, [], 'anon'));
+    expect((await admin(`select count(*)::int c from public.destination_images`)).rows[0].c).toBe(2);
+  });
+
+  it('can be written by nobody but the service (no client insert, update or delete)', async () => {
+    for (const role of ROLES) {
+      await expectDenied(as(users.A[role], `insert into public.destination_images(place_key, place_label, role, variants, width, height, alt_text, source_provider, source_id, source_url, license_type, attribution_text, content_hash) values ('x','x','hero','{}',1,1,'x','p','i','u','l','a','h9')`));
+      await expectDenied(as(users.A[role], `update public.destination_images set approved = true`));
+      await expectDenied(as(users.A[role], `delete from public.destination_images`));
+    }
+  });
+
+  it('never allows an approved image without a verified licence, and rejects malformed rows and duplicates', async () => {
+    await expectDenied(insert(base({ content_hash: 'h3', license_verified: false, approved: true })), ['23514']);
+    await expectDenied(insert(base({ place_key: 'Not A Slug', content_hash: 'h4' })), ['23514']);
+    await expectDenied(insert(base({ role: 'banner', content_hash: 'h5' })), ['23514']);
+    await expectDenied(insert(base({ variants: '[]', content_hash: 'h6' })), ['23514']);
+    await expectDenied(insert(base()), ['23505']); // same place, role and content
+  });
+
+  it('creates the public bucket for the optimised variants (WebP only)', async () => {
+    const bucket = (await admin(`select public, allowed_mime_types, file_size_limit from storage.buckets where id = 'destination-media'`)).rows[0];
+    expect(bucket).toMatchObject({ public: true, allowed_mime_types: ['image/webp'] });
+    expect(Number(bucket.file_size_limit)).toBeLessThanOrEqual(5 * 1024 * 1024);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0007_again', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
   });
 });
 
