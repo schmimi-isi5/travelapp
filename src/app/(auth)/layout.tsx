@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link href="/" className="mb-6 flex items-center justify-center gap-3 text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/icon.svg" alt="" width={44} height={44} className="rounded-xl" />
-          <span className="text-xl font-extrabold">Namibia &amp; Botswana</span>
+          <span className="text-xl font-bold">Namibia &amp; Botswana</span>
         </Link>
         <main className="rounded-xl bg-white p-6 shadow-card md:p-8">{children}</main>
         <p className="mt-4 text-center text-xs text-sand">Unsere Reise. Unsere Geschichte.</p>

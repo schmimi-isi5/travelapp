@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from './app-provider';
 import { InstallHint, usePersistentStorage } from './install-hint';
+import { roleLabel } from '@/lib/labels';
 import { isActive, MOBILE_TABS, MORE_NAV, PRIMARY_NAV, visibleFor } from './nav-items';
 import { useState } from 'react';
 import { Badge, Button, ConfirmationDialog, Notice, Select, Skeleton } from './ui';
@@ -34,9 +35,10 @@ export function FamilyAvatarGroup({ members, size = 36 }: { members: Member[]; s
 
 export function OfflineSyncBanner() {
   const { online, simulatedOffline, pendingCount, conflictCount, syncing, sync } = useApp();
-  if (online && pendingCount === 0 && conflictCount === 0 && !syncing) return null;
+  // A running sync alone is shown by the header indicator; the banner is for things that need attention.
+  if (online && pendingCount === 0 && conflictCount === 0) return null;
   return (
-    <div role="status" data-testid="sync-banner" className={clsx('flex flex-wrap items-center gap-3 px-4 py-2 text-sm font-medium', !online ? 'bg-amber-100 text-amber-950' : conflictCount > 0 ? 'bg-red-100 text-red-950' : 'bg-blue-100 text-blue-950')}>
+    <div role="status" data-testid="sync-banner" className={clsx('flex flex-wrap items-center gap-3 px-4 py-2 text-sm font-medium', !online ? 'bg-ochre-50 text-ochre-700' : conflictCount > 0 ? 'bg-clay-50 text-clay-700' : 'bg-teal-50 text-teal-900')}>
       {!online ? <WifiOff size={16} aria-hidden /> : conflictCount > 0 ? <TriangleAlert size={16} aria-hidden /> : <RefreshCw size={16} aria-hidden className={syncing ? 'animate-spin' : ''} />}
       <span>
         {!online ? `Offline${simulatedOffline ? ' (simuliert)' : ''}: Änderungen werden lokal gespeichert.` : syncing ? 'Synchronisiere …' : conflictCount > 0 ? 'Synchronisationskonflikt: bitte entscheiden.' : 'Änderungen warten auf Synchronisation.'}
@@ -53,6 +55,19 @@ export function OfflineSyncBanner() {
         </Button>
       )}
     </div>
+  );
+}
+
+/** Quiet sync status for the header (read-only view of the sync state): a dot plus a short word. */
+export function SyncIndicator() {
+  const { online, pendingCount, conflictCount, syncing } = useApp();
+  const state = !online ? { label: 'Offline', dot: 'bg-ochre-700' } : conflictCount > 0 ? { label: 'Konflikt', dot: 'bg-clay-700' } : syncing ? { label: 'Synchronisiert …', dot: 'bg-teal-700 animate-pulse' } : pendingCount > 0 ? { label: `${pendingCount} offen`, dot: 'bg-ochre-700' } : { label: 'Aktuell', dot: 'bg-savanna-700' };
+  return (
+    <span role="status" data-testid="sync-indicator" className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+      <span aria-hidden className={clsx('size-2.5 rounded-full', state.dot)} />
+      <span className="hidden sm:inline">{state.label}</span>
+      <span className="sr-only sm:hidden">{state.label}</span>
+    </span>
   );
 }
 
@@ -78,7 +93,7 @@ export function AccountMenu() {
     <div className="flex items-center gap-2">
       <span className="hidden text-right text-sm leading-tight sm:block" data-testid="account-name">
         <span className="block font-semibold">{currentUser?.display_name ?? userEmail}</span>
-        <span className="block text-xs text-muted">{role}</span>
+        <span className="block text-xs text-muted">{roleLabel[role]}</span>
       </span>
       <Button size="sm" variant="secondary" disabled={busy} onClick={() => void logout(false)}>Abmelden</Button>
       <ConfirmationDialog
@@ -100,7 +115,7 @@ function DemoBanner() {
     <div data-testid="demo-banner" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-deep px-4 py-2 text-center text-sm text-white">
       <Badge tone="demo" className="bg-gold text-deep">DEMO-MODUS</Badge>
       <span>Alle Stationen, Unterkünfte, Beträge und Profile sind fiktiv. Keine echte Buchung oder Zahlung.</span>
-      {mode.notConfiguredReason && <span className="opacity-90">Supabase: nicht konfiguriert ({mode.notConfiguredReason}).</span>}
+      {mode.notConfiguredReason && <span className="opacity-90">Live-Konto: nicht eingerichtet ({mode.notConfiguredReason}).</span>}
     </div>
   );
 }
@@ -123,8 +138,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/icon.svg" alt="" width={36} height={36} className="rounded-lg" />
             <span className="leading-tight">
-              <span className="block text-lg font-extrabold text-deep">Namibia & Botswana</span>
-              <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted sm:block">Unsere Reise. Unsere Geschichte.</span>
+              <span className="block text-lg font-bold text-deep">Namibia & Botswana</span>
+              <span className="hidden text-xs font-semibold uppercase tracking-wider text-muted sm:block">Unsere Reise. Unsere Geschichte.</span>
             </span>
           </Link>
           <nav aria-label="Hauptnavigation" className="hidden items-center gap-1 lg:flex">
@@ -135,6 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="flex items-center gap-3">
+            <SyncIndicator />
             <FamilyAvatarGroup members={members} size={32} />
             {isSupabase && <div className="hidden sm:block"><AccountMenu /></div>}
             {!isSupabase && currentUser && (
@@ -193,7 +209,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ul className="grid grid-cols-5">
           {MOBILE_TABS.map((item) => (
             <li key={item.href}>
-              <Link href={item.href} aria-current={isActive(pathname, item.href) ? 'page' : undefined} className={clsx('flex min-h-16 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold', isActive(pathname, item.href) ? 'text-deep' : 'text-muted')}>
+              <Link href={item.href} aria-current={isActive(pathname, item.href) ? 'page' : undefined} className={clsx('flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold', isActive(pathname, item.href) ? 'text-deep' : 'text-muted')}>
                 <item.icon size={22} aria-hidden strokeWidth={isActive(pathname, item.href) ? 2.5 : 2} />
                 {item.label}
               </Link>

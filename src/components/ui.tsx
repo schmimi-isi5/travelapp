@@ -43,9 +43,9 @@ type Tone = 'neutral' | 'ok' | 'warn' | 'danger' | 'info' | 'demo' | 'ai';
 const toneStyles: Record<Tone, string> = {
   neutral: 'bg-sand text-slate',
   ok: 'bg-green-100 text-green-900',
-  warn: 'bg-amber-100 text-amber-900',
+  warn: 'bg-ochre-50 text-ochre-700',
   danger: 'bg-red-100 text-red-900',
-  info: 'bg-blue-100 text-blue-900',
+  info: 'bg-teal-50 text-teal-800',
   demo: 'bg-deep-50 text-deep',
   ai: 'bg-violet-100 text-violet-900',
 };
@@ -62,7 +62,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-extrabold md:text-3xl">{title}</h1>
+        <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
         {subtitle && <p className="mt-1 max-w-2xl text-slate">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -197,7 +197,7 @@ export function EmptyState({ icon, title, text, action }: { icon: React.ReactNod
 }
 
 export function Notice({ tone = 'info', title, children }: { tone?: 'info' | 'warn' | 'ok' | 'danger'; title?: string; children: React.ReactNode }) {
-  const styles = { info: 'border-blue-300 bg-blue-50 text-blue-950', warn: 'border-amber-300 bg-amber-50 text-amber-950', ok: 'border-green-300 bg-green-50 text-green-950', danger: 'border-red-300 bg-red-50 text-red-950' };
+  const styles = { info: 'border-teal-100 bg-teal-50 text-teal-900', warn: 'border-gold-200 bg-ochre-50 text-ochre-700', ok: 'border-green-300 bg-green-50 text-green-950', danger: 'border-red-300 bg-red-50 text-red-950' };
   const Icon = tone === 'ok' ? CheckCircle2 : tone === 'info' ? Info : AlertTriangle;
   return (
     <div role={tone === 'danger' ? 'alert' : 'status'} className={clsx('flex gap-3 rounded-md border p-3 text-sm', styles[tone])}>

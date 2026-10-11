@@ -11,6 +11,8 @@ import { clearAllLocalData, resetDemo } from '@/lib/db/seed';
 import { update } from '@/lib/db/repo';
 import { getSupabase } from '@/lib/supabase/client';
 
+const AI_STATE_LABEL: Record<string, string> = { ready: 'bereit', disabled: 'aus', not_configured: 'nicht eingerichtet' };
+
 export default function SettingsPage() {
   const { mode, today, setDemoToday, hasDemoDateOverride, online, isSupabase, role, familyId, currentUser, userEmail, signOut } = useApp();
   const [consent, setConsent] = useState(false);
@@ -57,16 +59,16 @@ export default function SettingsPage() {
       <Card>
         <h2 className="mb-2 text-lg font-bold">Betriebsmodus</h2>
         {isSupabase ? (
-          <p className="flex flex-wrap items-center gap-2" data-testid="mode-supabase"><Badge tone="ok">Supabase</Badge> Angemeldet als {userEmail}. Daten werden mit dem Server synchronisiert; eine Kopie liegt verschlüsselungsfrei nur in diesem Browser.</p>
+          <p className="flex flex-wrap items-center gap-2" data-testid="mode-supabase"><Badge tone="ok">Live-Version</Badge> Angemeldet als {userEmail}. Daten werden mit dem Server synchronisiert; eine Kopie liegt verschlüsselungsfrei nur in diesem Browser.</p>
         ) : (
           <p className="flex flex-wrap items-center gap-2"><Badge tone="demo">Demo</Badge> Alle Daten liegen in diesem Browser (IndexedDB), es werden keine externen Schlüssel benötigt.</p>
         )}
-        {mode.notConfiguredReason ? <div className="mt-3"><Notice tone="warn" title="Supabase: not_configured">{mode.notConfiguredReason}. Siehe docs/SUPABASE.md und .env.example.</Notice></div> : mode.requested === 'demo' && <p className="mt-2 text-sm text-slate">Supabase-Modus: mit <code>NEXT_PUBLIC_APP_MODE=supabase</code> aktivierbar. Ein Wechsel von Demo- zu Echtdaten geschieht nie automatisch, sondern nur über bewussten Import.</p>}
+        {mode.notConfiguredReason ? <div className="mt-3"><Notice tone="warn" title="Live-Version: nicht eingerichtet">{mode.notConfiguredReason}. Hinweise stehen in docs/SUPABASE.md.</Notice></div> : mode.requested === 'demo' && <p className="mt-2 text-sm text-slate">Die Live-Version wird beim Einrichten des Servers aktiviert (<code>NEXT_PUBLIC_APP_MODE=supabase</code>). Ein Wechsel von Demo- zu Echtdaten geschieht nie automatisch, sondern nur über bewussten Import.</p>}
       </Card>
       <Card>
         <h2 className="mb-2 text-lg font-bold">KI-Funktionen</h2>
         <label className="flex items-start gap-3"><input type="checkbox" className="mt-1 size-5" checked={consent} onChange={(e) => { setConsent(e.target.checked); setAiConsent(e.target.checked); }} /><span><strong>Texte an den KI-Dienst senden dürfen</strong><br /><span className="text-sm text-slate">Nur ausdrücklich ausgewählte Texte (Frage, Tagebuchtext). Nie Dokumente, Ausweise oder Zahlungsdaten. Ohne Freigabe arbeitet die App rein lokal.</span></span></label>
-        <p className="mt-3 text-sm" data-testid="ai-status">Provider: <strong>{status ? `${status.provider} (${status.state})` : 'nicht erreichbar'}</strong>{status ? `: ${status.detail}` : ''}</p>
+        <p className="mt-3 text-sm" data-testid="ai-status">KI-Anbieter: <strong>{status ? `${status.provider} (${AI_STATE_LABEL[status.state] ?? status.state})` : 'nicht erreichbar'}</strong>{status ? `: ${status.detail}` : ''}</p>
       </Card>
       <Card>
         <h2 className="mb-2 text-lg font-bold">Fotos</h2>
@@ -95,7 +97,7 @@ export default function SettingsPage() {
       </Card>}
       <Card>
         <h2 className="mb-2 text-lg font-bold">Datenschutz &amp; Löschung</h2>
-        <p className="mb-3 text-sm text-slate">Export findest du im <Link href="/archive" className="font-semibold text-deep underline">Erinnerungsarchiv</Link>. Löschen entfernt alle lokalen Daten dieses Geräts unwiderruflich. Im Supabase-Betrieb löscht der Owner die Familiendaten über die Datenbankfunktion <code>delete_family_data</code> (/api/account/delete).</p>
+        <p className="mb-3 text-sm text-slate">Export findest du im <Link href="/archive" className="font-semibold text-deep underline">Erinnerungsarchiv</Link>. Löschen entfernt alle lokalen Daten dieses Geräts unwiderruflich. In der Live-Version löscht der Organisator die Familiendaten auf dem Server (weiter unten, mit Bestätigung).</p>
         {isSupabase ? (
           <div className="space-y-3">
             <p className="text-sm text-slate">Beim Abmelden werden die lokalen Daten dieses Geräts gelöscht (Server-Daten bleiben).</p>

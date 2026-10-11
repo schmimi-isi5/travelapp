@@ -32,7 +32,7 @@ function CurrentPlace({ view }: { view: FollowerView }) {
       <MapPin aria-hidden className="mt-1 shrink-0 text-clay-strong" />
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate">Gerade sind wir hier</p>
-        <p className="text-xl font-extrabold">{current.title}</p>
+        <p className="text-xl font-bold">{current.title}</p>
         <p className="text-slate">
           {current.country}
           {current.arrive_at && ` · seit ${formatDate(current.arrive_at, { day: 'numeric', month: 'long' })}`}
@@ -46,7 +46,7 @@ function CurrentPlace({ view }: { view: FollowerView }) {
 function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="mt-10">
-      <h2 className="mb-3 text-xl font-extrabold">
+      <h2 className="mb-3 text-xl font-bold">
         {title} {count !== undefined && count > 0 && <span className="text-base font-semibold text-slate">({count})</span>}
       </h2>
       {children}
@@ -70,7 +70,7 @@ export default function FollowerPage() {
   if (state.status === 'invalid') {
     return (
       <main className="mx-auto max-w-lg p-8 text-center">
-        <h1 className="text-2xl font-extrabold">Dieser Link ist nicht (mehr) gültig</h1>
+        <h1 className="text-2xl font-bold">Dieser Link ist nicht (mehr) gültig</h1>
         <p className="mt-3 text-slate">Der Link wurde beendet oder ist abgelaufen. Bitte fragt die Familie nach einem neuen Link.</p>
       </main>
     );
@@ -78,7 +78,7 @@ export default function FollowerPage() {
   if (state.status === 'error') {
     return (
       <main className="mx-auto max-w-lg p-8 text-center">
-        <h1 className="text-2xl font-extrabold">Die Reise konnte nicht geladen werden</h1>
+        <h1 className="text-2xl font-bold">Die Reise konnte nicht geladen werden</h1>
         <p className="mt-3 text-slate" role="alert">{state.message}</p>
         <Button className="mt-5" onClick={state.reload}>Erneut versuchen</Button>
       </main>
@@ -96,7 +96,7 @@ export default function FollowerPage() {
       {token === DEMO_FOLLOW_TOKEN && <Notice tone="warn" title="Vorschau (Demo)">So sehen Daheimgebliebene die Reise. Die Inhalte sind fiktiv.</Notice>}
       <header className={token === DEMO_FOLLOW_TOKEN ? 'mt-6' : ''}>
         <p className="text-sm font-semibold uppercase tracking-wide text-clay-strong">Unsere Reise. Unsere Geschichte.</p>
-        <h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{view.trip.title}</h1>
+        <h1 className="mt-1 text-3xl font-bold md:text-4xl">{view.trip.title}</h1>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate">
           <span>Stand: {formatDateTime(view.generatedAt)}</span>
           <button type="button" onClick={state.reload} className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 font-semibold text-deep hover:bg-deep-50" aria-label="Aktualisieren">

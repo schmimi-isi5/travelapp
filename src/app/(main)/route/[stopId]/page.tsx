@@ -11,7 +11,8 @@ import { TipCard } from '@/features/ai/tip-card';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable, useTips } from '@/lib/db/hooks';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
-import { formatDate, formatDuration } from '@/lib/formatting';
+import { formatDate } from '@/lib/formatting';
+import { driveSummary, durationSourceLabel } from '@/lib/labels';
 
 export default function StopDetailPage({ params }: { params: Promise<{ stopId: string }> }) {
   const { stopId } = use(params);
@@ -65,13 +66,13 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
         </Card>
         <Card>
           <h2 className="mb-2 text-lg font-bold">Fahrtstrecke</h2>
-          {incoming && from ? (
+          {incoming && from && driveSummary(incoming.distance_km, incoming.duration_minutes) ? (
             <p className="text-slate">
-              Von <strong>{from.title}</strong>: ca. {incoming.distance_km ?? '?'} km, ca. {formatDuration(incoming.duration_minutes)}.{' '}
-              <span className="text-muted">{incoming.duration_source === 'offline_estimate' ? 'Grobe Offline-Schätzung aus Luftlinie, keine Verkehrs- oder Navigationsdaten. Schotterpisten und Grenzen können deutlich länger dauern.' : 'Quelle: ' + incoming.duration_source}</span>
+              Von <strong>{from.title}</strong>: {driveSummary(incoming.distance_km, incoming.duration_minutes)}.{' '}
+              <span className="text-muted">{incoming.duration_source === 'offline_estimate' ? 'Grobe Offline-Schätzung aus Luftlinie, keine Verkehrs- oder Navigationsdaten. Schotterpisten und Grenzen können deutlich länger dauern.' : (durationSourceLabel[incoming.duration_source] ?? '')}</span>
             </p>
           ) : (
-            <p className="text-slate">Keine Fahrtstrecke erfasst (erste Station oder Quelle unbekannt).</p>
+            <p className="text-slate">Keine Fahrtstrecke erfasst.</p>
           )}
         </Card>
       </div>

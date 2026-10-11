@@ -9,7 +9,7 @@ const HEIGHT = 420;
 const PADDING = 48;
 
 /** The parts of a stop / leg the maps need; lets the follower view reuse the maps without app entities. */
-export type MapStop = Pick<TripStop, 'id' | 'title' | 'sequence' | 'latitude' | 'longitude'>;
+export type MapStop = Pick<TripStop, 'id' | 'title' | 'sequence' | 'latitude' | 'longitude'> & { country?: string };
 export type MapLeg = Pick<Route, 'id' | 'from_stop_id' | 'to_stop_id'>;
 
 interface Point {

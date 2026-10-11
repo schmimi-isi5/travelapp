@@ -56,3 +56,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.
 - Demo-Daten sind fiktiv, `is_demo = true`, `source_type = 'demo'`. Keine Fremdbilder, nur eigene SVG-Illustrationen.
 - Feature-Branch `feat/v1-travel-companion`; Commit/Push/Merge/Deployment nur nach ausdrücklicher Freigabe.
+
+## Design-Regeln (Premium-Redesign)
+
+Verbindlich für alle Gestaltungsarbeit: @CLAUDE.design.md

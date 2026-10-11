@@ -121,7 +121,7 @@ export default function FamilyPage() {
           <div className="min-w-48 flex-1"><Input aria-label="Einladungscode" placeholder="Code eingeben" value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <Button type="submit" variant="secondary">Annehmen</Button>
         </form>
-        <p className="mt-2 text-xs text-muted">Im Supabase-Betrieb wird nur ein Hash des Tokens gespeichert und die Annahme läuft über eine Datenbankfunktion.</p>
+        <p className="mt-2 text-xs text-muted">In der Live-Version speichert der Server nur eine Prüfsumme des Codes, nie den Code selbst.</p>
       </Card>}
       <Card>
         <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><ShieldCheck size={18} aria-hidden /> Rollen im Überblick</h2>

@@ -10,7 +10,8 @@ test.describe('Demo, Route und Dashboard', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Abreise in');
     await expect(page.getByTestId('featured-stop')).toContainText('Windhoek');
     await expect(page.getByTestId('booking-check')).toContainText('zu prüfen');
-    await expect(page.getByText('Nicht verfügbar: kein Wetterdienst verbunden.')).toBeVisible();
+    // no weather card without a weather source: nothing is claimed that cannot be shown
+    await expect(page.getByRole('heading', { name: 'Wetter' })).toHaveCount(0);
     expect(errors).toEqual([]);
     const health = await page.request.get('/api/health');
     expect((await health.json()).mode).toBe('demo');

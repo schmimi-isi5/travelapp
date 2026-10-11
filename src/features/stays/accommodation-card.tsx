@@ -13,6 +13,7 @@ import { computeStayFinancials, formatMinor, parseAmountToMinor } from '@/lib/do
 import { isAdult } from '@/lib/domain/policy';
 import type { ActionItem, DocumentRecord, Payment, Stay, TripStop } from '@/lib/domain/schemas';
 import { formatDate } from '@/lib/formatting';
+import { nights as formatNights } from '@/lib/labels';
 import { StayForm, STATUS_LABEL } from './stay-form';
 
 export function clarificationReasons(stay: Stay, payments: Payment[], docs: DocumentRecord[]): string[] {
@@ -68,7 +69,7 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
   const [deleting, setDeleting] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const nights = stay.check_in && stay.check_out ? Math.round((Date.parse(stay.check_out) - Date.parse(stay.check_in)) / 86_400_000) : null;
+  const nightCount = stay.check_in && stay.check_out ? Math.round((Date.parse(stay.check_out) - Date.parse(stay.check_in)) / 86_400_000) : null;
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -101,7 +102,7 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
             <h3 className="text-lg font-bold">{stay.name}</h3>
             {stay.is_demo && <Badge tone="demo">Demo</Badge>}
           </div>
-          <p className="text-sm text-slate">{stop?.title ?? 'Keine Station'} · {nights !== null ? `${nights} Nächte` : 'Nächte unbekannt'} · {formatDate(stay.check_in, { day: '2-digit', month: 'short' })} – {formatDate(stay.check_out, { day: '2-digit', month: 'short' })}</p>
+          <p className="text-sm text-slate">{stop?.title ?? 'Keine Station'} · {nightCount !== null ? formatNights(nightCount) : 'Nächte unbekannt'} · {formatDate(stay.check_in, { day: '2-digit', month: 'short' })} – {formatDate(stay.check_out, { day: '2-digit', month: 'short' })}</p>
         </div>
       }
       summary={adult ? <PaymentStatusBadge state={fin.state} /> : <Badge>{STATUS_LABEL[stay.booking_status]}</Badge>}

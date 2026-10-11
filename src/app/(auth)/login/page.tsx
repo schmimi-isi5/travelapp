@@ -51,7 +51,7 @@ function LoginForm() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Anmelden</h1>
+      <h1 className="mb-1 text-2xl font-bold">Anmelden</h1>
       <p className="mb-5 text-slate">Willkommen zurück bei eurer Reise.</p>
       <form onSubmit={submit} noValidate className="space-y-4" aria-label="Anmeldung">
         <Field label="E-Mail">{(p) => <Input {...p} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>

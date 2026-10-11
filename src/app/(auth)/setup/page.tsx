@@ -62,7 +62,7 @@ export default function SetupPage() {
   if (authStatus === 'ready' && !canCreateTrip) {
     return (
       <>
-        <h1 className="mb-2 text-2xl font-extrabold">Fast geschafft</h1>
+        <h1 className="mb-2 text-2xl font-bold">Fast geschafft</h1>
         <Notice tone="info">Der Owner richtet die Reise noch ein. Schau später wieder vorbei.</Notice>
         <Button className="mt-4 w-full" variant="secondary" onClick={() => void signOut({ discardUnsynced: true })}>Abmelden</Button>
       </>
@@ -71,7 +71,7 @@ export default function SetupPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">{needsFamily ? 'Familie einrichten' : 'Reise anlegen'}</h1>
+      <h1 className="mb-1 text-2xl font-bold">{needsFamily ? 'Familie einrichten' : 'Reise anlegen'}</h1>
       <p className="mb-5 text-slate">Angemeldet als {userEmail}. Es werden keine Demo-Daten angelegt, die Familie startet leer.</p>
       <form onSubmit={submit} noValidate className="space-y-4" aria-label="Einrichtung">
         {needsFamily && <Field label="Name der Familie">{(p) => <Input {...p} value={familyName} onChange={(e) => setFamilyName(e.target.value)} />}</Field>}

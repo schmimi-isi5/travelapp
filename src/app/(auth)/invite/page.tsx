@@ -22,7 +22,7 @@ function Invite() {
   const [busy, setBusy] = useState(false);
 
   if (!isSupabase) {
-    return <Notice tone="info">Einladungen gibt es nur im Supabase-Betrieb. Im Demo-Modus nutzt du den Code unter „Familie“.</Notice>;
+    return <Notice tone="info">Einladungen funktionieren nur in der Live-Version der App. Im Demo-Modus nutzt du den Code unter „Familie“.</Notice>;
   }
   if (!token) return <Notice tone="danger">Dieser Link enthält keine Einladung. Bitte öffne den vollständigen Link, den du erhalten hast.</Notice>;
 
@@ -73,7 +73,7 @@ function Invite() {
   if (authStatus === 'ready' || authStatus === 'no_family') {
     return (
       <>
-        <h1 className="mb-1 text-2xl font-extrabold">Einladung annehmen</h1>
+        <h1 className="mb-1 text-2xl font-bold">Einladung annehmen</h1>
         <p className="mb-5 text-slate">Du bist als <strong>{userEmail}</strong> angemeldet.</p>
         {error && <div className="mb-3"><Notice tone="danger">{error}</Notice></div>}
         <Button className="w-full" disabled={busy} onClick={() => { setBusy(true); void accept().finally(() => setBusy(false)); }}>Einladung annehmen</Button>
@@ -83,7 +83,7 @@ function Invite() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Willkommen in der Familie</h1>
+      <h1 className="mb-1 text-2xl font-bold">Willkommen in der Familie</h1>
       <p className="mb-5 text-slate">Lege ein Passwort fest, um die Einladung anzunehmen.</p>
       {accountExists ? (
         <Notice tone="info" title="Konto vorhanden">

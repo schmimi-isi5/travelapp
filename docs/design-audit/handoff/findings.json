@@ -1,0 +1,2446 @@
+{
+  "meta": {
+    "source": "Design-Audit 11.10.2026, https://reise.schmeckseler.de",
+    "note": "files sind vermutet bis verifiziert; status: open|in_progress|done|blocked",
+    "protected": [
+      "supabase/**",
+      "**/migrations/**",
+      "**/*rls*",
+      "lib/sync/** (vermutet)",
+      "lib/offline/** (vermutet)",
+      "lib/crypto/** bzw. Tresor (vermutet)",
+      "Finanzberechnungen (lib/finance*/payments*, vermutet)",
+      "Auth (middleware.ts, lib/auth*, vermutet)"
+    ]
+  },
+  "items": [
+    {
+      "id": "T1",
+      "title": "Tokens V2 in @theme inkl. Aliase (handoff/theme-v2.css)",
+      "route": "*",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "files": [
+        "app/globals.css (vermutet)"
+      ],
+      "depends_on": [],
+      "order": 1,
+      "status": "open"
+    },
+    {
+      "id": "G3",
+      "title": "Sync-Banner „Synchronisiere …“",
+      "route": "*",
+      "area": "global",
+      "current": "blaues Vollbreiten-Banner auf jeder Seite",
+      "target": "entfällt; Header-Punkt (grün = aktuell, gold pulsierend = überträgt, ochre = Warteschlange > 0, clay = Konflikt) + Tooltip; Banner nur bei Konflikt oder > 24 h offline",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "F4"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 2,
+      "status": "open"
+    },
+    {
+      "id": "G9",
+      "title": "Webfonts",
+      "route": "*",
+      "area": "global",
+      "current": "nicht geladen",
+      "target": "Fraunces + Inter via `next/font`",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "A1",
+        "A2"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 3,
+      "status": "open"
+    },
+    {
+      "id": "G10",
+      "title": "Texte",
+      "route": "*",
+      "area": "global",
+      "current": "Technikbegriffe (Liste Doc 07 §6)",
+      "target": "Mikrotext-Pass; zentrale `labels.ts` für Status-/Rollen-/Quellen-Labels",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "G1",
+        "G2",
+        "G4"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 4,
+      "status": "open"
+    },
+    {
+      "id": "D8",
+      "title": "Wetter",
+      "route": "/",
+      "area": "dashboard",
+      "current": "„Nicht verfügbar: kein Wetterdienst verbunden.“",
+      "target": "Karte ausblenden, wenn keine Daten",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "G1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 5,
+      "status": "open"
+    },
+    {
+      "id": "D9",
+      "title": "Offline-Status, Datenherkunft",
+      "route": "/",
+      "area": "dashboard",
+      "current": "eigene Karten",
+      "target": "entfernen (→ Header-Punkt, Einstellungen)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "G1",
+        "F1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 6,
+      "status": "open"
+    },
+    {
+      "id": "R1",
+      "title": "Karte – Ausschnitt",
+      "route": "/route",
+      "area": "route",
+      "current": "zeigt Flugstrecke/„Gabun“, keine Marker",
+      "target": "`fitBounds` nur über Stationen in NA/BW; Flugsegment gestrichelt optional einblendbar; Marker = nummerierte Kreise teal-800, aktiv gold; Route als durchgezogene clay-500-Linie",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "C1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 7,
+      "status": "open"
+    },
+    {
+      "id": "R5",
+      "title": "Fahrtsegment",
+      "route": "/route",
+      "area": "route",
+      "current": "„ca. ? km · ca. unbekannt (Quelle unbekannt)“",
+      "target": "`RouteSegment`: Linie + Auto-Icon + „330 km · ~4 h 30“; unbekannte Werte weglassen („Fahrzeit noch offen“ nur einmal, dezent); Quelle im Info-Popover",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "G3"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 8,
+      "status": "open"
+    },
+    {
+      "id": "R7",
+      "title": "Überlauf mobil",
+      "route": "/route",
+      "area": "route",
+      "current": "**Verdacht**: Liste breiter als Viewport",
+      "target": "Grid `grid-cols-1` + `min-w-0` auf Spalten; MapLibre `resize()` bei Container-Resize",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": true,
+      "criteria": [
+        "E1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 9,
+      "status": "open"
+    },
+    {
+      "id": "T2",
+      "title": "PhotoHero-Komponente + Bildpipeline (next/image, Blur, public/images/ASSETS.json)",
+      "route": "*",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "files": [
+        "components/media/photo-hero.tsx (neu)"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "order": 10,
+      "status": "open"
+    },
+    {
+      "id": "T3",
+      "title": "StationImage mit Fallback-Kette Foto → Landschaftsklasse (Stadt-SVG nur für Städte)",
+      "route": "/route",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "C1",
+        "C3"
+      ],
+      "files": [
+        "components/route/station-illustration.tsx (vermutet, enthält \"sky-city\")"
+      ],
+      "depends_on": [
+        "T2"
+      ],
+      "order": 11,
+      "status": "open"
+    },
+    {
+      "id": "G1",
+      "title": "Top-Navigation (Desktop)",
+      "route": "*",
+      "area": "global",
+      "current": "5 Links, Aktivzustand nur für diese 5",
+      "target": "entfernen; Header = Logo · Sync-Punkt · AvatarStack · Profilmenü",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "F1",
+        "F2"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 12,
+      "status": "open"
+    },
+    {
+      "id": "G2",
+      "title": "Sidebar",
+      "route": "*",
+      "area": "global",
+      "current": "14 gleichrangige Einträge",
+      "target": "4 Gruppen mit Überschrift (Doc 03 §7.3); Offline & Sync in Einstellungen; Breite 248 px; aktiver Eintrag teal-50 + 3 px Gold-Kante links",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "F1",
+        "F2",
+        "F3"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 13,
+      "status": "open"
+    },
+    {
+      "id": "G7",
+      "title": "Seitenkopf",
+      "route": "*",
+      "area": "global",
+      "current": "H1 Inter 48/800 + Untertitel + Button wechselnd platziert",
+      "target": "`PageHeader`-Komponente: Kapitel-Variante (Fraunces, optional Bild) / Werkzeug-Variante (Inter 650); Primäraktion immer rechts (Desktop) bzw. als FAB/Sticky-Button (Mobil)",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "A2",
+        "D2"
+      ],
+      "depends_on": [
+        "G9",
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 14,
+      "status": "open"
+    },
+    {
+      "id": "D1",
+      "title": "Hero",
+      "route": "/",
+      "area": "dashboard",
+      "current": "SVG „sky-city“ (Stadtsilhouette), 400 px, H1 „Abreise in 2 Tagen“",
+      "target": "`PhotoHero` mit Foto der **nächsten Naturstation** vor Abreise (Sossusvlei) bzw. der **aktuellen Station** unterwegs; 62 vh Desktop / 72 vh mobil (4:5); Eyebrow „NÄCHSTER HALT · 15. OKT“ (gold-200), Titel Fraunces display-xl, Untertitel „Noch 2 Tage – dann geht’s los nach Windhoek.“",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "C1",
+        "C2",
+        "C6"
+      ],
+      "depends_on": [
+        "T2",
+        "G9",
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 15,
+      "status": "open"
+    },
+    {
+      "id": "D4",
+      "title": "KPI-Karten",
+      "route": "/",
+      "area": "dashboard",
+      "current": "„Abreise 13. Okt“, „Reiseziele“, „29 zu prüfen“",
+      "target": "entfernen „Abreise“ + „Reiseziele“; „29 zu prüfen“ → `StatCard` „Buchungen bestätigt 0/29“ mit Ring → Link Buchungen (gefiltert)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "G1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 16,
+      "status": "open"
+    },
+    {
+      "id": "D5",
+      "title": "Nächste Unterkunft",
+      "route": "/",
+      "area": "dashboard",
+      "current": "fehlt",
+      "target": "`MediaCard` 4:3: Foto, Name, Zeitraum, Nächte, StatusDot, „2 Dinge klären“",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T2",
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 17,
+      "status": "open"
+    },
+    {
+      "id": "D13",
+      "title": "„Unser Reisebegleiter“-Raster",
+      "route": "/",
+      "area": "dashboard",
+      "current": "14 Kacheln",
+      "target": "Desktop entfernen; mobil ersetzt durch Mehr-Tab",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "F1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 18,
+      "status": "open"
+    },
+    {
+      "id": "R2",
+      "title": "Karte – Layout",
+      "route": "/route",
+      "area": "route",
+      "current": "rechte Spalte, 375 px hoch, Text darunter",
+      "target": "Desktop: sticky rechte Spalte, Höhe `calc(100vh – Header – 32)`; Offline-Hinweis als kleines Wolken-Icon mit Popover; „Entfernen“ in Einstellungen",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 19,
+      "status": "open"
+    },
+    {
+      "id": "G4",
+      "title": "Rolle im Header",
+      "route": "*",
+      "area": "global",
+      "current": "„owner“",
+      "target": "„Organisator:in“ (deutsche Rollennamen überall; Datenwerte unverändert, nur Label-Mapping)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "G1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 20,
+      "status": "open"
+    },
+    {
+      "id": "G8",
+      "title": "Inhaltsbreiten",
+      "route": "*",
+      "area": "global",
+      "current": "768 / 896 / 1152 px ohne Regel",
+      "target": "`content` / `prose` / `wide` (Doc 03 §4)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [
+        "D1"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 21,
+      "status": "open"
+    },
+    {
+      "id": "D2",
+      "title": "Hero-Aktionen",
+      "route": "/",
+      "area": "dashboard",
+      "current": "2 Buttons gestapelt (mobil)",
+      "target": "Primär „Tagesbriefing“ (gold), Sekundär „Route“ (on-photo-outline), nebeneinander auch mobil (je 50 %)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 22,
+      "status": "open"
+    },
+    {
+      "id": "D3",
+      "title": "Familie",
+      "route": "/",
+      "area": "dashboard",
+      "current": "fehlt",
+      "target": "`AvatarStack` im Hero unten rechts (Fotos aus Profilen, Initialen-Fallback in Autorfarbe) → Link Familie",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 1,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 23,
+      "status": "open"
+    },
+    {
+      "id": "R4",
+      "title": "Stationskarte",
+      "route": "/route",
+      "area": "route",
+      "current": "SVG-Thumbnail 144 px, Titel truncate, Pfeil",
+      "target": "`MediaCard` horizontal (Desktop: Bild 3:2 280 px links), vertikal (mobil: Bild oben); Eyebrow „TAG 3–4 · 15.–17. OKT“, Titel Fraunces h2, Highlights-Chips, FactBar (Unterkunft · offene Aufgaben · Aktivitäten)",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T3",
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 24,
+      "status": "open"
+    },
+    {
+      "id": "S1",
+      "title": "Hero",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Dünen-SVG 230 px, Titel darunter",
+      "target": "`PhotoHero` 16:9 / 44 vh, Titel im Bild, Eyebrow „STATION 3 VON 14 · NAMIBIA“, Datum",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T2"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 25,
+      "status": "open"
+    },
+    {
+      "id": "S3",
+      "title": "Tagesbriefing",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Textliste 5 Zeilen",
+      "target": "`FactBar`: 🛏 Sossus Oasis · 🚙 330 km ~4 h 30 · ☐ 1 offen · ✦ 2 Aktivitäten (+ Wetter nur wenn vorhanden)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 26,
+      "status": "open"
+    },
+    {
+      "id": "S4",
+      "title": "Fahrtstrecke",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "eigene Karte, „Quelle: user_entered“, „Min..“",
+      "target": "in FactBar integriert; Quelle „selbst eingetragen“ im Popover; Tippfehler beheben",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "G1",
+        "G2"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 27,
+      "status": "open"
+    },
+    {
+      "id": "S6",
+      "title": "Unterkunft",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Textlink + Liste mit „unknown“",
+      "target": "eingebettete `StayCard` (kompakt) + Aktivitätenliste mit StatusDot (deutsch)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 28,
+      "status": "open"
+    },
+    {
+      "id": "U1",
+      "title": "Liste",
+      "route": "/stays",
+      "area": "stays",
+      "current": "Akkordeon, kein Bild",
+      "target": "Raster `StayCard` (Desktop 2 Sp., Tablet 2 Sp., Mobil 1 Sp.), Foto 4:3",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "D3",
+        "C3"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 29,
+      "status": "open"
+    },
+    {
+      "id": "U2",
+      "title": "Status-Badge",
+      "route": "/stays",
+      "area": "stays",
+      "current": "13× „unbekannt“",
+      "target": "StatusDot im Bild-Overlay; Kopfzeile „13 Unterkünfte · 0 bestätigt · 13 zu klären“",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 30,
+      "status": "open"
+    },
+    {
+      "id": "U4",
+      "title": "Detail",
+      "route": "/stays",
+      "area": "stays",
+      "current": "Akkordeon mit 4 „unbekannt“-Feldern",
+      "target": "`Sheet` mit SubNav (Überblick · Zahlungen · Belege · Checkliste); Felder „unbekannt“ → `MissingInfo`",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "D5"
+      ],
+      "depends_on": [
+        "U1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 31,
+      "status": "open"
+    },
+    {
+      "id": "U5",
+      "title": "Finanzblock",
+      "route": "/stays",
+      "area": "stays",
+      "current": "4 Spalten / mobil 4 Zeilen",
+      "target": "`PaymentMeter` + 2×2-Grid, tabellarische Ziffern, Beträge rechtsbündig; Werte und Berechnung **unverändert**",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "A5",
+        "D4",
+        "I2"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 32,
+      "status": "open"
+    },
+    {
+      "id": "U7",
+      "title": "Pluralisierung",
+      "route": "/stays",
+      "area": "stays",
+      "current": "„1 Nächte“",
+      "target": "`Intl.PluralRules` / Hilfsfunktion `nights(n)`",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "G2"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 33,
+      "status": "open"
+    },
+    {
+      "id": "B2",
+      "title": "Karte",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "Typ- + Status-Badge, 5 Textzeilen",
+      "target": "Zeile: Typ-Icon · Titel · Datum · Betrag (tabular) · StatusDot; aufklappbar",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 34,
+      "status": "open"
+    },
+    {
+      "id": "B3",
+      "title": "Wiederholungen",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "„Referenz: unbekannt · Anbieter: unbekannt“, „Kein Nachweis hinterlegt“",
+      "target": "`MissingInfo`: „Fehlt: Referenz · Anbieter · Nachweis“",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "D5"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 35,
+      "status": "open"
+    },
+    {
+      "id": "J2",
+      "title": "Feed",
+      "route": "/journal",
+      "area": "journal",
+      "current": "(nicht prüfbar – leer)",
+      "target": "Tagesgruppen, Datum Fraunces, `JournalCard` (Foto 3:2, Titel h2, Text body-l in prose-Breite, Autor-Avatar, Sprachmemo-Player)",
+      "priority": "P0",
+      "effort": "L",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 36,
+      "status": "open"
+    },
+    {
+      "id": "GA1",
+      "title": "Raster",
+      "route": "/gallery",
+      "area": "gallery",
+      "current": "(nicht prüfbar – leer)",
+      "target": "Justified Grid nach Tag/Station gruppiert, sticky Gruppenkopf",
+      "priority": "P0",
+      "effort": "L",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/15_galerie_leer.jpg",
+        "docs/design-audit/screenshots/tablet/05_galerie_leer.jpg"
+      ],
+      "order": 37,
+      "status": "open"
+    },
+    {
+      "id": "GA2",
+      "title": "Lightbox",
+      "route": "/gallery",
+      "area": "gallery",
+      "current": "(nicht prüfbar)",
+      "target": "`Lightbox` (Doc 03 §7.7) inkl. Tastatur/Swipe, Favorit, Audio",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "GA1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/15_galerie_leer.jpg",
+        "docs/design-audit/screenshots/tablet/05_galerie_leer.jpg"
+      ],
+      "order": 38,
+      "status": "open"
+    },
+    {
+      "id": "K1",
+      "title": "Badges",
+      "route": "/guide",
+      "area": "guide",
+      "current": "3 pro Karte + Warnbox",
+      "target": "ein `SourceInfo` pro Karte; Warnbox → einzeiliger Hinweis unter der Suche",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/18_ki_guide.jpg",
+        "docs/design-audit/screenshots/desktop/19_ki_guide_karten.jpg",
+        "docs/design-audit/screenshots/mobile/11_ki_guide.jpg"
+      ],
+      "order": 39,
+      "status": "open"
+    },
+    {
+      "id": "K2",
+      "title": "Eingabe mobil",
+      "route": "/guide",
+      "area": "guide",
+      "current": "Feld ~160 px, Placeholder abgeschnitten",
+      "target": "Feld volle Breite, Senden als Icon-Button im Feld",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "E5"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/18_ki_guide.jpg",
+        "docs/design-audit/screenshots/desktop/19_ki_guide_karten.jpg",
+        "docs/design-audit/screenshots/mobile/11_ki_guide.jpg"
+      ],
+      "order": 40,
+      "status": "open"
+    },
+    {
+      "id": "T1",
+      "title": "Artenliste",
+      "route": "/sightings",
+      "area": "sightings",
+      "current": "15 Textchips mit Zähler + Herz",
+      "target": "`SpeciesTile`-Raster 1:1 (Desktop 5 Sp., mobil 3 Sp.), gesehen farbig + Zähler, ungesehen gedimmt",
+      "priority": "P0",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "C3"
+      ],
+      "depends_on": [],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/20_safari_tracker.jpg",
+        "docs/design-audit/screenshots/mobile/12_safari_tracker.jpg"
+      ],
+      "order": 41,
+      "status": "open"
+    },
+    {
+      "id": "A1",
+      "title": "Leerzustände",
+      "route": "/expenses",
+      "area": "expenses",
+      "current": "3-fach + leere „Kategorien“-Karte",
+      "target": "ein Werkzeug-Empty-State; Kategorien/Konsolidierung erst ab erster Ausgabe",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "D6"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/21_ausgaben.jpg"
+      ],
+      "order": 42,
+      "status": "open"
+    },
+    {
+      "id": "SI1",
+      "title": "Reihenfolge",
+      "route": "/safety",
+      "area": "safety",
+      "current": "Warnbox, Standort, Pannen-Liste, Hinweise, Tresor",
+      "target": "1. Notfallkontakte (große Anruf-Karten, offline-Badge), 2. Pannen-Checkliste, 3. Tresor, 4. Hinweise (eingeklappt)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/22_sicherheit.jpg",
+        "docs/design-audit/screenshots/desktop/23_sicherheit_tresor.jpg"
+      ],
+      "order": 43,
+      "status": "open"
+    },
+    {
+      "id": "SI2",
+      "title": "Platzhalter-Nummern",
+      "route": "/safety",
+      "area": "safety",
+      "current": "gelbe Box",
+      "target": "Status „Kritisch“ direkt an jedem Platzhalter-Kontakt + Aufgabe auf Dashboard",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/22_sicherheit.jpg",
+        "docs/design-audit/screenshots/desktop/23_sicherheit_tresor.jpg"
+      ],
+      "order": 44,
+      "status": "open"
+    },
+    {
+      "id": "F1",
+      "title": "Untertitel",
+      "route": "/family",
+      "area": "family",
+      "current": "„…per Row-Level-Security durchgesetzt“",
+      "target": "„Jede Person sieht nur, was ihre Rolle erlaubt.“",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "G1"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/24_familie.jpg",
+        "docs/design-audit/screenshots/desktop/25_mitreisen.jpg"
+      ],
+      "order": 45,
+      "status": "open"
+    },
+    {
+      "id": "O2",
+      "title": "Texte",
+      "route": "/offline",
+      "area": "offline",
+      "current": "„Server: Supabase“, „running“, „members · geändert“",
+      "target": "„Verbunden“, „Synchronisierung läuft“, „Mitglieder geändert“ (Label-Mapping)",
+      "priority": "P0",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "G1"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/28_offline_sync.jpg"
+      ],
+      "order": 46,
+      "status": "open"
+    },
+    {
+      "id": "G5",
+      "title": "Bottom-Nav mobil",
+      "route": "*",
+      "area": "global",
+      "current": "Dashboard · Route · Unterkünfte · Tagebuch · Mehr",
+      "target": "Heute · Route · ⊕ Erfassen · Erinnern · Mehr (Unterkünfte in „Route“-Tab als Segment und in „Mehr“)",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "E6",
+        "F3"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 47,
+      "status": "open"
+    },
+    {
+      "id": "G6",
+      "title": "Mehr-Menü mobil",
+      "route": "*",
+      "area": "global",
+      "current": "„Abmelden“ als erstes Element",
+      "target": "Gruppiert wie Sidebar; Abmelden ganz unten, Sekundärstil",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "F3"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/mobile/04_mehr_menue.jpg"
+      ],
+      "order": 48,
+      "status": "open"
+    },
+    {
+      "id": "D6",
+      "title": "Offene Aufgaben",
+      "route": "/",
+      "area": "dashboard",
+      "current": "8 Einträge + Inline-Formular, Leerraum",
+      "target": "max. 5 Einträge, sortiert nach Datum; „Alle 8 anzeigen“; Formular hinter „+ Aufgabe“ (aufklappend); Zuweisung als Avatar statt Text „Nicht zugewiesen“",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 49,
+      "status": "open"
+    },
+    {
+      "id": "D7",
+      "title": "Fehlende Belege",
+      "route": "/",
+      "area": "dashboard",
+      "current": "eigene Karte",
+      "target": "in Aufgaben integrieren als zusammengefasste Aufgabe „30 Belege fehlen“",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 50,
+      "status": "open"
+    },
+    {
+      "id": "D10",
+      "title": "KI-Tagesempfehlung",
+      "route": "/",
+      "area": "dashboard",
+      "current": "fehlt",
+      "target": "Karte „Heute für euch“ – nur sichtbar, wenn KI freigegeben; sonst kuratierte Tipps der Station mit `SourceInfo`",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 51,
+      "status": "open"
+    },
+    {
+      "id": "D11",
+      "title": "Route-Überblick",
+      "route": "/",
+      "area": "dashboard",
+      "current": "fehlt",
+      "target": "`StationRail` (14 Miniaturen 3:2, aktuelle hervorgehoben)",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 52,
+      "status": "open"
+    },
+    {
+      "id": "D12",
+      "title": "Letzte Erinnerungen",
+      "route": "/",
+      "area": "dashboard",
+      "current": "Text „Noch keine Medien.“",
+      "target": "Vorfreude-Empty-State (Doc 03 §7.8) bzw. 6 neueste Fotos als Collage",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 53,
+      "status": "open"
+    },
+    {
+      "id": "D14",
+      "title": "Raster",
+      "route": "/",
+      "area": "dashboard",
+      "current": "2/3 + 1/3, gleiche Gewichte",
+      "target": "Desktop 12 Sp.: Hero 12 · Unterkunft 7 + KI/Stat 5 · Aufgaben 7 + Erinnerungen 5 · Rail 12",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/desktop/02_dashboard_aufgaben_status.jpg",
+        "docs/design-audit/screenshots/desktop/03_dashboard_reisebegleiter_grid.jpg",
+        "docs/design-audit/screenshots/tablet/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/01_dashboard_hero.jpg",
+        "docs/design-audit/screenshots/mobile/02_dashboard_statuskarten.jpg"
+      ],
+      "order": 54,
+      "status": "open"
+    },
+    {
+      "id": "R3",
+      "title": "Mobil Liste/Karte",
+      "route": "/route",
+      "area": "route",
+      "current": "Karte unter 14 Stationen",
+      "target": "`SegmentedControl` „Liste · Karte“; Kartenmodus mit Stations-Carousel unten",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 55,
+      "status": "open"
+    },
+    {
+      "id": "R6",
+      "title": "Anreise-Station",
+      "route": "/route",
+      "area": "route",
+      "current": "wie Naturstation dargestellt",
+      "target": "eigene kompakte „Anreise“-Karte (Flugzeug-Icon, Flugnummer falls vorhanden)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 56,
+      "status": "open"
+    },
+    {
+      "id": "R8",
+      "title": "Kopf",
+      "route": "/route",
+      "area": "route",
+      "current": "H1 + langer Disclaimer",
+      "target": "Kapitel-Header mit Zusammenfassung „14 Stationen · 21 Tage · ≈ 3 200 km“ (nur aus vorhandenen Daten summiert, bei Lücken „mind.“)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/04_route_liste_karte.jpg",
+        "docs/design-audit/screenshots/desktop/05_route_liste_mitte.jpg",
+        "docs/design-audit/screenshots/tablet/03_route.jpg",
+        "docs/design-audit/screenshots/mobile/05_route.jpg",
+        "docs/design-audit/screenshots/mobile/06_route_karte.jpg"
+      ],
+      "order": 57,
+      "status": "open"
+    },
+    {
+      "id": "S2",
+      "title": "„Angaben nicht geprüft“",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Badge",
+      "target": "`SourceInfo`-Icon neben Titel",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 58,
+      "status": "open"
+    },
+    {
+      "id": "S5",
+      "title": "Sehenswürdigkeiten",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Chips + Disclaimer",
+      "target": "Highlights als 2–3 Bildkacheln (falls Assets) oder Chips; Disclaimer ins Popover",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 59,
+      "status": "open"
+    },
+    {
+      "id": "U3",
+      "title": "Filter",
+      "route": "/stays",
+      "area": "stays",
+      "current": "5 Chips, 4 mit 0",
+      "target": "`SegmentedControl` Alle · Zu klären · In Arbeit · Bestätigt (0-Optionen gedimmt)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "E3"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 60,
+      "status": "open"
+    },
+    {
+      "id": "U6",
+      "title": "Notiz",
+      "route": "/stays",
+      "area": "stays",
+      "current": "„Planpreis 62,42 € pro Nacht × 2 (aus der Excel …)“",
+      "target": "als „Planwert“-Zeile im Finanzblock mit Herkunft im Popover",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 61,
+      "status": "open"
+    },
+    {
+      "id": "U8",
+      "title": "Aktionen",
+      "route": "/stays",
+      "area": "stays",
+      "current": "Bearbeiten / Löschen inline",
+      "target": "Overflow-Menü ⋯; Löschen nur mit Dialog",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 62,
+      "status": "open"
+    },
+    {
+      "id": "U9",
+      "title": "Klärbedarf",
+      "route": "/stays",
+      "area": "stays",
+      "current": "Badges-Reihe",
+      "target": "Checkliste „Zu klären (3)“ mit direkter Aktion je Punkt",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/09_unterkuenfte_liste.jpg",
+        "docs/design-audit/screenshots/desktop/11_unterkunft_aufgeklappt.jpg",
+        "docs/design-audit/screenshots/tablet/04_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/08_unterkuenfte.jpg",
+        "docs/design-audit/screenshots/mobile/09_unterkunft_finanzen.jpg"
+      ],
+      "order": 63,
+      "status": "open"
+    },
+    {
+      "id": "B1",
+      "title": "Struktur",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "flache Kartenliste",
+      "target": "nach Station/Datum gruppierte Timeline mit Stationskopf (Miniaturbild)",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 64,
+      "status": "open"
+    },
+    {
+      "id": "B4",
+      "title": "Aktionen",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "4 Buttons (Nachweis, Exportieren, Bearbeiten, Löschen)",
+      "target": "1 Kontextbutton + ⋯-Menü",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 65,
+      "status": "open"
+    },
+    {
+      "id": "B5",
+      "title": "Filter",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "7 Chips, umbrechend",
+      "target": "`FilterRail` horizontal",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [
+        "E3"
+      ],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 66,
+      "status": "open"
+    },
+    {
+      "id": "J1",
+      "title": "Leerzustand",
+      "route": "/journal",
+      "area": "journal",
+      "current": "gestrichelter Kasten",
+      "target": "Vorfreude-Empty-State mit Windhoek-/Sossusvlei-Bild, „Euer erstes Kapitel beginnt am 13. Oktober.“, Button „Ersten Eintrag schreiben“",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 67,
+      "status": "open"
+    },
+    {
+      "id": "J3",
+      "title": "Filter",
+      "route": "/journal",
+      "area": "journal",
+      "current": "Chip „Alle“ + Vollbreiten-Select",
+      "target": "eine `FilterRail`: Alle · pro Familienmitglied · Station (Combobox)",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 68,
+      "status": "open"
+    },
+    {
+      "id": "J4",
+      "title": "Editor",
+      "route": "/journal",
+      "area": "journal",
+      "current": "Formular",
+      "target": "„Schreibmoment“: Titel-Feld Fraunces 32 ohne Rahmen, Datum/Station vorausgefüllt als Chips, Textarea autogrow ohne Rahmen, Medienleiste sticky unten, Sichtbarkeit/Follower/EXIF in einem Sheet „Optionen“",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 69,
+      "status": "open"
+    },
+    {
+      "id": "J5",
+      "title": "Sprachmemo",
+      "route": "/journal",
+      "area": "journal",
+      "current": "Clay-Button + Hinweistexte",
+      "target": "Aufnahme-Sheet mit Wellenform und Timer; Transkriptionshinweis nur wenn relevant",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 70,
+      "status": "open"
+    },
+    {
+      "id": "GA3",
+      "title": "Filter",
+      "route": "/gallery",
+      "area": "gallery",
+      "current": "2 Pill-Gruppen",
+      "target": "`FilterRail`: Alben-Combobox · Fotos · Videos · Audio · ♥",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/15_galerie_leer.jpg",
+        "docs/design-audit/screenshots/tablet/05_galerie_leer.jpg"
+      ],
+      "order": 71,
+      "status": "open"
+    },
+    {
+      "id": "GA4",
+      "title": "Leerzustand",
+      "route": "/gallery",
+      "area": "gallery",
+      "current": "Kasten",
+      "target": "Collage aus Platzhalter-Landschaften (eigene Assets) + Upload",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/15_galerie_leer.jpg",
+        "docs/design-audit/screenshots/tablet/05_galerie_leer.jpg"
+      ],
+      "order": 72,
+      "status": "open"
+    },
+    {
+      "id": "GA5",
+      "title": "Performance",
+      "route": "/gallery",
+      "area": "gallery",
+      "current": "–",
+      "target": "`next/image` mit `sizes`, AVIF/WebP, Blur-Placeholder, Virtualisierung ab 200 Medien",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/15_galerie_leer.jpg",
+        "docs/design-audit/screenshots/tablet/05_galerie_leer.jpg"
+      ],
+      "order": 73,
+      "status": "open"
+    },
+    {
+      "id": "K3",
+      "title": "Schnellfragen",
+      "route": "/guide",
+      "area": "guide",
+      "current": "Chip-Wolke",
+      "target": "`FilterRail` horizontal",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/18_ki_guide.jpg",
+        "docs/design-audit/screenshots/desktop/19_ki_guide_karten.jpg",
+        "docs/design-audit/screenshots/mobile/11_ki_guide.jpg"
+      ],
+      "order": 74,
+      "status": "open"
+    },
+    {
+      "id": "K4",
+      "title": "Kontext",
+      "route": "/guide",
+      "area": "guide",
+      "current": "eigenständige Seite",
+      "target": "zusätzlich „Frag zu dieser Station“ auf Stationsdetail; „Heute für euch“ auf Dashboard",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/18_ki_guide.jpg",
+        "docs/design-audit/screenshots/desktop/19_ki_guide_karten.jpg",
+        "docs/design-audit/screenshots/mobile/11_ki_guide.jpg"
+      ],
+      "order": 75,
+      "status": "open"
+    },
+    {
+      "id": "K5",
+      "title": "Karten",
+      "route": "/guide",
+      "area": "guide",
+      "current": "Text, Unterstrichener Quelllink",
+      "target": "Karten mit Kategorie-Icon, Titel h3, 3 Zeilen, „Quelle“ als Ghost-Link",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/18_ki_guide.jpg",
+        "docs/design-audit/screenshots/desktop/19_ki_guide_karten.jpg",
+        "docs/design-audit/screenshots/mobile/11_ki_guide.jpg"
+      ],
+      "order": 76,
+      "status": "open"
+    },
+    {
+      "id": "T2",
+      "title": "Fortschritt",
+      "route": "/sightings",
+      "area": "sightings",
+      "current": "Text „0 von 15 Arten“",
+      "target": "`ProgressRing` „Big Five 0/5“ + „Arten 0/15“",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/20_safari_tracker.jpg",
+        "docs/design-audit/screenshots/mobile/12_safari_tracker.jpg"
+      ],
+      "order": 77,
+      "status": "open"
+    },
+    {
+      "id": "T3",
+      "title": "Sichtungslog",
+      "route": "/sightings",
+      "area": "sightings",
+      "current": "Leerzustand",
+      "target": "Timeline mit Foto, Ort, Uhrzeit, Anzahl, Autor",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/20_safari_tracker.jpg",
+        "docs/design-audit/screenshots/mobile/12_safari_tracker.jpg"
+      ],
+      "order": 78,
+      "status": "open"
+    },
+    {
+      "id": "T4",
+      "title": "Erfassen",
+      "route": "/sightings",
+      "area": "sightings",
+      "current": "Button + Formular",
+      "target": "Bottom-Sheet: Art antippen → Anzahl → optional Foto; < 10 s",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/20_safari_tracker.jpg",
+        "docs/design-audit/screenshots/mobile/12_safari_tracker.jpg"
+      ],
+      "order": 79,
+      "status": "open"
+    },
+    {
+      "id": "A2",
+      "title": "Struktur",
+      "route": "/expenses",
+      "area": "expenses",
+      "current": "Karten untereinander",
+      "target": "Währungs-Tabs (NAD · BWP · EUR), Summenkacheln, Liste mit tabellarischen Ziffern",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/21_ausgaben.jpg"
+      ],
+      "order": 80,
+      "status": "open"
+    },
+    {
+      "id": "A4",
+      "title": "Aktionen",
+      "route": "/expenses",
+      "area": "expenses",
+      "current": "CSV links, Erfassen rechts daneben",
+      "target": "Erfassen = Primär (mobil FAB), CSV = Ghost im ⋯-Menü",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/21_ausgaben.jpg"
+      ],
+      "order": 81,
+      "status": "open"
+    },
+    {
+      "id": "SI3",
+      "title": "Tresor",
+      "route": "/safety",
+      "area": "safety",
+      "current": "Select + Passwortfeld + Button in einer Zeile",
+      "target": "Karte mit Schloss-Icon, Status „Verschlüsselt auf diesem Gerät“, Upload-Flow als Sheet (Art → Passphrase → Datei). **Kryptografie unverändert.**",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/22_sicherheit.jpg",
+        "docs/design-audit/screenshots/desktop/23_sicherheit_tresor.jpg"
+      ],
+      "order": 82,
+      "status": "open"
+    },
+    {
+      "id": "SI4",
+      "title": "Dokumentliste",
+      "route": "/safety",
+      "area": "safety",
+      "current": "Leerzeile",
+      "target": "Liste mit Dokumenttyp-Icon, Ablaufdatum (falls vorhanden), Schloss",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/22_sicherheit.jpg",
+        "docs/design-audit/screenshots/desktop/23_sicherheit_tresor.jpg"
+      ],
+      "order": 83,
+      "status": "open"
+    },
+    {
+      "id": "F2",
+      "title": "Mitglieder",
+      "route": "/family",
+      "area": "family",
+      "current": "Textzeile + Initialen",
+      "target": "Avatar-Karten (Foto, Name, Rolle, Autorfarbe)",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/24_familie.jpg",
+        "docs/design-audit/screenshots/desktop/25_mitreisen.jpg"
+      ],
+      "order": 84,
+      "status": "open"
+    },
+    {
+      "id": "F4",
+      "title": "Mitreisen-Formular",
+      "route": "/family",
+      "area": "family",
+      "current": "Felder ungleich hoch, Hilfetext unter Feld drückt Layout",
+      "target": "Felder in einer Grid-Zeile mit Hilfetexten unterhalb gemeinsam; Vorschau „So sieht Oma die Reise“ (statisches Mock der Follower-Ansicht)",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/24_familie.jpg",
+        "docs/design-audit/screenshots/desktop/25_mitreisen.jpg"
+      ],
+      "order": 85,
+      "status": "open"
+    },
+    {
+      "id": "E1",
+      "title": "Liste",
+      "route": "/archive",
+      "area": "archive",
+      "current": "31 gleichförmige Textkarten, unterstrichene Titel",
+      "target": "Zeitachse nach Tag mit Stationsfoto als Kapitelkopf; Karten nach Typ (Eintrag, Sichtung, Medium, Station, Buchung) mit Icon; Titel nicht unterstrichen",
+      "priority": "P1",
+      "effort": "M",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/26_erinnerungsarchiv.jpg",
+        "docs/design-audit/screenshots/desktop/27_erinnerungsarchiv_liste.jpg"
+      ],
+      "order": 86,
+      "status": "open"
+    },
+    {
+      "id": "E2",
+      "title": "Suche/Filter",
+      "route": "/archive",
+      "area": "archive",
+      "current": "2 Selects + 2 Datumsfelder + 6 Chips",
+      "target": "Suchfeld prominent; Filter in „Filter“-Sheet; aktive Filter als entfernbare Chips",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/26_erinnerungsarchiv.jpg",
+        "docs/design-audit/screenshots/desktop/27_erinnerungsarchiv_liste.jpg"
+      ],
+      "order": 87,
+      "status": "open"
+    },
+    {
+      "id": "E3",
+      "title": "Buchungen im Archiv",
+      "route": "/archive",
+      "area": "archive",
+      "current": "dominieren (Planwerte)",
+      "target": "Typ „Buchung“ standardmäßig ausgeblendet; Fokus auf Erinnerungen",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/26_erinnerungsarchiv.jpg",
+        "docs/design-audit/screenshots/desktop/27_erinnerungsarchiv_liste.jpg"
+      ],
+      "order": 88,
+      "status": "open"
+    },
+    {
+      "id": "O1",
+      "title": "Navigation",
+      "route": "/offline",
+      "area": "offline",
+      "current": "eigener Hauptpunkt",
+      "target": "Unterseite von Einstellungen",
+      "priority": "P1",
+      "effort": "S",
+      "phase": 2,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/28_offline_sync.jpg"
+      ],
+      "order": 89,
+      "status": "open"
+    },
+    {
+      "id": "S7",
+      "title": "Kontakte",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "Karte mit einem Link",
+      "target": "in SubNav/Footer „Notfallkontakte“ verschieben",
+      "priority": "P2",
+      "effort": "S",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 90,
+      "status": "open"
+    },
+    {
+      "id": "S8",
+      "title": "Navigation",
+      "route": "/route/[id]",
+      "area": "station",
+      "current": "„← Route“",
+      "target": "zusätzlich Vor/Zurück zur Nachbarstation (Mini-Karten unten)",
+      "priority": "P2",
+      "effort": "S",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/07_station_sossusvlei_oben.jpg",
+        "docs/design-audit/screenshots/desktop/08_station_sossusvlei_unten.jpg",
+        "docs/design-audit/screenshots/mobile/07_station_sossusvlei.jpg"
+      ],
+      "order": 91,
+      "status": "open"
+    },
+    {
+      "id": "B6",
+      "title": "Summen",
+      "route": "/bookings",
+      "area": "bookings",
+      "current": "fehlen",
+      "target": "Kopf-StatCards je Währung „Geplant · Bezahlt · Offen“ (nur Anzeige vorhandener Summen; keine neue Berechnungslogik – falls Summen nicht existieren, P2 und Freigabe einholen)",
+      "priority": "P2",
+      "effort": "M",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/16_buchungen.jpg",
+        "docs/design-audit/screenshots/desktop/17_buchungen_liste.jpg",
+        "docs/design-audit/screenshots/mobile/10_buchungen.jpg"
+      ],
+      "order": 92,
+      "status": "open"
+    },
+    {
+      "id": "J6",
+      "title": "FAB mobil",
+      "route": "/journal",
+      "area": "journal",
+      "current": "Mikrofon-FAB (gut)",
+      "target": "beibehalten; Long-Press → Foto/Text",
+      "priority": "P2",
+      "effort": "S",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/13_tagebuch_leer.jpg",
+        "docs/design-audit/screenshots/desktop/14_tagebuch_neuer_eintrag.jpg",
+        "docs/design-audit/screenshots/mobile/13_tagebuch_leer.jpg"
+      ],
+      "order": 93,
+      "status": "open"
+    },
+    {
+      "id": "A3",
+      "title": "Diagramm",
+      "route": "/expenses",
+      "area": "expenses",
+      "current": "–",
+      "target": "Kategorie-Balken (horizontal, Palette gold/teal/clay/savanna) – reine Anzeige vorhandener Summen",
+      "priority": "P2",
+      "effort": "M",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/21_ausgaben.jpg"
+      ],
+      "order": 94,
+      "status": "open"
+    },
+    {
+      "id": "F3",
+      "title": "Rollen",
+      "route": "/family",
+      "area": "family",
+      "current": "Textblock",
+      "target": "Vergleichstabelle Rolle × Bereich mit Häkchen",
+      "priority": "P2",
+      "effort": "S",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/24_familie.jpg",
+        "docs/design-audit/screenshots/desktop/25_mitreisen.jpg"
+      ],
+      "order": 95,
+      "status": "open"
+    },
+    {
+      "id": "E4",
+      "title": "Rückblick",
+      "route": "/archive",
+      "area": "archive",
+      "current": "–",
+      "target": "„Heute vor einem Jahr“ / Reise-Jahresrückblick (nach der Reise)",
+      "priority": "P2",
+      "effort": "L",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/26_erinnerungsarchiv.jpg",
+        "docs/design-audit/screenshots/desktop/27_erinnerungsarchiv_liste.jpg"
+      ],
+      "order": 96,
+      "status": "open"
+    },
+    {
+      "id": "O3",
+      "title": "„Offline simulieren“",
+      "route": "/offline",
+      "area": "offline",
+      "current": "gleichrangiger Button",
+      "target": "in „Erweitert“ einklappen",
+      "priority": "P2",
+      "effort": "S",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/28_offline_sync.jpg"
+      ],
+      "order": 97,
+      "status": "open"
+    },
+    {
+      "id": "O4",
+      "title": "Einstellungen",
+      "route": "/offline",
+      "area": "offline",
+      "current": "Karten untereinander",
+      "target": "gruppierte Liste (iOS-Settings-Muster)",
+      "priority": "P2",
+      "effort": "M",
+      "phase": 3,
+      "hotfix": false,
+      "criteria": [],
+      "depends_on": [
+        "T1"
+      ],
+      "files": [],
+      "screenshots": [
+        "docs/design-audit/screenshots/desktop/28_offline_sync.jpg"
+      ],
+      "order": 98,
+      "status": "open"
+    }
+  ]
+}

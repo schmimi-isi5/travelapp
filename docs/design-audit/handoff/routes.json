@@ -1,0 +1,28 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "viewports": [
+    { "name": "mobile", "width": 390, "height": 844 },
+    { "name": "tablet", "width": 768, "height": 1024 },
+    { "name": "desktop", "width": 1440, "height": 900 }
+  ],
+  "routes": [
+    { "path": "/", "name": "dashboard" },
+    { "path": "/route", "name": "route" },
+    { "path": "/route/:firstStation", "name": "station", "note": "ID der ersten Naturstation zur Laufzeit aus /route ermitteln (erster Link /route/<uuid> nach der Anreise)" },
+    { "path": "/stays", "name": "stays" },
+    { "path": "/bookings", "name": "bookings" },
+    { "path": "/journal", "name": "journal" },
+    { "path": "/gallery", "name": "gallery" },
+    { "path": "/guide", "name": "guide" },
+    { "path": "/sightings", "name": "sightings" },
+    { "path": "/expenses", "name": "expenses" },
+    { "path": "/safety", "name": "safety" },
+    { "path": "/family", "name": "family" },
+    { "path": "/followers", "name": "followers" },
+    { "path": "/archive", "name": "archive" },
+    { "path": "/offline", "name": "offline" },
+    { "path": "/settings", "name": "settings" }
+  ],
+  "forbiddenStrings": ["user_entered", "unknown", "running", "Supabase", "Row-Level-Security", "members ·", "owner", "Provider", "Demo-Daten", "Datensätze", "1 Nächte", "Min..", "ca. ? km", "Quelle unbekannt"],
+  "forbiddenAllowedOn": ["/settings"]
+}

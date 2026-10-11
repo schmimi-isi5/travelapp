@@ -11,14 +11,7 @@ import { StopForm } from '@/features/trip/stop-form';
 import { useTable } from '@/lib/db/hooks';
 import { isAdult } from '@/lib/domain/policy';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
-import { formatDuration } from '@/lib/formatting';
-
-const DURATION_SOURCE_LABEL = {
-  offline_estimate: 'grobe Offline-Schätzung',
-  provider: 'Quelle: Anbieter',
-  user_entered: 'selbst eingetragen',
-  unknown: 'Quelle unbekannt',
-} as const;
+import { driveSummary, durationSourceLabel } from '@/lib/labels';
 
 export default function RoutePage() {
   const { role, today } = useApp();
@@ -47,16 +40,17 @@ export default function RoutePage() {
       {ordered.length === 0 ? (
         <EmptyState icon={<MapIcon />} title="Noch keine Stationen" text="Lege die erste Station deiner Reise an." action={isAdult(role) ? <Button onClick={() => setAdding(true)}>Station hinzufügen</Button> : undefined} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-5">
-          <section aria-label="Stationenliste" className="space-y-3 lg:col-span-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <section aria-label="Stationenliste" className="min-w-0 space-y-3 lg:col-span-3">
             {ordered.map((stop, index) => {
               const previous = ordered[index - 1];
               const leg = previous ? routes.find((r) => r.from_stop_id === previous.id && r.to_stop_id === stop.id) : undefined;
               return (
                 <div key={stop.id}>
-                  {leg && (
+                  {leg && driveSummary(leg.distance_km, leg.duration_minutes) && (
                     <p className="mb-3 ml-6 border-l-2 border-dashed border-clay pl-4 text-sm text-slate" data-testid="route-leg">
-                      ca. {leg.distance_km ?? '?'} km · ca. {formatDuration(leg.duration_minutes)} <span className="text-muted">({DURATION_SOURCE_LABEL[leg.duration_source]})</span>
+                      {driveSummary(leg.distance_km, leg.duration_minutes)}
+                      {durationSourceLabel[leg.duration_source] && <span className="text-muted"> ({durationSourceLabel[leg.duration_source]})</span>}
                     </p>
                   )}
                   <StopCard stop={stop} isCurrent={current?.id === stop.id} />
@@ -64,7 +58,7 @@ export default function RoutePage() {
               );
             })}
           </section>
-          <section aria-label="Karte" className="lg:col-span-2">
+          <section aria-label="Karte" className="min-w-0 lg:col-span-2">
             <div className="lg:sticky lg:top-28">
               <TripMap stops={ordered} routes={routes} selectedId={selected} onSelect={setSelected} />
               {selectedStop && (
