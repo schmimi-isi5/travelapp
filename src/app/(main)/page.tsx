@@ -1,6 +1,6 @@
 'use client';
 
-import { CloudSun, Database, FileWarning, WifiOff } from 'lucide-react';
+import { FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
 import { MORE_NAV, PRIMARY_NAV, visibleFor } from '@/components/nav-items';
@@ -14,7 +14,7 @@ import { buildDayBriefing } from '@/lib/domain/trip-day';
 import { formatDate } from '@/lib/formatting';
 
 export default function DashboardPage() {
-  const { today, role, online, pendingCount, hasDemoDateOverride } = useApp();
+  const { today, role, hasDemoDateOverride } = useApp();
   const stops = useTable('trip_stops').rows;
   const items = useTable('action_items').rows;
   const media = useTable('media_assets').rows;
@@ -33,8 +33,6 @@ export default function DashboardPage() {
   const docsFor = new Set(documents.flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
   const withoutReceipt = [...stays.filter((s) => s.booking_status !== 'cancelled').map((s) => s.id), ...bookings.filter((b) => b.booking_status !== 'cancelled').map((b) => b.id)].filter((id) => !docsFor.has(id)).length;
 
-  const allRows = [...stops, ...stays, ...bookings, ...items, ...media];
-  const demoCount = allRows.filter((r) => r.source_type === 'demo').length;
   const heading =
     briefing.phase === 'before'
       ? `Abreise in ${briefing.daysUntilStart} ${briefing.daysUntilStart === 1 ? 'Tag' : 'Tagen'}`
@@ -50,8 +48,8 @@ export default function DashboardPage() {
         <div className="absolute inset-0 opacity-90">{featured ? <Scene name={sceneForStop(featured)} label="" className="" /> : <Scene name="savanna" label="" />}</div>
         <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/70 to-deep/10" aria-hidden />
         <div className="relative flex min-h-[340px] flex-col justify-end gap-3 p-6 md:min-h-[400px] md:p-10">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-gold">Dein nächster Reisetag</span>
-          <h1 id="hero-title" className="max-w-2xl !text-white text-3xl font-extrabold md:text-5xl">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-gold-200">Dein nächster Reisetag</span>
+          <h1 id="hero-title" className="max-w-2xl !text-white text-3xl font-bold md:text-5xl">
             {heading}
           </h1>
           {featured && (
@@ -76,15 +74,15 @@ export default function DashboardPage() {
       <section aria-label="Eckdaten" className="grid gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-xs font-bold uppercase text-muted">Abreise laut Planung</p>
-          <p className="mt-1 text-xl font-extrabold text-deep">{formatDate(trip?.start_date)}</p>
+          <p className="mt-1 text-xl font-bold text-deep">{formatDate(trip?.start_date)}</p>
         </Card>
         <Card>
           <p className="text-xs font-bold uppercase text-muted">Reiseziele</p>
-          <p className="mt-1 text-xl font-extrabold text-deep">{trip?.countries.join(' & ') || 'unbekannt'}</p>
+          <p className="mt-1 text-xl font-bold text-deep">{trip?.countries.join(' & ') || 'unbekannt'}</p>
         </Card>
         <Card>
           <p className="text-xs font-bold uppercase text-muted">Buchungsstatus</p>
-          <p className="mt-1 text-xl font-extrabold text-deep" data-testid="booking-check">{unclearBookings > 0 ? `${unclearBookings} zu prüfen` : 'alle geklärt'}</p>
+          <p className="mt-1 text-xl font-bold text-deep" data-testid="booking-check">{unclearBookings > 0 ? `${unclearBookings} zu prüfen` : 'alle geklärt'}</p>
         </Card>
       </section>
 
@@ -104,18 +102,6 @@ export default function DashboardPage() {
               <Link href="/stays" className="mt-2 inline-block font-semibold text-deep underline">Unterkünfte prüfen</Link>
             </Card>
           )}
-          <Card>
-            <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CloudSun size={18} aria-hidden /> Wetter</h2>
-            <p className="text-slate">Nicht verfügbar: kein Wetterdienst verbunden.</p>
-          </Card>
-          <Card>
-            <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><WifiOff size={18} aria-hidden /> Offline-Status</h2>
-            <p className="text-slate">{online ? 'Online' : 'Offline'} · {pendingCount} Änderung{pendingCount === 1 ? '' : 'en'} in der Warteschlange</p>
-          </Card>
-          <Card>
-            <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Database size={18} aria-hidden /> Datenherkunft</h2>
-            <p className="text-slate">{demoCount} von {allRows.length} Datensätzen sind Demo-Daten. Reale Daten nur über bewussten Import.</p>
-          </Card>
         </div>
       </div>
 

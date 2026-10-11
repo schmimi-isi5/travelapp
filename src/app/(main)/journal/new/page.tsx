@@ -118,7 +118,7 @@ function Editor() {
           </ul>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={readExif} onChange={(e) => setReadExif(e.target.checked)} /><span>Aufnahmedatum aus Foto-Metadaten (EXIF) lesen. Standortdaten im Foto werden nie ausgelesen.</span></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={shareLocation} onChange={(e) => setShareLocation(e.target.checked)} /><span>Aktuellen Standort einmalig zu diesem Eintrag speichern (Einwilligung, kein Hintergrund-Tracking).</span></label>
-          <Badge tone="info">Transkription: nur mit angebundenem Provider</Badge>
+          <Badge tone="info">Transkription: noch nicht verfügbar</Badge>
         </fieldset>
         {isAdult(role) && (
           <label className="flex items-start gap-2 rounded-lg border border-line bg-white p-4 text-sm">

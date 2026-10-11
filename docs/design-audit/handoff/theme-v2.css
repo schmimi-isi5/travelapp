@@ -1,0 +1,69 @@
+/*
+ * ENTWURF – Design-System V2 (docs/design-audit/03_DESIGN_SYSTEM_V2.md)
+ * In die globale CSS-Datei übernehmen (vermutlich app/globals.css) und mit den
+ * bestehenden @theme-Werten zusammenführen. Bestehende Token-Namen bleiben als Aliase.
+ * --font-fraunces / --font-inter werden von next/font gesetzt (fonts.snippet.tsx).
+ */
+@theme {
+  /* Schriften */
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Typo-Skala (Mobil-Basis; Desktop-Werte über md:/lg:-Varianten der Komponenten) */
+  --text-display-xl: 2.75rem;  --text-display-xl--line-height: 1.05;
+  --text-display-l: 2.25rem;   --text-display-l--line-height: 1.08;
+  --text-h1: 1.875rem;         --text-h1--line-height: 1.15;
+  --text-h2: 1.375rem;         --text-h2--line-height: 1.25;
+  --text-eyebrow: 0.75rem;     --text-eyebrow--line-height: 1.2;
+  --tracking-eyebrow: 0.14em;
+
+  /* Basispalette */
+  --color-teal-950: #082430;  --color-teal-900: #0B2E3B;  --color-teal-800: #0F3D4E;
+  --color-teal-700: #14566D;  --color-teal-100: #D5E6EB;  --color-teal-50:  #E6F0F3;
+  --color-gold-700: #8F5F2E;  --color-gold-500: #D4A373;  --color-gold-200: #F0D9B5;  --color-gold-100: #F6E9DA;
+  --color-sand-300: #E5DCCD;  --color-sand-200: #EAD7BE;  --color-sand-100: #F5E6D3;  --color-sand-50:  #FBF6EE;
+  --color-clay-700: #A8472B;  --color-clay-500: #C65A3A;  --color-clay-50:  #FBEAE4;
+  --color-savanna-700: #2F5D3A; --color-savanna-50: #EAF2EA;
+  --color-ochre-700: #8A5A12;   --color-ochre-50: #FDF3DC;
+  --color-stone-600: #5B6470;   --color-stone-100: #F1EEE9;
+  --color-ink-900: #1F2937;     --color-ink-600: #566376;
+
+  /* Aliase für Bestandsklassen (bg-deep, text-muted, border-line …) */
+  --color-deep: var(--color-teal-800);
+  --color-deep-700: var(--color-teal-700);
+  --color-deep-50: var(--color-teal-50);
+  --color-gold: var(--color-gold-500);
+  --color-sand: var(--color-sand-100);
+  --color-clay: var(--color-clay-500);
+  --color-clay-strong: var(--color-clay-700);
+  --color-ink: var(--color-ink-900);
+  --color-muted: var(--color-ink-600);
+  --color-line: var(--color-sand-300);
+  --color-warn: var(--color-ochre-700);
+  --color-danger: var(--color-clay-700);
+  --color-info: var(--color-teal-700);
+
+  /* Radius & Schatten */
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
+  --shadow-card: 0 1px 2px rgb(15 61 78 / .06), 0 8px 24px -12px rgb(15 61 78 / .18);
+  --shadow-raised: 0 2px 4px rgb(15 61 78 / .08), 0 20px 40px -16px rgb(15 61 78 / .28);
+  --shadow-photo: 0 24px 48px -24px rgb(8 36 48 / .45);
+
+  /* Container (max-w-reading / max-w-content / max-w-wide) */
+  --container-reading: 42rem;
+  --container-content: 72rem;
+  --container-wide: 88rem;
+}
+
+:root {
+  --overlay-hero: linear-gradient(180deg, rgb(8 36 48 / .05) 30%, rgb(8 36 48 / .78) 100%);
+}
+
+@layer components {
+  .eyebrow { font-size: var(--text-eyebrow); font-weight: 600; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

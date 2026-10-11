@@ -26,7 +26,7 @@ export default function UpdatePasswordPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Neues Passwort</h1>
+      <h1 className="mb-1 text-2xl font-bold">Neues Passwort</h1>
       <p className="mb-5 text-slate">Mindestens {MIN_PASSWORD_LENGTH} Zeichen.</p>
       <form onSubmit={submit} noValidate className="space-y-4" aria-label="Passwort ändern">
         <Field label="Neues Passwort">{(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>

@@ -25,6 +25,7 @@ const ROUTE_SOURCE = 'trip-routes';
 const MARKER_DEEP = '#0f3d4e';
 const MARKER_ACTIVE = '#a8472b';
 const MAX_FIT_ZOOM = 8;
+const TRAVEL_REGION: ReadonlySet<string> = new Set(['Namibia', 'Botswana']);
 const TILES_SIZE_HINT = 'ca. 60 MB';
 
 let isProtocolRegistered = false;
@@ -104,6 +105,7 @@ function TileMap({ stops, routes, selectedId, onSelect, readOnly = false, onFail
   useEffect(() => {
     let isCancelled = false;
     const markers = markersRef.current;
+    let resizeObserver: ResizeObserver | undefined;
     async function init() {
       const [maplibregl, { Protocol, PMTiles }] = await Promise.all([import('maplibre-gl'), import('pmtiles')]);
       if (isCancelled || !containerRef.current) return;
@@ -146,10 +148,14 @@ function TileMap({ stops, routes, selectedId, onSelect, readOnly = false, onFail
         setIsLoaded(true);
       });
       mapRef.current = map;
+      // The container changes size with the layout (sticky column, orientation change); keep the canvas in step.
+      resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(containerRef.current);
     }
     void init();
     return () => {
       isCancelled = true;
+      resizeObserver?.disconnect();
       for (const { marker } of markers.values()) marker.remove();
       markers.clear();
       mapRef.current?.remove();
@@ -176,11 +182,15 @@ function TileMap({ stops, routes, selectedId, onSelect, readOnly = false, onFail
         markersRef.current.set(stop.id, { marker, element });
       }
       paintMarkers(markersRef.current, selectedIdRef.current); // markers are created asynchronously, after the selection effect ran
-      if (located.length === 1 && located[0]) {
-        map.jumpTo({ center: [located[0].longitude, located[0].latitude], zoom: MAX_FIT_ZOOM });
-      } else if (located.length > 1) {
+      // The view frames the travel region; a departure stop elsewhere (e.g. the flight from Germany) keeps its marker
+      // but must not stretch the view across two continents.
+      const regional = located.filter((stop) => stop.country === undefined || TRAVEL_REGION.has(stop.country));
+      const framed = regional.length > 0 ? regional : located;
+      if (framed.length === 1 && framed[0]) {
+        map.jumpTo({ center: [framed[0].longitude, framed[0].latitude], zoom: MAX_FIT_ZOOM });
+      } else if (framed.length > 1) {
         const bounds = new maplibregl.LngLatBounds();
-        for (const stop of located) bounds.extend([stop.longitude, stop.latitude]);
+        for (const stop of framed) bounds.extend([stop.longitude, stop.latitude]);
         map.fitBounds(bounds, { padding: 56, maxZoom: MAX_FIT_ZOOM, animate: false });
       }
     });

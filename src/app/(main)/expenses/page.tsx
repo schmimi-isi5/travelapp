@@ -74,7 +74,7 @@ export default function ExpensesPage() {
         {totals.map((t) => (
           <Card key={t.currency} data-testid={`total-${t.currency}`}>
             <p className="text-xs font-bold uppercase text-muted">Summe {t.currency}</p>
-            <p className="mt-1 text-2xl font-extrabold text-deep">{formatMinor(t.totalMinor, t.currency)}</p>
+            <p className="mt-1 text-2xl font-bold text-deep">{formatMinor(t.totalMinor, t.currency)}</p>
             <p className="text-sm text-slate">{t.count} Buchung{t.count === 1 ? '' : 'en'}</p>
           </Card>
         ))}

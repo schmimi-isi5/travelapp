@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
 import { AppProvider } from '@/components/app-provider';
+
+// Self-hosted variable fonts (src/app/fonts/README.md): no request to a font service, works offline.
+const fraunces = localFont({ src: './fonts/fraunces-latin.woff2', weight: '400 700', display: 'swap', variable: '--font-fraunces' });
+const inter = localFont({ src: './fonts/inter-latin.woff2', weight: '400 700', display: 'swap', variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: 'Namibia & Botswana | Unsere Reise',
@@ -18,7 +23,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de-DE">
+    <html lang="de-DE" className={`${fraunces.variable} ${inter.variable}`}>
       <body>
         <AppProvider>{children}</AppProvider>
       </body>

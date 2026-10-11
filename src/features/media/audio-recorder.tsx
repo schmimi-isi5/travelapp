@@ -63,7 +63,7 @@ export function AudioRecorder({ onRecorded }: { onRecorded: (file: File) => void
       ) : (
         <Button variant="sunset" onClick={() => void start()}><Mic size={16} aria-hidden /> Sprachmemo aufnehmen</Button>
       )}
-      <p className="mt-1 text-xs text-muted">Transkription: nicht verfügbar (kein Provider angebunden). Die Aufnahme bleibt als Audio erhalten.</p>
+      <p className="mt-1 text-xs text-muted">Transkription: noch nicht verfügbar. Die Aufnahme bleibt als Audio erhalten.</p>
       {error && <p role="alert" className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   );

@@ -87,7 +87,7 @@ test.describe('KI-Guide', () => {
   test('mit Freigabe und Stub-Provider entsteht ein deutlich gelabelter KI-Entwurf, offline der Fallback', async ({ page }) => {
     await open(page, '/settings');
     await page.getByLabel(/Texte an den KI-Dienst senden dürfen/).check();
-    await expect(page.getByTestId('ai-status')).toContainText('stub (ready)');
+    await expect(page.getByTestId('ai-status')).toContainText('stub (bereit)');
     await page.goto('/guide');
     await page.getByLabel('Deine Frage').fill('Wie fahren wir auf Schotter?');
     await page.getByRole('button', { name: 'Fragen' }).click();
