@@ -9,6 +9,7 @@ import { Scene, sceneNameFromPath } from '@/components/scene';
 import { Badge, Card } from '@/components/ui';
 import { ActionChecklist } from '@/features/common/action-checklist';
 import { useDestinationLibrary } from '@/features/media/use-destination-library';
+import { StationTipsSummary } from '@/features/tips/station-recommendations';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable } from '@/lib/db/hooks';
 import { isAdult } from '@/lib/domain/policy';
@@ -35,6 +36,8 @@ export default function DashboardPage() {
   // hands over to the next one that has a photo, so the first screen is never an illustration when real photos exist.
   const library = useDestinationLibrary();
   const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
+  // Tips follow the current station, or before departure the first station in the travel region (not the airport).
+  const tipsStop = briefing.currentStop ?? ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0)).find((s) => s.country === 'Namibia' || s.country === 'Botswana') ?? featured;
   const heroStop = ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0)).find((s) => imagesForStop(s, library).hero) ?? featured;
 
   const unclearBookings = bookings.filter((b) => b.booking_status === 'unknown').length + stays.filter((s) => s.booking_status === 'unknown').length;
@@ -101,6 +104,7 @@ export default function DashboardPage() {
           <ActionChecklist items={briefing.openItems.slice(0, 6)} label="Offene Aufgaben" />
         </Card>
         <div className="space-y-6">
+          {tipsStop && <StationTipsSummary stop={tipsStop} stays={stays.filter((s) => s.stop_id === tipsStop.id)} />}
           {adult && (
             <Card>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><FileWarning size={18} aria-hidden /> Fehlende Belege</h2>

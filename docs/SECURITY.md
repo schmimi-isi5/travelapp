@@ -67,6 +67,9 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - `approved` ist per Constraint nur mit geprüfter Lizenz möglich. Die Auslieferung erfolgt über `/media/destination/…` mit strengem Pfadmuster (`<ort>/<hash12>-<rolle>-<variante>.webp`), kein Hotlinking zu Wikimedia, Abgleich der Pfade verhindert Zugriff auf andere Buckets oder Verzeichnisse.
 - An Wikimedia gehen nur Suchbegriffe aus Ortsnamen, keine personenbezogenen Daten. Der Import läuft nur auf einem vertrauenswürdigen Rechner, nicht im Browser und nicht über eine öffentliche Route.
 
+## 6d. Wetter-Route
+- `/api/weather` ist ein schmaler Proxy zu Open-Meteo und antwortet im Produktivmodus nur angemeldeten Nutzern (sonst 401, sonst wäre der Server ein offener Proxy), mit Rate-Limit je Nutzer (240 pro Stunde), strenger Eingabeprüfung (Koordinaten, Datum, höchstens 21 Tage) und Cache. An Open-Meteo gehen nur gerundete Koordinaten der Station und Datumsangaben, keine Nutzerdaten.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.

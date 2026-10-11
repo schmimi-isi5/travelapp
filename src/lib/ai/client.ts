@@ -1,7 +1,6 @@
 import type { TravelTip } from '../domain/schemas';
-import { getModeStatus } from '../db/mode';
 import { isOnline } from '../offline/network';
-import { getSupabase } from '../supabase/client';
+import { authHeaders } from '../supabase/auth-headers';
 import { runLocal } from './fallback';
 import type { AiRequest, AiResult, ProviderStatus } from './types';
 
@@ -31,13 +30,6 @@ export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
   } catch {
     return null;
   }
-}
-
-/** In supabase mode the server only answers signed-in users, so the session token travels with the request. */
-async function authHeaders(): Promise<Record<string, string>> {
-  if (getModeStatus().effective !== 'supabase') return {};
-  const { data } = await getSupabase().auth.getSession();
-  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
 }
 
 export interface AiOutcome {
