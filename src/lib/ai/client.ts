@@ -1,5 +1,7 @@
 import type { TravelTip } from '../domain/schemas';
+import { getModeStatus } from '../db/mode';
 import { isOnline } from '../offline/network';
+import { getSupabase } from '../supabase/client';
 import { runLocal } from './fallback';
 import type { AiRequest, AiResult, ProviderStatus } from './types';
 
@@ -31,6 +33,13 @@ export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
   }
 }
 
+/** In supabase mode the server only answers signed-in users, so the session token travels with the request. */
+async function authHeaders(): Promise<Record<string, string>> {
+  if (getModeStatus().effective !== 'supabase') return {};
+  const { data } = await getSupabase().auth.getSession();
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+}
+
 export interface AiOutcome {
   result: AiResult;
   /** Why the local fallback was used, or null if the provider answered. */
@@ -48,7 +57,8 @@ export async function requestAi(request: AiRequest, tips: readonly TravelTip[] =
   const status = await fetchProviderStatus();
   if (!status || status.state !== 'ready') return local(status?.detail ?? 'KI-Dienst nicht erreichbar.');
   try {
-    const res = await fetch('/api/ai/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consent: true, ...request }) });
+    const res = await fetch('/api/ai/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(await authHeaders()) }, body: JSON.stringify({ consent: true, ...request }) });
+    if (res.status === 429) return local('KI-Kontingent vorerst aufgebraucht. Lokale, regelbasierte Hilfe.');
     if (!res.ok) return local('KI-Dienst hat nicht geantwortet.');
     return { result: (await res.json()) as AiResult, fallbackReason: null };
   } catch {

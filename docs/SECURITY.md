@@ -58,6 +58,10 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - Der Klartext-Link liegt nur im `localStorage` des erstellenden Geräts (`nb-follow-token:<id>`) und wird beim Abmelden gelöscht.
 - Restrisiko: Der Token steht im URL-Pfad und damit in Zugriffsprotokollen des Reverse-Proxys (Coolify/Traefik). Protokolle nicht weitergeben; im Zweifel Link beenden und neu erstellen.
 
+## 6b. KI-Route
+- `/api/ai/generate` verlangt im Produktivmodus eine gültige Anmeldung (401 sonst) und die ausdrückliche Einwilligung im Request; Kontingente je Nutzer und gesamt (429). Der API-Schlüssel des Anbieters liegt nur in der Server-Umgebung. Fehlerprotokolle enthalten den HTTP-Status, nie den Antworttext.
+- An den Anbieter gehen nur die gewählten Texte, nie Dokumente, Ausweise oder Zahlungsdaten. Die Kontingente sind in-memory je Instanz; das Ausgabenlimit beim Anbieter ist die harte Grenze.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.
