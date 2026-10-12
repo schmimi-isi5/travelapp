@@ -74,6 +74,8 @@ export class KonturosProvider implements AiProvider {
 
 export const ANTHROPIC_DEFAULT_MODEL = 'claude-haiku-5-5';
 const ANTHROPIC_VERSION = '2023-06-01';
+const DEFAULT_MAX_TOKENS = 1500;
+const RETRY_MAX_TOKENS = 4000;
 
 const SYSTEM_PROMPT = [
   'Du bist ein sachlicher Reisebegleiter für eine Familienreise durch Namibia und Botswana.',
@@ -100,7 +102,8 @@ function taskPrompt(request: AiRequest): string {
 
 /**
  * Claude via the Anthropic Messages API. Server-side only: the key never reaches the browser and the request carries
- * only the text the user chose to send (see the route's schema and docs/AI_INTEGRATION.md). One request, no retries.
+ * only the text the user chose to send (see the route's schema and docs/AI_INTEGRATION.md). One request; a second one only when
+ * the whole token budget went into thinking and no text came back.
  */
 export class AnthropicProvider implements AiProvider {
   readonly id = 'anthropic';
@@ -118,19 +121,30 @@ export class AnthropicProvider implements AiProvider {
     return { provider: this.id, state: 'ready', detail: `Claude (${this.model}) ist konfiguriert.` };
   }
 
-  async generate(request: AiRequest): Promise<AiResult> {
-    if (this.status().state !== 'ready') throw new Error('Anthropic ist nicht konfiguriert');
+  private async call(request: AiRequest, maxTokens: number): Promise<{ text: string; stopReason: string | null; blockTypes: string[] }> {
     const response = await this.fetchImpl(`${this.config.baseUrl ?? 'https://api.anthropic.com'}/v1/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': this.config.apiKey as string, 'anthropic-version': ANTHROPIC_VERSION },
-      body: JSON.stringify({ model: this.model, max_tokens: this.config.maxTokens ?? 700, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: taskPrompt(request) }] }),
+      body: JSON.stringify({ model: this.model, max_tokens: maxTokens, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: taskPrompt(request) }] }),
       signal: AbortSignal.timeout(30_000),
     });
     // Only the status goes into the error: response bodies are not logged.
     if (!response.ok) throw new Error(`Anthropic antwortete mit HTTP ${response.status}`);
-    const json = (await response.json()) as { content?: { type?: string; text?: string }[] };
-    const text = (json.content ?? []).filter((block) => block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('\n').trim();
-    if (!text) throw new Error('Anthropic lieferte keinen Text');
+    const json = (await response.json()) as { content?: { type?: string; text?: string }[]; stop_reason?: string | null };
+    const blocks = json.content ?? [];
+    const text = blocks.filter((block) => block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join('\n').trim();
+    return { text, stopReason: json.stop_reason ?? null, blockTypes: blocks.map((block) => block.type ?? 'unbekannt') };
+  }
+
+  async generate(request: AiRequest): Promise<AiResult> {
+    if (this.status().state !== 'ready') throw new Error('Anthropic ist nicht konfiguriert');
+    const limit = this.config.maxTokens ?? DEFAULT_MAX_TOKENS;
+    let answer = await this.call(request, limit);
+    // A model that "thinks" first can use up the whole budget before the first word of the answer (stop reason max_tokens and
+    // only a thinking block): one more attempt with a larger budget instead of an empty answer.
+    if (!answer.text && answer.stopReason === 'max_tokens') answer = await this.call(request, Math.min(limit * 4, RETRY_MAX_TOKENS));
+    if (!answer.text) throw new Error(`Anthropic lieferte keinen Text (stop_reason: ${answer.stopReason ?? 'keiner'}, Blöcke: ${answer.blockTypes.join(', ') || 'keine'})`);
+    const { text } = answer;
     return {
       text,
       origin: 'ai_generated',

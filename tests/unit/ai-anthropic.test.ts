@@ -54,4 +54,21 @@ describe('AnthropicProvider', () => {
     const empty = reply({ content: [{ type: 'tool_use' }] });
     await expect(new AnthropicProvider({ apiKey: 'k' }, empty as unknown as typeof fetch).generate({ task: 'answer_question', input: { question: 'x' } })).rejects.toThrow(/keinen Text/);
   });
+
+  it('retries once with a larger budget when the model spent everything on thinking, and then answers', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stop_reason: 'max_tokens', content: [{ type: 'thinking', thinking: '…' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Fertig.' }] }), { status: 200 }));
+    const result = await new AnthropicProvider({ apiKey: 'k', maxTokens: 700 }, fetchMock as unknown as typeof fetch).generate({ task: 'answer_question', input: { question: 'x' } });
+    expect(result.text).toBe('Fertig.');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const budgets = fetchMock.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)).max_tokens as number);
+    expect(budgets).toEqual([700, 2800]);
+  });
+
+  it('names stop reason and block types when there is still no text, and does not retry for other reasons', async () => {
+    const fetchMock = reply({ stop_reason: 'refusal', content: [] });
+    await expect(new AnthropicProvider({ apiKey: 'k' }, fetchMock as unknown as typeof fetch).generate({ task: 'answer_question', input: { question: 'x' } })).rejects.toThrow(/stop_reason: refusal, Blöcke: keine/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
