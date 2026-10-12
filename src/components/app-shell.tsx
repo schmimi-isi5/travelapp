@@ -142,13 +142,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="hidden text-xs font-semibold uppercase tracking-wider text-muted sm:block">Unsere Reise. Unsere Geschichte.</span>
             </span>
           </Link>
-          <nav aria-label="Hauptnavigation" className="hidden items-center gap-1 lg:flex">
-            {visibleFor(PRIMARY_NAV, role).map((item) => (
-              <Link key={item.href} href={item.href} aria-current={isActive(pathname, item.href) ? 'page' : undefined} className={clsx('rounded-full px-4 py-2 text-sm font-semibold', isActive(pathname, item.href) ? 'bg-deep text-white' : 'text-slate hover:bg-sand')}>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
           <div className="flex items-center gap-3">
             <SyncIndicator />
             <FamilyAvatarGroup members={members} size={32} />
@@ -172,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="mx-auto flex max-w-[1440px]">
         <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-line p-4 lg:block">
-          <nav aria-label="Seitennavigation">
+          <nav aria-label="Hauptnavigation">
             <ul className="space-y-1">
               {sideItems.map((item) => (
                 <li key={item.href}>

@@ -3,11 +3,10 @@
 import { FileWarning } from 'lucide-react';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
-import { MORE_NAV, PRIMARY_NAV, visibleFor } from '@/components/nav-items';
 import { DestinationHero } from '@/components/destination-image';
 import { Scene, sceneNameFromPath } from '@/components/scene';
 import { Badge, Card } from '@/components/ui';
-import { ActionChecklist } from '@/features/common/action-checklist';
+import { FamilyCard, ImpressionsStrip, impressionsFor, NextStopCard, QuickActions, RoutePreviewCard, TaskSummary } from '@/features/dashboard/dashboard-sections';
 import { useDestinationLibrary } from '@/features/media/use-destination-library';
 import { StationTipsSummary } from '@/features/tips/station-recommendations';
 import { sceneForStop } from '@/features/trip/stop-card';
@@ -18,13 +17,14 @@ import { formatDate } from '@/lib/formatting';
 import { imagesForStop } from '@/lib/media/places';
 
 export default function DashboardPage() {
-  const { today, role, hasDemoDateOverride } = useApp();
+  const { today, role, hasDemoDateOverride, members } = useApp();
   const stops = useTable('trip_stops').rows;
   const items = useTable('action_items').rows;
   const media = useTable('media_assets').rows;
   const stays = useTable('stays').rows;
   const bookings = useTable('bookings').rows;
   const documents = useTable('documents').rows;
+  const routes = useTable('routes').rows;
   const trips = useTable('trips').rows;
   const trip = trips[0];
 
@@ -40,6 +40,9 @@ export default function DashboardPage() {
   const tipsStop = briefing.currentStop ?? ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0)).find((s) => s.country === 'Namibia' || s.country === 'Botswana') ?? featured;
   const heroStop = ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0)).find((s) => imagesForStop(s, library).hero) ?? featured;
 
+  const upcoming = ordered.slice(Math.max(0, featured ? ordered.findIndex((s) => s.id === featured.id) : 0));
+  const impressions = impressionsFor(upcoming, library);
+
   const unclearBookings = bookings.filter((b) => b.booking_status === 'unknown').length + stays.filter((s) => s.booking_status === 'unknown').length;
   const docsFor = new Set(documents.flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
   const withoutReceipt = [...stays.filter((s) => s.booking_status !== 'cancelled').map((s) => s.id), ...bookings.filter((b) => b.booking_status !== 'cancelled').map((b) => b.id)].filter((id) => !docsFor.has(id)).length;
@@ -54,7 +57,7 @@ export default function DashboardPage() {
           : 'Reisetermine fehlen';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto max-w-content space-y-8">
       <section aria-labelledby="hero-title" className="overflow-hidden rounded-xl text-white shadow-card">
         <DestinationHero stop={heroStop} fallback={featured ? sceneForStop(featured) : 'savanna'}>
         <div className="flex flex-col gap-3 p-6 pb-3 pt-24 md:p-10 md:pb-4">
@@ -97,14 +100,19 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <h2 className="mb-1 text-lg font-bold">Offene Aufgaben</h2>
-          <p className="mb-3 text-sm text-slate" data-testid="open-count">{briefing.openItems.length} offen</p>
-          <ActionChecklist items={briefing.openItems.slice(0, 6)} label="Offene Aufgaben" />
-        </Card>
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-12">
+        {featured && <div className="lg:col-span-5"><NextStopCard stop={featured} stays={stays.filter((s) => s.stop_id === featured.id)} /></div>}
+        <div className="lg:col-span-4"><RoutePreviewCard stops={ordered} routes={routes} selectedId={featured?.id} /></div>
+        <div className="space-y-6 lg:col-span-3">
           {tipsStop && <StationTipsSummary stop={tipsStop} stays={stays.filter((s) => s.stop_id === tipsStop.id)} />}
+        </div>
+      </div>
+
+      <ImpressionsStrip impressions={impressions} />
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2"><TaskSummary items={briefing.openItems} /></div>
+        <div className="space-y-6">
           {adult && (
             <Card>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><FileWarning size={18} aria-hidden /> Fehlende Belege</h2>
@@ -114,8 +122,11 @@ export default function DashboardPage() {
               <Link href="/stays" className="mt-2 inline-block font-semibold text-deep underline">Unterkünfte prüfen</Link>
             </Card>
           )}
+          <FamilyCard members={members} />
         </div>
       </div>
+
+      <QuickActions role={role} />
 
       <section aria-labelledby="media-title">
         <div className="mb-3 flex items-end justify-between">
@@ -132,21 +143,6 @@ export default function DashboardPage() {
             );
           })}
           {latestMedia.length === 0 && <li className="col-span-full text-slate">Noch keine Medien.</li>}
-        </ul>
-      </section>
-
-      <section aria-labelledby="tiles-title">
-        <h2 id="tiles-title" className="mb-3 text-xl font-bold">Unser Reisebegleiter</h2>
-        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-          {[...visibleFor(PRIMARY_NAV, role).slice(1), ...visibleFor(MORE_NAV, role)].map((item) => (
-            <li key={item.href}>
-              <Link href={item.href} className="flex h-full min-h-28 flex-col gap-2 rounded-lg border border-line bg-white p-4 shadow-card transition-shadow hover:shadow-lg">
-                <span className="grid size-10 place-items-center rounded-full bg-sand text-deep"><item.icon size={20} aria-hidden /></span>
-                <strong>{item.label}</strong>
-                <span className="text-sm text-slate">{item.description}</span>
-              </Link>
-            </li>
-          ))}
         </ul>
       </section>
     </div>
