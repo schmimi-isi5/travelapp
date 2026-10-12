@@ -9,6 +9,7 @@ import type { ProviderStatus } from '@/lib/ai/types';
 import { isResizeEnabled, setResizeEnabled } from '@/lib/db/image-resize';
 import { clearAllLocalData, resetDemo } from '@/lib/db/seed';
 import { update } from '@/lib/db/repo';
+import { ProfilePhotoField } from '@/features/family/profile-photo';
 import { getSupabase } from '@/lib/supabase/client';
 
 const AI_STATE_LABEL: Record<string, string> = { ready: 'bereit', disabled: 'aus', not_configured: 'nicht eingerichtet' };
@@ -80,6 +81,7 @@ export default function SettingsPage() {
       {isSupabase && (
         <Card>
           <h2 className="mb-2 text-lg font-bold">Mein Profil</h2>
+          {currentUser && <div className="mb-4"><ProfilePhotoField member={currentUser} /></div>}
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Anzeigename">{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
             <Button variant="secondary" onClick={() => void saveName()}>Speichern</Button>

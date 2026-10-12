@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useApp } from '@/components/app-provider';
 import { MORE_NAV, PRIMARY_NAV, visibleFor } from '@/components/nav-items';
-import { AccountMenu } from '@/components/app-shell';
+import { SignOutButton } from '@/components/app-header';
 import { PageHeader, Select } from '@/components/ui';
 
 export default function MorePage() {
@@ -13,7 +13,7 @@ export default function MorePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Mehr" subtitle="Alle weiteren Module." />
-      {isSupabase && <div className="mb-4 sm:hidden"><AccountMenu /></div>}
+      {isSupabase && <div className="mb-4 sm:hidden"><SignOutButton /></div>}
       {currentUser && !isSupabase && (
         <div className="mb-4 sm:hidden">
           <label className="mb-1 block text-sm font-semibold text-slate" htmlFor="profile">Profil (Demo)</label>

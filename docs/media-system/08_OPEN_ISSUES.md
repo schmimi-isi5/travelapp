@@ -10,11 +10,11 @@
 - **Pexels** nicht angebunden (kein Schlüssel, keine belastbaren Ortsmetadaten).
 
 ## Technik
-- **Produktion:** Migration 0007 und der Import liegen nur lokal vor. Für die Produktion: Merge, Deploy, danach den Import gegen die API-Domain (siehe 04).
+- **Produktion:** Migration 0007, der Import und die Nachbereinigung (24 ungeeignete Fotos außer Betrieb, `disable.mjs`) laufen auf der Produktion. Neue Orte: Import gegen die API-Domain (siehe 04).
 - **AVIF** wird nicht erzeugt (nur WebP); Einsparung wäre gering gegenüber dem Aufwand für Browserweichen.
 - **Verknüpfung über Koordinaten:** Stationen ohne Koordinaten und ohne passenden Ortsschlüssel bekommen kein Foto.
 - **Cache:** Der Bildcache hat kein eigenes Größenlimit außer dem Vorwärm-Limit (80 Dateien). Geleerte Browserdaten leeren ihn.
 - **Dashboard-Hero vor der Reise:** Zeigt das Foto der ersten Station mit Foto (Windhoek), nicht der Abflug.
 - **Rate-Limits:** Commons drosselt gelegentlich (429); betroffene Suchbegriffe fehlen dann im Lauf. Ein zweiter Lauf füllt Lücken.
-- **Follower-Ansicht** nutzt die Bibliothek noch nicht.
+- **Follower-Ansicht** zeigt Ortsfotos erreichter Stationen mit Bildnachweisen (seit 12.10.2026).
 - Die Designreferenzen `docs/design-references/` existieren nicht im Repository; es wurde nach `docs/design-audit/` und `CLAUDE.design.md` gestaltet.

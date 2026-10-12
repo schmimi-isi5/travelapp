@@ -1,4 +1,4 @@
-import { BedDouble, BookOpenText, CalendarCheck, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive, Binoculars } from 'lucide-react';
+import { BedDouble, BookOpenText, CalendarCheck, CalendarDays, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive, Binoculars } from 'lucide-react';
 import type { Role } from '@/lib/domain/schemas';
 
 export interface NavItem {
@@ -12,15 +12,16 @@ export interface NavItem {
 
 export const PRIMARY_NAV: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, description: 'Dein nächster Reisetag' },
-  { href: '/route', label: 'Route', icon: Map, description: 'Stationen, Karte & Tagesbriefing' },
+  { href: '/route', label: 'Reiseplan', icon: CalendarDays, description: 'Stationen, Fahrtstrecken & Tagesbriefing' },
   { href: '/stays', label: 'Unterkünfte', icon: BedDouble, description: 'Checklisten, Preise & Zahlungen' },
   { href: '/journal', label: 'Tagebuch', icon: BookOpenText, description: 'Unsere gemeinsamen Geschichten' },
   { href: '/gallery', label: 'Galerie', icon: ImageIcon, description: 'Fotos, Videos & Sprachmemos' },
 ];
 
 export const MORE_NAV: NavItem[] = [
+  { href: '/map', label: 'Karte', icon: Map, description: 'Alle Stationen auf der Karte' },
   { href: '/bookings', label: 'Buchungen', icon: Plane, description: 'Flüge, Mietwagen & Aktivitäten' },
-  { href: '/guide', label: 'KI-Guide', icon: Sparkles, description: 'Tipps mit Herkunft & Stand' },
+  { href: '/guide', label: 'Reiseführer', icon: Sparkles, description: 'Tipps mit Herkunft & Stand' },
   { href: '/sightings', label: 'Safari-Tracker', icon: PawPrint, description: 'Unsere Tiersichtungen' },
   { href: '/expenses', label: 'Ausgaben', icon: Wallet, description: 'Nach Währung & Kategorie', roles: ['owner', 'adult'] },
   { href: '/safety', label: 'Sicherheit', icon: ShieldCheck, description: 'Notfallkontakte & Dokumente' },
@@ -28,8 +29,13 @@ export const MORE_NAV: NavItem[] = [
   { href: '/followers', label: 'Mitreisen', icon: Binoculars, description: 'Privater Link für Daheimgebliebene', roles: ['owner', 'adult'] },
   { href: '/archive', label: 'Erinnerungen', icon: Archive, description: 'Suche & Export' },
   { href: '/offline', label: 'Offline & Sync', icon: WifiOff, description: 'Warteschlange & Konflikte' },
-  { href: '/settings', label: 'Einstellungen', icon: Settings, description: 'Demo, KI & Datenschutz' },
+  { href: '/settings', label: 'Einstellungen', icon: Settings, description: 'Profil, KI & Datenschutz' },
 ];
+
+/** Sidebar order of the design plan; "Mitreisen" lives under Familie and "Erinnerungen" under Galerie (links on those pages). */
+const SIDEBAR_ORDER = ['/', '/route', '/map', '/stays', '/bookings', '/journal', '/gallery', '/sightings', '/expenses', '/safety', '/family', '/guide', '/offline', '/settings'];
+const ALL_NAV = [...PRIMARY_NAV, ...MORE_NAV];
+export const SIDEBAR_NAV: NavItem[] = SIDEBAR_ORDER.map((href) => ALL_NAV.find((item) => item.href === href)).filter((item): item is NavItem => Boolean(item));
 
 export const MOBILE_TABS: NavItem[] = [
   PRIMARY_NAV[0]!,

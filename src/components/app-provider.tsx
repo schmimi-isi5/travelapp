@@ -1,5 +1,6 @@
 'use client';
 
+import { clearSharedInbox } from '@/lib/share-inbox';
 import type { Session } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -91,6 +92,8 @@ function readStored(key: string): string | null {
 }
 
 function clearAppStorage(): void {
+  // files shared into the app but not imported yet must not outlive the session
+  void clearSharedInbox();
   try {
     for (const key of Object.keys(window.localStorage)) if (key.startsWith('nb-') && key !== 'nb-device-id') window.localStorage.removeItem(key);
   } catch {
@@ -260,6 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           role: membership.role,
           status: 'active',
           avatar_color: '#0F3D4E',
+          avatar_data: null,
           version: 1,
           created_at: session.user.created_at,
           updated_at: session.user.created_at,

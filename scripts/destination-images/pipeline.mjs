@@ -1,7 +1,7 @@
 // Reproducible import: stops -> places -> candidates (Commons) -> licence/location gate -> ranking -> optimised variants ->
 // storage + library rows -> report. Idempotent: existing roles are not refilled and known files are not downloaded again.
 import { createHash } from 'node:crypto';
-import { altTextFor, chooseRoles, checkLocation, classifyLicense, highlightQueries, isUsableCandidate, namesPlace, placeFromStop, regionMotifFits, scoreCandidate, TRAVEL_REGION, VARIANT_PLAN, stripHtml } from './lib.mjs';
+import { altTextFor, chooseRoles, checkLocation, classifyLicense, highlightQueries, isUsableCandidate, motifPlausibleForPlace, namesPlace, placeFromStop, regionMotifFits, scoreCandidate, TRAVEL_REGION, VARIANT_PLAN, stripHtml } from './lib.mjs';
 
 export const BUCKET = 'destination-media';
 export const GALLERY_TARGET = 10;
@@ -78,6 +78,8 @@ export async function importPlace({ place, admin, commons, pixabay = null, makeV
     if (!licence.ok) { bump(report.rejected, licence.reason.split(':')[0]); continue; }
     const location = checkLocation(place, c.coords);
     if (location.basis === 'file_coordinates_too_far') { bump(report.rejected, 'location_mismatch'); continue; }
+    // stock photos are tagged generously: the subject must also suit the place (no coast for Windhoek, no dunes at the river)
+    if (c.provider === 'pixabay' && !motifPlausibleForPlace(place, c)) { bump(report.rejected, 'motif_implausible'); continue; }
     const namesThePlace = namesPlace(place, c);
     const isCountryMotif = !location.verified && !namesThePlace && c.provider === 'pixabay' && regionMotifFits(place, c);
     if (!location.verified && !namesThePlace && !isCountryMotif) { bump(report.rejected, 'no_place_evidence'); continue; }

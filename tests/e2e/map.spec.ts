@@ -7,7 +7,7 @@ const hasTiles = existsSync('data/map/namibia-botswana.pmtiles');
 
 test.describe('Karte', () => {
   test('zeigt Stationen auf der Karte oder die schematische Ersatzkarte, nie eine leere Fläche', async ({ page }) => {
-    await open(page, '/route');
+    await open(page, '/map');
     await expect(page.getByLabel('Routenkarte mit Stationen')).toBeVisible();
     await expect(page.getByRole('link', { name: /Station 1: Windhoek/ })).toBeVisible();
     if (!hasTiles) await expect(page.getByText(/Schematische Karte/)).toBeVisible();
@@ -16,7 +16,7 @@ test.describe('Karte', () => {
   test('speichert die Karte offline und lädt sie danach ohne Kachel-Abruf', async ({ page, browserName }) => {
     test.skip(!hasTiles, 'Kartenkacheln nicht installiert (scripts/build-map-assets.sh)');
     test.skip(browserName === 'webkit', 'Cache-API-Größenlimit im Test-WebKit');
-    await open(page, '/route');
+    await open(page, '/map');
     await expect(page.locator('.maplibregl-canvas')).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: /Offline speichern/ }).click();
     await expect(page.getByText(/auf diesem Gerät gespeichert/)).toBeVisible({ timeout: 60_000 });

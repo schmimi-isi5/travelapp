@@ -292,6 +292,61 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     expect(await getLocalDb().sync_conflicts.count()).toBeGreaterThan(0);
   });
 
+  it('syncs the own profile photo to the family, and rejects changing the photo of somebody else', async () => {
+    const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
+    const child = new Device(fam.child, fam).on();
+    await child.sync();
+    await update('members', fam.child.id, { avatar_data: photo });
+    expect((await child.sync()).failed).toBe(0);
+    expect((await admin.from('profiles').select('avatar_data').eq('user_id', fam.child.id).single()).data).toMatchObject({ avatar_data: photo });
+
+    const owner = new Device(fam.owner, fam).on();
+    await owner.sync();
+    expect((await get('members', fam.child.id))?.avatar_data).toBe(photo);
+    // somebody else's photo cannot be changed on the server, even by the owner
+    const row = (await getLocalDb().entity('members').get(fam.child.id))!;
+    const result = await owner.remote.apply({ id: crypto.randomUUID(), mutation_id: crypto.randomUUID(), device_id: 'x', entity_type: 'members', entity_id: fam.child.id, operation: 'upsert', base_version: Number(row.version), payload: { ...row, avatar_data: null }, status: 'pending', error: null, created_at: new Date().toISOString() });
+    expect(result.status).toBe('rejected');
+    expect((await admin.from('profiles').select('avatar_data').eq('user_id', fam.child.id).single()).data).toMatchObject({ avatar_data: photo });
+  });
+
+  it('does not lose an edit that is made while the previous version of the same entity is still being sent', async () => {
+    const adult = new Device(fam.adult, fam).on();
+    await adult.sync();
+    const real = adult.remote.apply.bind(adult.remote);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let sending!: () => void;
+    const started = new Promise<void>((resolve) => { sending = resolve; });
+    adult.remote.apply = async (mutation) => { sending(); await gate; return real(mutation); };
+
+    await update('members', fam.adult.id, { avatar_data: 'data:image/jpeg;base64,AAAA' });
+    const firstSync = syncNow(adult.remote);
+    await started; // the first edit is on its way ...
+    await update('members', fam.adult.id, { avatar_data: null }); // ... when the second one is made
+    release();
+    await firstSync;
+    adult.remote.apply = real;
+    expect(await syncNow(adult.remote)).toMatchObject({ failed: 0, conflicts: 0 });
+    expect((await admin.from('profiles').select('avatar_data').eq('user_id', fam.adult.id).single()).data).toMatchObject({ avatar_data: null });
+    expect(await getLocalDb().sync_mutations.where('status').equals('pending').count()).toBe(0);
+  });
+
+  it('shows other people a changed profile photo and name even though their role row did not change', async () => {
+    const owner = new Device(fam.owner, fam).on();
+    await owner.sync();
+    const before = await get('members', fam.child.id);
+    const child = new Device(fam.child, fam).on();
+    await child.sync();
+    await update('members', fam.child.id, { avatar_data: 'data:image/jpeg;base64,CCCC', display_name: 'Neuer Name' });
+    expect(await syncNow(child.remote)).toMatchObject({ failed: 0, conflicts: 0 });
+    owner.on();
+    await syncNow(owner.remote);
+    const after = await get('members', fam.child.id);
+    expect(after).toMatchObject({ avatar_data: 'data:image/jpeg;base64,CCCC', display_name: 'Neuer Name' });
+    expect(Number(after?.version)).toBeGreaterThan(Number(before?.version));
+  });
+
   it('exports synced data with a complete manifest and leaves finance out for children', async () => {
     const owner = new Device(fam.owner, fam).on();
     await owner.sync();

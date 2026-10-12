@@ -1,7 +1,8 @@
 'use client';
 
 import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Toolbar } from '@/components/ui';
 import { FollowerShareToggle } from '@/features/follow/share-toggle';
@@ -16,6 +17,7 @@ import { downloadBlob } from '@/lib/download';
 import { canEditOwnedRow } from '@/lib/domain/policy';
 import type { MediaAsset } from '@/lib/domain/schemas';
 import { formatDateTime } from '@/lib/formatting';
+import { clearSharedInbox, readSharedFiles } from '@/lib/share-inbox';
 
 export default function GalleryPage() {
   const { familyId, tripId, currentUser, role } = useApp();
@@ -28,6 +30,7 @@ export default function GalleryPage() {
   const [deleting, setDeleting] = useState<MediaAsset | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const me = currentUser?.id ?? '';
 
@@ -41,10 +44,8 @@ export default function GalleryPage() {
   const index = filtered.findIndex((m) => m.id === openId);
   const current = index >= 0 ? filtered[index] : undefined;
 
-  async function onFiles(list: FileList | null) {
-    if (!list) return;
+  async function uploadFiles(files: File[]) {
     const problems: string[] = [];
-    const files = Array.from(list);
     for (const [i, file] of files.entries()) {
       try {
         await addMedia({ file, familyId, tripId, onProgress: (p) => setProgress(((i + p / 100) / files.length) * 100) });
@@ -57,6 +58,27 @@ export default function GalleryPage() {
     setProgress(null);
   }
 
+  const onFiles = (list: FileList | null) => (list ? uploadFiles(Array.from(list)) : Promise.resolve());
+
+  // Files shared from another app (Android "Teilen mit …") wait in the inbox until this page imports them.
+  useEffect(() => {
+    const flag = new URLSearchParams(window.location.search).get('shared');
+    if (flag === 'unavailable') setShareNotice('Teilen funktioniert erst, wenn die App einmal vollständig geöffnet war. Bitte öffne sie kurz und teile die Fotos dann noch einmal.');
+    else if (flag === 'error') setShareNotice('Die geteilten Dateien konnten nicht übernommen werden.');
+    let isCancelled = false;
+    void readSharedFiles().then(async (files) => {
+      if (isCancelled || files.length === 0) return;
+      await uploadFiles(files);
+      await clearSharedInbox();
+      setShareNotice(`${files.length} geteilte ${files.length === 1 ? 'Datei' : 'Dateien'} in die Galerie übernommen.`);
+    });
+    return () => {
+      isCancelled = true;
+    };
+    // runs once per visit; uploadFiles only reads current ids
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function download(asset: MediaAsset) {
     const record = await loadBlob(getLocalDb(), asset.id);
     if (record) downloadBlob(record.blob, asset.original_name ?? 'medium');
@@ -66,8 +88,10 @@ export default function GalleryPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<><input ref={fileRef} type="file" multiple accept="image/*,video/*,audio/*" className="sr-only" aria-label="Medien hochladen" onChange={(e) => { void onFiles(e.target.files); e.target.value = ''; }} /><Button onClick={() => fileRef.current?.click()}><Upload size={18} aria-hidden /> Hochladen</Button></>} />
+      {shareNotice && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="share-notice">{shareNotice}</span></Notice></div>}
       {progress !== null && <div className="mb-4"><ProgressBar value={progress} label="Upload-Fortschritt" /></div>}
       {errors.length > 0 && <div className="mb-4 space-y-2">{errors.map((e) => <Notice key={e} tone="danger">{e}</Notice>)}</div>}
+      <p className="mb-3 text-sm"><Link href="/archive" className="font-semibold text-deep underline">Erinnerungen durchsuchen und exportieren</Link></p>
       <Toolbar>
         <Chip active={album === 'all'} onClick={() => setAlbum('all')}>Alle Alben</Chip>
         {albums.map((a) => <Chip key={a} active={album === a} onClick={() => setAlbum(a)}>{a}</Chip>)}

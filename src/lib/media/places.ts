@@ -53,21 +53,29 @@ export interface StopImages {
   gallery: DestinationImage[];
 }
 
+/** Close-ups, minerals, buildings and the like never stand for a place: the app shows landscapes and wildlife only. */
+const UNSUITABLE_MOTIF = /mineral|crystal|kristall|quartz|quarz|tourmalin|feldspar|beryl|aquamarin|akwamaryn|specimen|gem\b|rock sample|flower|blüte|insect|insekt|beetle|käfer|spider|spinne|butterfly|schmetterling|caterpillar|fungus|pilz|lichen|flechte|hotel|building|gebäude|church|kirche|airport|flughafen|street|strasse|supermarket|portrait|selfie/i;
+
+export function isScenicMotif(image: Pick<DestinationImage, 'alt_text' | 'place_label'>): boolean {
+  return !UNSUITABLE_MOTIF.test(image.alt_text);
+}
+
 const NONE: StopImages = { hero: null, card: null, gallery: [] };
 
 /** The library images of a stop: same place key first, otherwise the nearest place whose radius covers the stop. */
 export function imagesForStop(stop: Pick<TripStop, 'title' | 'latitude' | 'longitude'>, library: readonly DestinationImage[]): StopImages {
   if (library.length === 0) return NONE;
+  const usable = library.filter(isScenicMotif);
   const key = placeKeyForStop(stop.title);
-  let candidates = library.filter((image) => image.place_key === key);
+  let candidates = usable.filter((image) => image.place_key === key);
   if (candidates.length === 0 && stop.latitude !== null && stop.longitude !== null) {
     let best: { key: string; distance: number } | null = null;
-    for (const image of library) {
+    for (const image of usable) {
       if (image.latitude === null || image.longitude === null) continue;
       const distance = distanceKm(stop.latitude, stop.longitude, image.latitude, image.longitude);
       if (distance <= image.radius_km && (!best || distance < best.distance)) best = { key: image.place_key, distance };
     }
-    if (best) candidates = library.filter((image) => image.place_key === best.key);
+    if (best) candidates = usable.filter((image) => image.place_key === best.key);
   }
   if (candidates.length === 0) return NONE;
   // verified locations first, so that a place-authentic photo always wins over a regional motif

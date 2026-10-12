@@ -12,6 +12,9 @@ Offizielle API `https://pixabay.com/api/`, nur aktiv, wenn `PIXABAY_API_KEY` in 
 
 Pixabay liefert keine Koordinaten, daher ist jedes Pixabay-Foto ein **Regionsmotiv** (`location_verified = false`). Zulässig ist es nur, wenn (a) die Tags den Ort nennen, oder (b) die Tags nur das Land nennen **und** das Motiv zum Ort passt (`regionMotifFits`: kein Meer im Busch, keine Dünen am Fluss, keine Safaritiere in der Stadt, keine Gebäude oder Nahaufnahmen). Fall (b) hat `location_basis = country_tag_plausible_motif` und steht so im Prüfvermerk.
 
+## Motivfilter
+Vor der Bewertung werden Dateien verworfen, deren Titel oder Kategorien auf Flughäfen und Flugzeuge, Kirchen und andere Einzelgebäude, Bahnhöfe, Straßenszenen, Mineralien und Nahaufnahmen oder Unterkünfte (Lodge, Hotel, Camp, Resort) hinweisen (`UNSUITABLE_MOTIF` in `scripts/destination-images/lib.mjs`, Ablehnungsgrund `motif_unsuitable`). Die App filtert zusätzlich beim Anzeigen (`isScenicMotif`). Bereits gespeicherte, ungeeignete Fotos nimmt `scripts/destination-images/disable.mjs <plan.json>` reversibel außer Betrieb (`approved = false`, mit Vermerk).
+
 ## Bewusst nicht genutzt
 Google Images, Social-Media-Bilder, Hotelportale und Buchungsplattformen (keine Lizenz zur Weiterverwendung), KI-generierte Bilder als vermeintliche Ortsfotos.
 

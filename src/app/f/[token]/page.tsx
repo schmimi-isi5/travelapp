@@ -8,6 +8,7 @@ import { TripMap } from '@/components/trip-map';
 import { Badge, Button, Dialog, Notice, Skeleton } from '@/components/ui';
 import { DEMO_FOLLOW_TOKEN, useFollowerView } from '@/features/follow/use-follower-view';
 import { formatDate, formatDateTime, formatShortDate } from '@/lib/formatting';
+import { imageUrl } from '@/lib/media/places';
 import type { FollowerView } from '@/lib/follow/view';
 import type { MediaAsset } from '@/lib/domain/schemas';
 
@@ -28,7 +29,12 @@ function CurrentPlace({ view }: { view: FollowerView }) {
   if (view.trip.status === 'finished') return <Notice tone="ok">Die Reise ist zu Ende. Hier seht ihr unsere ganze Route.</Notice>;
   if (!current) return null;
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-line bg-white p-4 shadow-card" data-testid="follower-current">
+    <div className="overflow-hidden rounded-lg border border-line bg-white shadow-card" data-testid="follower-current">
+      {current.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl(current.image.path)} alt={current.image.alt} className="h-48 w-full object-cover md:h-64" loading="lazy" title={current.image.isRegionMotif ? 'Regionsmotiv: Landschaft der Gegend' : undefined} />
+      )}
+      <div className="flex items-start gap-3 p-4">
       <MapPin aria-hidden className="mt-1 shrink-0 text-clay-strong" />
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate">Gerade sind wir hier</p>
@@ -38,6 +44,7 @@ function CurrentPlace({ view }: { view: FollowerView }) {
           {current.arrive_at && ` · seit ${formatDate(current.arrive_at, { day: 'numeric', month: 'long' })}`}
           {current.depart_at && ` · bis ${formatDate(current.depart_at, { day: 'numeric', month: 'long' })}`}
         </p>
+      </div>
       </div>
     </div>
   );
@@ -116,7 +123,12 @@ export default function FollowerPage() {
           <ol className="space-y-2">
             {stopsWithPlace.map((s) => (
               <li key={s.id} className="flex items-baseline gap-3 rounded-lg border border-line bg-white px-4 py-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-deep text-sm font-bold text-white" aria-hidden>{s.sequence}</span>
+                {s.image?.thumbPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl(s.image.thumbPath)} alt="" width={56} height={42} loading="lazy" className="h-[42px] w-14 shrink-0 self-center rounded object-cover" />
+                ) : (
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-deep text-sm font-bold text-white" aria-hidden>{s.sequence}</span>
+                )}
                 <span className="font-semibold">{s.title}</span>
                 <span className="text-sm text-slate">{s.country}</span>
                 <span className="ml-auto text-sm text-slate">{s.arrive_at ? formatShortDate(s.arrive_at) : ''}{s.depart_at ? ` – ${formatShortDate(s.depart_at)}` : ''}</span>
@@ -174,6 +186,17 @@ export default function FollowerPage() {
             ))}
           </ul>
         </Section>
+      )}
+
+      {view.imageCredits.length > 0 && (
+        <details className="mt-10 text-sm text-slate" data-testid="follower-credits">
+          <summary className="min-h-11 cursor-pointer font-semibold text-deep">Bildnachweise der Ortsfotos</summary>
+          <ul className="mt-2 space-y-1">
+            {view.imageCredits.map((credit) => (
+              <li key={credit.url}><strong>{credit.place}:</strong> {credit.text} (<a href={credit.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-deep underline">Quelle</a>)</li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <footer className="mt-12 border-t border-line pt-4 text-sm text-slate">

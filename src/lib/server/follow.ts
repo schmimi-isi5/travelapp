@@ -1,3 +1,4 @@
+import type { DestinationImage } from '@/lib/media/places';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { MIN_INVITE_TOKEN_LENGTH, sha256Hex } from '@/lib/auth/token';
 import { isLinkUsable, type FollowSource, type FollowTrip } from '@/lib/follow/view';
@@ -51,7 +52,7 @@ async function rows<T>(query: PromiseLike<{ data: unknown; error: { message: str
 export async function loadFollowerSource(admin: SupabaseClient, link: FollowerLinkRow): Promise<FollowSource | null> {
   const trip = await loadTrip(admin, link.trip_id);
   if (!trip) return null;
-  const [stops, entries, media, sightings] = await Promise.all([
+  const [stops, entries, media, sightings, library] = await Promise.all([
     rows<FollowSource['stops'][number]>(admin.from('trip_stops').select('id, sequence, title, country, latitude, longitude, arrive_at, depart_at').eq('trip_id', link.trip_id).order('sequence'), 'stops'),
     rows<FollowSource['entries'][number]>(
       admin.from('journal_entries').select('id, stop_id, author_user_id, entry_date, title, body, visibility, status, shared_with_followers')
@@ -68,6 +69,10 @@ export async function loadFollowerSource(admin: SupabaseClient, link: FollowerLi
         .eq('trip_id', link.trip_id).eq('shared_with_followers', true).order('seen_at', { ascending: false }).limit(MAX_SIGHTINGS),
       'sightings',
     ),
+    rows<DestinationImage>(
+      admin.from('destination_images').select('id, place_key, place_label, country, latitude, longitude, radius_km, role, variants, width, height, alt_text, source_provider, source_url, photographer, license_type, license_url, attribution_text, location_verified').eq('approved', true).limit(500),
+      'destination images',
+    ),
   ]);
 
   const authorIds = [...new Set(entries.map((e) => e.author_user_id))];
@@ -83,6 +88,7 @@ export async function loadFollowerSource(admin: SupabaseClient, link: FollowerLi
     entries,
     media,
     sightings,
+    library,
     authorNames: Object.fromEntries(profiles.map((p) => [p.user_id, p.display_name])),
     speciesNames: Object.fromEntries(species.map((s) => [s.id, s.common_name_de])),
     today: travelToday(),

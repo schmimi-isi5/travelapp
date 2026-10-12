@@ -16,17 +16,12 @@ interface Scope {
   booking_id?: string;
 }
 
-export function ActionChecklist({ items, scope, label, readOnly }: { items: ActionItem[]; scope?: Scope; label: string; readOnly?: boolean }) {
-  const { members, familyId, tripId, role } = useApp();
+/** Form for a new task (optionally scoped to a stay, stop or booking); adults only, decided by the caller. */
+export function AddActionForm({ scope, label, onAdded, className }: { scope?: Scope; label: string; onAdded?: () => void; className?: string }) {
+  const { members, familyId, tripId } = useApp();
   const [title, setTitle] = useState('');
   const [owner, setOwner] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const canEdit = isAdult(role) && !readOnly;
-  const nameOf = (id: string | null) => members.find((m) => m.id === id)?.display_name ?? null;
-
-  async function toggle(item: ActionItem) {
-    await update('action_items', item.id, { status: item.status === 'done' ? 'open' : 'done' });
-  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +33,41 @@ export function ActionChecklist({ items, scope, label, readOnly }: { items: Acti
     await create('action_items', { family_id: familyId, trip_id: tripId, title: title.trim(), owner_user_id: owner || null, ...scope });
     setTitle('');
     setOwner('');
+    onAdded?.();
+  }
+
+  return (
+    <form onSubmit={add} className={clsx('flex flex-col gap-2 sm:flex-row', className)} aria-label={`${label}: neue Aufgabe`} noValidate>
+      <div className="flex-1">
+        <Input aria-label="Neue Aufgabe" placeholder="Neue Aufgabe …" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={Boolean(error)} />
+        {error && (
+          <p role="alert" className="mt-1 text-sm text-danger">
+            {error}
+          </p>
+        )}
+      </div>
+      <Select aria-label="Zuständige Person" value={owner} onChange={(e) => setOwner(e.target.value)} className="sm:w-52">
+        <option value="">Nicht zugewiesen</option>
+        {members.filter((m) => m.status === 'active').map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.display_name}
+          </option>
+        ))}
+      </Select>
+      <Button type="submit" variant="secondary">
+        <Plus size={16} aria-hidden /> Hinzufügen
+      </Button>
+    </form>
+  );
+}
+
+export function ActionChecklist({ items, scope, label, readOnly }: { items: ActionItem[]; scope?: Scope; label: string; readOnly?: boolean }) {
+  const { members, role } = useApp();
+  const canEdit = isAdult(role) && !readOnly;
+  const nameOf = (id: string | null) => members.find((m) => m.id === id)?.display_name ?? null;
+
+  async function toggle(item: ActionItem) {
+    await update('action_items', item.id, { status: item.status === 'done' ? 'open' : 'done' });
   }
 
   return (
@@ -64,29 +94,7 @@ export function ActionChecklist({ items, scope, label, readOnly }: { items: Acti
           </li>
         ))}
       </ul>
-      {canEdit && (
-        <form onSubmit={add} className="mt-3 flex flex-col gap-2 sm:flex-row" aria-label={`${label}: neue Aufgabe`} noValidate>
-          <div className="flex-1">
-            <Input aria-label="Neue Aufgabe" placeholder="Neue Aufgabe …" value={title} onChange={(e) => setTitle(e.target.value)} aria-invalid={Boolean(error)} />
-            {error && (
-              <p role="alert" className="mt-1 text-sm text-danger">
-                {error}
-              </p>
-            )}
-          </div>
-          <Select aria-label="Zuständige Person" value={owner} onChange={(e) => setOwner(e.target.value)} className="sm:w-52">
-            <option value="">Nicht zugewiesen</option>
-            {members.filter((m) => m.status === 'active').map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.display_name}
-              </option>
-            ))}
-          </Select>
-          <Button type="submit" variant="secondary">
-            <Plus size={16} aria-hidden /> Hinzufügen
-          </Button>
-        </form>
-      )}
+      {canEdit && <AddActionForm scope={scope} label={label} className="mt-3" />}
     </div>
   );
 }

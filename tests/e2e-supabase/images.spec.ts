@@ -67,7 +67,7 @@ test('Dashboard, Route und Station zeigen die Bibliotheksfotos mit Bildnachweis 
   const hero = page.getByTestId('destination-hero');
   await expect(hero).toHaveAttribute('data-image', 'photo', { timeout: 30_000 });
   await expect.poll(() => loaded(page, '[data-testid=destination-hero] img')).toBe(true);
-  await expect(hero.locator('img')).toHaveAttribute('src', new RegExp(`^/media/destination/${key}/`)); // same origin, never a storage or third-party URL
+  await expect(hero.locator('img')).toHaveAttribute('src', /^\/media\/destination\/[a-z0-9-]+\//); // same origin, never a storage or third-party URL (the hero is a desert motif of the library)
   await expect(page.getByTestId('image-attribution')).toHaveCount(0); // credits are not printed under the photos
   await expect(hero.getByTestId('region-motif')).toHaveCount(0); // location proven
   const axe = async () => (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`);

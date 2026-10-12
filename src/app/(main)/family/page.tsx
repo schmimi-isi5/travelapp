@@ -1,16 +1,19 @@
 'use client';
 
-import { Copy, Link2, ShieldCheck, UserMinus } from 'lucide-react';
+import { Binoculars, Copy, Link2, ShieldCheck, UserMinus } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
+import { MemberAvatar } from '@/components/avatar';
 import { Badge, Button, Card, ConfirmationDialog, Field, Input, Notice, PageHeader, Select } from '@/components/ui';
 import { useTable } from '@/lib/db/hooks';
 import { createInviteToken } from '@/lib/auth/token';
 import { getSupabase } from '@/lib/supabase/client';
 import { create, update } from '@/lib/db/repo';
 import { newId } from '@/lib/db/ids';
+import { isAdult } from '@/lib/domain/policy';
 import { ROLES, type Member, type Role } from '@/lib/domain/schemas';
-import { formatDate, readableTextColor } from '@/lib/formatting';
+import { formatDate } from '@/lib/formatting';
 
 const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', adult: 'Erwachsene/r', member: 'Mitglied', child: 'Kind' };
 const ROLE_RIGHTS: Record<Role, string> = {
@@ -80,7 +83,7 @@ export default function FamilyPage() {
         <ul className="divide-y divide-line rounded-lg border border-line bg-white shadow-card">
           {active.map((m) => (
             <li key={m.id} className="flex flex-wrap items-center gap-3 p-4" data-testid="member-row">
-              <span className="grid size-10 place-items-center rounded-full text-sm font-bold" style={{ background: m.avatar_color, color: readableTextColor(m.avatar_color) }} aria-hidden>{m.display_name.replace('Demo-', '').charAt(0)}</span>
+              <MemberAvatar member={m} size={40} />
               <div className="min-w-0 flex-1"><p className="font-bold">{m.display_name} {m.id === currentUser?.id && <Badge tone="info">du</Badge>}</p><p className="text-sm text-slate">{ROLE_RIGHTS[m.role]}</p></div>
               {isOwner && m.role !== 'owner' ? (
                 <>
@@ -123,6 +126,13 @@ export default function FamilyPage() {
         </form>
         <p className="mt-2 text-xs text-muted">In der Live-Version speichert der Server nur eine Prüfsumme des Codes, nie den Code selbst.</p>
       </Card>}
+      {isAdult(role) && (
+        <Card>
+          <h2 className="mb-1 flex items-center gap-2 text-lg font-bold"><Binoculars size={18} aria-hidden /> Mitreisen von zuhause</h2>
+          <p className="mb-3 text-sm text-slate">Daheimgebliebene verfolgen die Reise über einen privaten Link, ohne Konto. Sie sehen nur, was ihr freigebt.</p>
+          <Link href="/followers" className="inline-flex min-h-11 items-center font-semibold text-deep underline">Privaten Link verwalten</Link>
+        </Card>
+      )}
       <Card>
         <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><ShieldCheck size={18} aria-hidden /> Rollen im Überblick</h2>
         <dl className="space-y-2 text-sm">{ROLES.map((r) => <div key={r}><dt className="font-bold">{ROLE_LABEL[r]}</dt><dd className="text-slate">{ROLE_RIGHTS[r]}</dd></div>)}</dl>

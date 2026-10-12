@@ -70,6 +70,11 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 ## 6d. Wetter-Route
 - `/api/weather` ist ein schmaler Proxy zu Open-Meteo und antwortet im Produktivmodus nur angemeldeten Nutzern (sonst 401, sonst wäre der Server ein offener Proxy), mit Rate-Limit je Nutzer (240 pro Stunde), strenger Eingabeprüfung (Koordinaten, Datum, höchstens 21 Tage) und Cache. An Open-Meteo gehen nur gerundete Koordinaten der Station und Datumsangaben, keine Nutzerdaten.
 
+## 6e. Teilen-Ziel, Profilfoto, Follower-Bilder
+- `/share-target` (Android „Teilen mit …“) nimmt auf dem Server nichts an: Die Dateien nimmt der Service Worker im Browser entgegen und parkt sie im Gerätecache, bis die angemeldete App sie importiert. Der Posteingang wird nach dem Import und beim Abmelden geleert. Nur Bilder, Videos und Audio werden übernommen.
+- Das Profilfoto ist ein kleines JPEG in `profiles.avatar_data` (Prüfregel in der Datenbank: JPEG-Data-URL, höchstens 60 KB). Gelesen wird es nur von der Person selbst und von Familienmitgliedern, geändert nur von der Person selbst (RLS-Test in `supabase/tests/rls.test.ts`, Sync-Test in `tests/backend/sync.test.ts`).
+- Die Follower-Ansicht liefert Ortsfotos nur für bereits erreichte Stationen und nie Familienfotos über diesen Weg; die Bibliotheksbilder sind öffentliche Referenzbilder.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.

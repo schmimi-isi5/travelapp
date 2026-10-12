@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { AlertTriangle, CheckCircle2, ChevronDown, Info, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, CloudOff, GitMerge, ImageOff, Info, Inbox, Lock, ShieldQuestion, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'sunset';
@@ -191,6 +191,44 @@ export function EmptyState({ icon, title, text, action }: { icon: React.ReactNod
       </div>
       <h3 className="text-lg font-bold">{title}</h3>
       <p className="mt-1 max-w-md text-slate">{text}</p>
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+export type StateKind = 'loading' | 'empty' | 'error' | 'offline' | 'conflict' | 'permission_denied' | 'needs_media' | 'unknown_status';
+
+const STATE_DEFAULTS: Record<Exclude<StateKind, 'loading'>, { icon: React.ReactNode; title: string; text: string; tone: string }> = {
+  empty: { icon: <Inbox />, title: 'Noch nichts da', text: 'Sobald es Einträge gibt, erscheinen sie hier.', tone: 'bg-sand text-deep' },
+  error: { icon: <AlertTriangle />, title: 'Das hat nicht geklappt', text: 'Bitte versuche es gleich noch einmal.', tone: 'bg-clay-50 text-clay-700' },
+  offline: { icon: <CloudOff />, title: 'Du bist offline', text: 'Änderungen werden auf dem Gerät gespeichert und später übertragen.', tone: 'bg-ochre-50 text-ochre-700' },
+  conflict: { icon: <GitMerge />, title: 'Zwei Versionen', text: 'Dieser Eintrag wurde an zwei Orten geändert. Bitte entscheide, welche Version gilt.', tone: 'bg-clay-50 text-clay-700' },
+  permission_denied: { icon: <Lock />, title: 'Kein Zugriff', text: 'Dieser Bereich ist in deiner Rolle nicht sichtbar.', tone: 'bg-stone-100 text-stone-600' },
+  needs_media: { icon: <ImageOff />, title: 'Foto noch nicht vorhanden', text: 'Hier fehlt noch ein Bild mit geklärten Rechten.', tone: 'bg-sand text-deep' },
+  unknown_status: { icon: <ShieldQuestion />, title: 'Noch nicht bestätigt', text: 'Dazu liegt noch keine gesicherte Angabe vor.', tone: 'bg-stone-100 text-stone-600' },
+};
+
+/**
+ * One look for every state of a view (design system V3): loading, empty, error, offline, conflict, permission_denied,
+ * needs_media and unknown_status. Defaults are sensible German texts; callers pass their own wording where it helps.
+ */
+export function StateBlock({ kind, title, text, action, className }: { kind: StateKind; title?: string; text?: string; action?: React.ReactNode; className?: string }) {
+  if (kind === 'loading') {
+    return (
+      <div role="status" className={clsx('space-y-3 rounded-lg border border-line bg-white/60 p-6', className)} aria-busy="true" aria-label={title ?? 'Lädt'} data-state="loading">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+  const preset = STATE_DEFAULTS[kind];
+  return (
+    <div role={kind === 'error' ? 'alert' : 'status'} data-state={kind} className={clsx('grid place-items-center rounded-lg border-2 border-dashed border-line bg-white/60 px-6 py-10 text-center', className)}>
+      <div className={clsx('mb-3 grid size-14 place-items-center rounded-full', preset.tone)} aria-hidden>
+        {preset.icon}
+      </div>
+      <h3 className="text-lg font-bold">{title ?? preset.title}</h3>
+      <p className="mt-1 max-w-md text-slate">{text ?? preset.text}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

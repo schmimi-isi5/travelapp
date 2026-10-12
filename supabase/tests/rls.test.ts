@@ -153,6 +153,7 @@ beforeAll(async () => {
   await run('0005_documents_ciphertext', readFileSync(join(MIGRATIONS, '0005_documents_ciphertext.sql'), 'utf8'));
   await run('0006_follower_links', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
   await run('0007_destination_images', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
+  await run('0008_profile_avatar', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -816,6 +817,26 @@ describe('migration 0007 (destination image library)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0007_again', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0008 (profile photo)', () => {
+  const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+
+  it('lets a person set their own photo, family members read it, nobody else changes it', async () => {
+    expect((await as(users.A.child, `update public.profiles set avatar_data=$2 where user_id=$1`, [users.A.child, photo])).affectedRows).toBe(1);
+    expect((await as(users.A.owner, `update public.profiles set avatar_data=$2 where user_id=$1`, [users.A.child, 'data:image/jpeg;base64,AAAA'])).affectedRows).toBe(0);
+    expect((await as(users.A.owner, `select avatar_data from public.profiles where user_id=$1`, [users.A.child])).rows[0]).toMatchObject({ avatar_data: photo });
+    expect(await count(users.B.owner, `select 1 from public.profiles where user_id=$1`, [users.A.child])).toBe(0);
+  });
+
+  it('accepts only small JPEG data URLs', async () => {
+    await expectDenied(as(users.A.adult, `update public.profiles set avatar_data='https://example.test/a.jpg' where user_id=$1`, [users.A.adult]), ['23514']);
+    await expectDenied(as(users.A.adult, `update public.profiles set avatar_data=$2 where user_id=$1`, [users.A.adult, `data:image/jpeg;base64,${'A'.repeat(60001)}`]), ['23514']);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0008_again', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
   });
 });
 

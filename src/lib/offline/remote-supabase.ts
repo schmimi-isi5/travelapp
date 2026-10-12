@@ -201,7 +201,9 @@ export class SupabaseRemote implements RemoteAdapter {
     const userId = m.entity_id;
     const { familyId } = this.ctx;
     if (m.operation === 'delete') {
-      const { error } = await this.client.from('family_members').delete().eq('family_id', familyId).eq('user_id', userId).eq('version', m.base_version ?? -1);
+      // the member version is composite (see pullMembers), the optimistic check on the row needs its own version
+      const { data: row } = await this.client.from('family_members').select('version').eq('family_id', familyId).eq('user_id', userId).maybeSingle();
+      const { error } = await this.client.from('family_members').delete().eq('family_id', familyId).eq('user_id', userId).eq('version', row ? Number((row as Row).version) : -1);
       this.assertNoTransportError(error);
       return error ? this.classify(error, 'members', m) : { status: 'ok', version: (m.base_version ?? 0) + 1 };
     }
@@ -210,19 +212,18 @@ export class SupabaseRemote implements RemoteAdapter {
     const current = await this.fetchOne('members', userId);
     if (!current) return { status: 'conflict', remote: null };
     if (Number(current.version) !== m.base_version) return { status: 'conflict', remote: current };
-    let version = Number(current.version);
     if (payload.role !== current.role || payload.status !== current.status) {
+      const { data: row } = await this.client.from('family_members').select('version').eq('family_id', familyId).eq('user_id', userId).maybeSingle();
       const { data, error } = await this.client
         .from('family_members')
         .update({ role: payload.role, status: payload.status })
         .eq('family_id', familyId)
         .eq('user_id', userId)
-        .eq('version', m.base_version)
+        .eq('version', row ? Number((row as Row).version) : -1)
         .select('version');
       this.assertNoTransportError(error);
       if (error) return this.classify(error, 'members', m);
       if (!data?.length) return { status: 'rejected', reason: 'Nur der Owner darf Rollen ändern' };
-      version = Number((data[0] as Row).version);
     }
     if (payload.display_name !== current.display_name) {
       if (userId !== this.ctx.userId) return { status: 'rejected', reason: 'Anzeigenamen kann nur die Person selbst ändern' };
@@ -230,7 +231,14 @@ export class SupabaseRemote implements RemoteAdapter {
       this.assertNoTransportError(error);
       if (error) return this.classify(error, 'members', m);
     }
-    return { status: 'ok', version };
+    if ((payload.avatar_data ?? null) !== (current.avatar_data ?? null)) {
+      if (userId !== this.ctx.userId) return { status: 'rejected', reason: 'Das Profilfoto kann nur die Person selbst ändern' };
+      const { error } = await this.client.from('profiles').update({ avatar_data: payload.avatar_data ?? null }).eq('user_id', userId);
+      this.assertNoTransportError(error);
+      if (error) return this.classify(error, 'members', m);
+    }
+    // Every change (role, name, photo) must raise the member version, or two quick edits of the same person would collide.
+    return { status: 'ok', version: Number(((await this.fetchOne('members', userId)) ?? current).version) };
   }
 
   private async applyInvitation(m: SyncMutation): Promise<ApplyResult> {
@@ -326,11 +334,15 @@ export class SupabaseRemote implements RemoteAdapter {
     if (filter) membersQuery = filter(membersQuery);
     const [{ data: members, error: memberError }, { data: profiles, error: profileError }] = await Promise.all([
       membersQuery as unknown as Promise<{ data: Row[] | null; error: { code?: string; message?: string } | null }>,
-      this.client.from('profiles').select('user_id, display_name'),
+      this.client.from('profiles').select('user_id, display_name, avatar_data, version'),
     ]);
     if (memberError) throw new Error(`family_members: ${describe(memberError)}`);
     if (profileError) throw new Error(`profiles: ${describe(profileError)}`);
     const names = new Map((profiles ?? []).map((p) => [String(p.user_id), String(p.display_name)]));
+    // A member is two rows: family_members (role, status) and profiles (name, photo). The entity version counts changes in both,
+    // because a person can only ever write their own profile, not the family_members row, and each edit needs a higher version.
+    const profileVersions = new Map((profiles ?? []).map((p) => [String(p.user_id), Number(p.version ?? 1)]));
+    const avatars = new Map((profiles ?? []).map((p) => [String(p.user_id), (p.avatar_data as string | null) ?? null]));
     const out: RemoteRow[] = [];
     for (const m of members ?? []) {
       const userId = String(m.user_id);
@@ -342,7 +354,8 @@ export class SupabaseRemote implements RemoteAdapter {
           role: m.role,
           status: m.status,
           avatar_color: avatarColor(userId),
-          version: m.version,
+          avatar_data: avatars.get(userId) ?? null,
+          version: Number(m.version) + (profileVersions.get(userId) ?? 1) - 1,
           created_at: m.created_at,
           updated_at: m.updated_at,
           source_type: 'user_entered',

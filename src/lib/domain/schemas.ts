@@ -55,6 +55,8 @@ export const memberSchema = z.object({
   role: roleSchema,
   status: z.enum(['active', 'invited', 'suspended', 'removed']).default('active'),
   avatar_color: z.string().default('#0F3D4E'),
+  /** Small JPEG data URL (max 60 KB) of the person's profile photo; null = initials on the avatar colour. */
+  avatar_data: z.string().max(60000).regex(/^data:image\/jpeg;base64,/).nullable().default(null),
 });
 
 export const invitationSchema = z.object({

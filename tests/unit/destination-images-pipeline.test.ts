@@ -144,14 +144,15 @@ describe('destination image import pipeline', () => {
       categories: tags.replace(/, /g, '|'), description: '', coords: null, meta: {}, provider: 'pixabay', providerLabel: 'Pixabay', popularity: 2,
       licence: { ok: true, type: 'Pixabay Content License', licenseUrl: 'https://pixabay.com/service/license-summary/', photographer: `Autor ${n}`, attributionRequired: false },
     });
-    const pixabay = fakeCommons([...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => stock(n) as unknown as FakeFile), stock(20, 'safari, africa, lion') as unknown as FakeFile]);
+    const pixabay = fakeCommons([...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => stock(n) as unknown as FakeFile), stock(20, 'africa, nature, landscape') as unknown as FakeFile, stock(21, 'sossusvlei, namibia, ocean, coast') as unknown as FakeFile]);
     const [report] = await runImport({ stops: [SOSSUSVLEI], admin, commons: fakeCommons([]), pixabay, makeVariants });
     const gallery = rows.filter((r) => r.role === 'gallery');
     expect(gallery).toHaveLength(10);
     expect(rows.filter((r) => r.role === 'hero')).toHaveLength(0); // 1280 px is too small for a hero
     expect(gallery.every((r) => r.source_provider === 'pixabay' && r.location_verified === false && r.attribution_required === false)).toBe(true);
     expect(String(gallery[0]!.attribution_text)).toMatch(/Autor \d+ \/ Pixabay \/ Pixabay Content License/);
-    expect(report!.rejected.no_place_evidence).toBe(1); // no place or country in the tags: 'safari, africa, lion'
+    expect(report!.rejected.no_place_evidence).toBe(1); // neither place nor country in the tags
+    expect(report!.rejected.motif_implausible).toBe(1); // tags name the place, but the sea does not belong to Sossusvlei
     expect(pixabay.download).toHaveBeenCalledWith(expect.stringContaining('cdn.pixabay.example'));
   });
 

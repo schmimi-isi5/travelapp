@@ -54,7 +54,7 @@ describe('follower view: stops', () => {
   it('exposes no booking, price or address fields on a stop', () => {
     const noisy = { ...stop('a', 1, '2026-10-13', null), address: 'Hidden Lodge 1', price_minor: 5000, booking_ref: 'XYZ' };
     const view = buildFollowerView(source({ stops: [noisy] }));
-    expect(Object.keys(view.stops[0]!).sort()).toEqual(['arrive_at', 'country', 'depart_at', 'id', 'latitude', 'longitude', 'sequence', 'title']);
+    expect(Object.keys(view.stops[0]!).sort()).toEqual(['arrive_at', 'country', 'depart_at', 'id', 'image', 'latitude', 'longitude', 'sequence', 'title']);
   });
 });
 
@@ -105,5 +105,27 @@ describe('link usability', () => {
     expect(isLinkUsable({ revoked_at: null, expires_at: '2026-10-15T00:00:00Z' }, now)).toBe(false);
     expect(isLinkUsable({ revoked_at: null, expires_at: null }, now)).toBe(true);
     expect(isLinkUsable({ revoked_at: null, expires_at: '2026-11-01T00:00:00Z' }, now)).toBe(true);
+  });
+});
+
+describe('follower view: place photos', () => {
+  const photo = (id: string, placeKey: string, over: Record<string, unknown> = {}) => ({
+    id, place_key: placeKey, place_label: placeKey, country: 'Namibia', latitude: null, longitude: null, radius_km: 30, role: 'card' as const, variants: { card: `${placeKey}/aaaaaaaaaaaa-card-card.webp`, thumb: `${placeKey}/aaaaaaaaaaaa-card-thumb.webp` }, width: 800, height: 600,
+    alt_text: 'Landschaft', source_provider: 'wikimedia_commons', source_url: `https://commons.example/${id}`, photographer: 'A', license_type: 'CC BY-SA 4.0', license_url: null, attribution_text: `Fotograf ${id} / Wikimedia Commons / CC BY-SA 4.0`, location_verified: true, ...over,
+  });
+
+  it('shows a photo and its credit for reached stops only, never for a stop that is still ahead', () => {
+    const view = buildFollowerView(source({ stops: [{ ...stop('a', 1, '2026-10-13', '2026-10-15'), title: 'Windhoek' }, { ...stop('c', 3, '2026-10-30', '2026-10-31'), title: 'Etosha' }], library: [photo('1', 'windhoek'), photo('2', 'etosha')] }));
+    expect(view.stops.map((s) => [s.id, s.image?.path])).toEqual([['a', 'windhoek/aaaaaaaaaaaa-card-card.webp']]);
+    expect(view.imageCredits).toEqual([{ place: 'windhoek', text: 'Fotograf 1 / Wikimedia Commons / CC BY-SA 4.0', url: 'https://commons.example/1' }]);
+    expect(JSON.stringify(view)).not.toContain('etosha');
+  });
+
+  it('marks photos without proven location as region motifs and works without any library', () => {
+    const withMotif = buildFollowerView(source({ stops: [{ ...stop('a', 1, '2026-10-13', '2026-10-15'), title: 'Windhoek' }], library: [photo('1', 'windhoek', { location_verified: false })] }));
+    expect(withMotif.stops[0]?.image?.isRegionMotif).toBe(true);
+    const without = buildFollowerView(source());
+    expect(without.stops.every((s) => s.image === null)).toBe(true);
+    expect(without.imageCredits).toEqual([]);
   });
 });
