@@ -110,7 +110,25 @@ test('Profilfoto: wählen, im Profilmenü sehen, auf dem Server gespeichert, ent
   await page.goto('/settings');
   await page.getByLabel('Profilfoto auswählen').setInputFiles({ name: 'ich.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByRole('status').filter({ hasText: 'Profilfoto gespeichert' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId('account-menu').locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/, { timeout: 20_000 });
+  try {
+    await expect(page.getByTestId('account-menu').locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/, { timeout: 20_000 });
+  } catch (cause) {
+    // diagnostics for CI: what the device holds locally and what the queue did with the change
+    const dump = await page.evaluate(async () => {
+      const dbs = (await indexedDB.databases()).filter((d) => d.name?.startsWith('nb-sb-'));
+      const out: unknown[] = [];
+      for (const info of dbs) {
+        const db: IDBDatabase = await new Promise((res, rej) => { const o = indexedDB.open(info.name!); o.onsuccess = () => res(o.result); o.onerror = () => rej(o.error); });
+        const read = (store: string) => new Promise<unknown[]>((res) => { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => res(r.result); });
+        const muts = (await read('sync_mutations')) as { entity_type: string; status: string; error: string | null; base_version: number | null }[];
+        const members = (await read('members')) as { id: string; version: number; avatar_data: string | null }[];
+        out.push({ muts: muts.filter((m) => m.entity_type === 'members').map((m) => [m.status, m.base_version, m.error]), members: members.map((m) => [m.id.slice(0, 8), m.version, Boolean(m.avatar_data)]), conflicts: (await read('sync_conflicts')).length });
+      }
+      return out;
+    });
+    console.log('PROFILFOTO-DIAGNOSE', JSON.stringify(dump), await page.getByTestId('account-menu').innerHTML());
+    throw cause;
+  }
   await expect.poll(async () => (await service.from('profiles').select('avatar_data').eq('user_id', userId).single()).data?.avatar_data ?? null, { timeout: 30_000 }).toMatch(/^data:image\/jpeg;base64,/);
   await page.getByRole('button', { name: 'Entfernen' }).click();
   await expect(page.getByTestId('account-menu').locator('img')).toHaveCount(0, { timeout: 20_000 });
