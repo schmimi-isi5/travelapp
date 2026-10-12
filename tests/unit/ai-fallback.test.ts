@@ -24,3 +24,16 @@ describe('local answers for every AI task (no model, no network)', () => {
     expect(runLocal({ task: 'suggest_species', input: { question: 'Etwas Raschelndes im Busch', facts: ['Elefant'] } }).text).toBe('unklar');
   });
 });
+
+describe('local transcript cleanup', () => {
+  const clean = (raw: string) => runLocal({ task: 'clean_transcript', input: { entries: [{ title: 'Abschrift', body: raw }] } }).text;
+  it('removes filler words and stutters and fixes spacing and sentence starts', () => {
+    expect(clean('äh also wir waren heute am Wasserloch und ähm haben Elefanten gesehen')).toBe('Wir waren heute am Wasserloch und haben Elefanten gesehen.');
+    expect(clean('wir wir sind früh los . dann gab es Frühstück ,ähm sehr lecker')).toBe('Wir sind früh los. Dann gab es Frühstück, sehr lecker.');
+  });
+  it('changes no wording beyond that, keeps numbers and names, and says it is not an AI correction', () => {
+    expect(clean('Wir fuhren 320 Kilometer nach Etosha. Naja es war heiß!')).toBe('Wir fuhren 320 Kilometer nach Etosha. Es war heiß!');
+    expect(runLocal({ task: 'clean_transcript', input: { entries: [{ title: 'Abschrift', body: 'ähm' }] } }).text).toBe('Keine Abschrift zum Glätten.');
+    expect(runLocal({ task: 'clean_transcript', input: { entries: [{ title: 'Abschrift', body: 'ok' }] } }).availability_note).toContain('keine KI');
+  });
+});

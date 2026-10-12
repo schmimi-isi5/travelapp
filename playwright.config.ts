@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
-const DESKTOP_SPECS = /(core|offline-ai|map|follow|photos|share-target|ai-planning)\.spec\.ts/;
+const DESKTOP_SPECS = /(core|offline-ai|map|follow|photos|share-target|ai-planning|journal-voice)\.spec\.ts/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -16,7 +16,7 @@ export default defineConfig({
     command: `npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
-    env: { AI_PROVIDER: 'stub' },
+    env: { AI_PROVIDER: 'stub', TRANSCRIBE_PROVIDER: 'stub' },
     timeout: 60_000,
   },
   projects: [

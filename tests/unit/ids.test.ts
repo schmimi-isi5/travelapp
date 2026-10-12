@@ -17,3 +17,12 @@ describe('newId', () => {
     for (const id of ids) expect(id).toMatch(UUID_V4);
   });
 });
+
+describe('queue timestamps', () => {
+  it('are strictly increasing even when asked within the same millisecond, so the push order is the order of the changes', async () => {
+    const { queueStamp } = await import('../../src/lib/db/ids');
+    const stamps = Array.from({ length: 200 }, () => queueStamp());
+    expect(new Set(stamps).size).toBe(200);
+    expect([...stamps].sort()).toEqual(stamps);
+  });
+});

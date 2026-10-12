@@ -34,12 +34,25 @@ Alle laufen über `requestAi` (Freigabe je Gerät, Anmeldung, Kontingent, regelb
 | `suggest_title` | Tagebuch, „Titel vorschlagen“ | der Text des Eintrags | erste Wörter, Ortstitel |
 | `suggest_species` | Safari-Tracker, Notiz | die Notiz und die Namen der bekannten Arten | Abgleich mit den bekannten Arten |
 | `trip_review` | Archiv, „Reise-Rückblick“ | höchstens 20 sichtbare Tagebucheinträge und zwei Zahlen | Auszug (erste Sätze) |
+| `clean_transcript` | Abschrift eines Sprachmemos, „Glätten“ | der Text der Abschrift | regelbasierte Glättung |
 | `summarize_journal` | Tagebuch | die gewählten Einträge | Auszug |
 
 Die Fakten für Tagesbriefing und Reise-Check entstehen **regelbasiert** (`src/lib/domain/day-plan.ts`, `trip-check.ts`, offline, getestet); die KI formuliert nur, sie findet nichts selbst. Der Prompt verbietet Zeiten und Zahlen, die nicht in den Fakten stehen.
 
 ### Belegerkennung (`/api/ai/receipt`)
 Der einzige Weg, auf dem ein **Foto** zum KI-Dienst geht, und deshalb mit eigener Bestätigung je Foto („Belegfoto an die KI senden?“). Der Browser verkleinert das Foto auf 1600 px und kodiert es neu als JPEG (ohne EXIF/GPS); die Route nimmt nur JPEG bis etwa 2 MB an, verlangt Anmeldung und `consent: true`, hat ein eigenes Kontingent (20 pro Stunde, 60 pro Tag je Nutzer, zählt zusätzlich in die 500 pro Tag insgesamt) und speichert nichts. Antwort: Betrag, Währung, Datum, Geschäft, Kategorie, jedes Feld darf `null` sein (nichts wird geraten). Die App füllt damit nur das Formular; gespeichert wird erst nach dem Prüfen. Nur `AnthropicProvider` (und der Stub) können Bilder lesen; sonst 503 mit Hinweis, selbst einzutragen.
+
+### Abschrift von Sprachmemos (`/api/ai/transcribe`)
+Claude nimmt keine Audiodateien, deshalb gibt es dafür einen eigenen, austauschbaren Dienst hinter einem einzigen Vertrag: ein **OpenAI-kompatibler** Endpunkt `…/audio/transcriptions` (OpenAI selbst, Groq oder ein selbst betriebener Whisper-Server). Der Schlüssel bleibt auf dem Server.
+
+| Variable | Bedeutung |
+|---|---|
+| `TRANSCRIBE_PROVIDER` | `disabled` (Standard, die App sagt „noch nicht eingerichtet“), `openai`, `stub` (nur Tests) |
+| `TRANSCRIBE_API_KEY` | Schlüssel des Dienstes; Rückfall `OPENAI_API_KEY` |
+| `TRANSCRIBE_BASE_URL` | Standard `https://api.openai.com/v1`; Beispiel Groq `https://api.groq.com/openai/v1` |
+| `TRANSCRIBE_MODEL` | Standard `gpt-4o-mini-transcribe` (Annahme, nicht gegen den echten Dienst getestet); bei Groq z. B. `whisper-large-v3-turbo` |
+
+Ablauf: Aufnahme (Android webm/opus, iPhone mp4/aac) → Abschrift erstellen (Bestätigung je Aufnahme, weil die Stimme das Gerät verlässt) → lesen und korrigieren → optional **Glätten** (KI-Aufgabe `clean_transcript`: Erkennungsfehler und Füllwörter, nichts erfinden; ohne KI eine regelbasierte Glättung) → in den Eintrag übernehmen. Im gespeicherten Eintrag wird die Abschrift als `voice_transcripts` zur Aufnahme gespeichert. Die Route verlangt Anmeldung und `consent`, nimmt Audio bis 10 MB, hat ein eigenes Kontingent (20 pro Stunde, 60 pro Tag), speichert und loggt keine Aufnahme (Fehlertexte enthalten nur den HTTP-Status). Das Wörterbuch im Aufruf (Ortsnamen der Reise) verbessert die Erkennung.
 
 ### Kursdienst (`/api/fx`)
 Kein KI-Dienst, aber im gleichen Geist: Referenzkurs von `open.er-api.com` (kostenlos, Quellenangabe „Rates By Exchange Rate API“), 6 Stunden zwischengespeichert, nur für Angemeldete, 60 Anfragen pro Stunde. Die Ausgabenseite füllt damit das Kursformular (Quelle und Stand inklusive); gespeichert wird erst nach dem Prüfen. Ein Referenzkurs ist kein Wechselstubenkurs.
@@ -59,4 +72,4 @@ Weicht der echte Vertrag ab, ist nur `KonturosProvider.generate` in `src/lib/ai/
 - Nur mit ausdrücklicher Freigabe in den Einstellungen (`nb-ai-consent`); die API lehnt Anfragen ohne `consent: true` ab.
 - Es werden nur die vom Nutzer gewählten Texte gesendet (Frage, Tagebuchtext), nie Dokumente, Ausweise oder Zahlungsdaten.
 - Antworten tragen Herkunft (`ai_generated` / `local_rule_based`), Anbieter, Zeitstempel und Verfügbarkeitshinweis.
-- Transkription/Waveform: nicht implementiert (kein Provider). Audio wird aufgenommen und abgespielt, die UI weist darauf hin.
+- Abschrift von Sprachmemos: mit eigenem Dienst (siehe oben) und Bestätigung je Aufnahme; ohne konfigurierten Dienst bleibt die Aufnahme ein Sprachmemo, und die UI sagt, dass die Abschrift nicht eingerichtet ist.

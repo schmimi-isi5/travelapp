@@ -1,11 +1,13 @@
 'use client';
 
-import { Lock, Pencil, Sparkles } from 'lucide-react';
+import { Lock, Pencil, Sparkles, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Badge, Button, Notice } from '@/components/ui';
+import { Badge, Button, Dialog, Notice } from '@/components/ui';
 import { FollowerShareToggle } from '@/features/follow/share-toggle';
+import { AudioMemo } from '@/features/journal/audio-memo';
+import { deleteJournalEntry } from '@/features/journal/delete-entry';
 import { MediaBody } from '@/features/media/media-tile';
 import { requestAi } from '@/lib/ai/client';
 import { update } from '@/lib/db/repo';
@@ -16,6 +18,8 @@ import { formatDate } from '@/lib/formatting';
 export function JournalEntryCard({ entry, media, stop, authorName }: { entry: JournalEntry; media: MediaAsset[]; stop?: TripStop; authorName: string }) {
   const { currentUser, role } = useApp();
   const [busy, setBusy] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [withMedia, setWithMedia] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const editable = currentUser ? canEditOwnedRow(role, entry.author_user_id, currentUser.id) : false;
   const visual = media.filter((m) => m.kind !== 'audio');
@@ -27,6 +31,17 @@ export function JournalEntryCard({ entry, media, stop, authorName }: { entry: Jo
     await update('journal_entries', entry.id, { summary: { text: result.text, provider: result.provider, generated_at: result.generated_at, is_ai: result.origin === 'ai_generated' } });
     setNote(fallbackReason);
     setBusy(false);
+  }
+
+  async function confirmDelete() {
+    if (!currentUser) return;
+    setBusy(true);
+    try {
+      await deleteJournalEntry(entry, media, withMedia, { userId: currentUser.id, role });
+    } finally {
+      setBusy(false);
+      setIsDeleting(false);
+    }
   }
 
   async function setShared(next: boolean) {
@@ -58,7 +73,7 @@ export function JournalEntryCard({ entry, media, stop, authorName }: { entry: Jo
         </div>
         <h3 className="text-lg font-bold">{entry.title}</h3>
         {entry.body && <p className="mt-1 whitespace-pre-line text-slate">{entry.body}</p>}
-        {audio.map((a) => <div key={a.id} className="mt-3 h-20 overflow-hidden rounded-md"><MediaBody asset={a} controls /></div>)}
+        {audio.map((a) => <AudioMemo key={a.id} asset={a} entry={entry} canEdit={editable} />)}
         {media.some((m) => m.upload_state === 'queued') && <p className="mt-2 text-sm text-warn" data-testid="queued-media">Medien warten auf Upload.</p>}
         {entry.summary && (
           <div className="mt-3 rounded-md bg-sand-50 p-3 text-sm" data-testid="summary">
@@ -72,8 +87,23 @@ export function JournalEntryCard({ entry, media, stop, authorName }: { entry: Jo
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href={`/journal/new?id=${entry.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-deep"><Pencil size={14} aria-hidden /> Bearbeiten</Link>
             <Button size="sm" variant="secondary" disabled={busy || !entry.body} onClick={() => void summarize()}><Sparkles size={14} aria-hidden /> Zusammenfassen</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setWithMedia(false); setIsDeleting(true); }}><Trash2 size={14} aria-hidden /> Löschen</Button>
           </div>
         )}
+        <Dialog open={isDeleting} onClose={() => setIsDeleting(false)} title="Eintrag löschen?">
+          <p className="text-slate">„{entry.title}“ wird unwiderruflich gelöscht{entry.shared_with_followers ? ' und ist für Follower nicht mehr sichtbar' : ''}.</p>
+          {media.length > 0 && (
+            <fieldset className="mt-4 space-y-2">
+              <legend className="mb-1 font-semibold">Was soll mit den {media.length} Fotos, Videos und Aufnahmen des Eintrags geschehen?</legend>
+              <label className="flex items-start gap-2"><input type="radio" name={`delete-media-${entry.id}`} className="mt-1 size-4" checked={!withMedia} onChange={() => setWithMedia(false)} /><span>Nur den Text löschen, die Dateien bleiben in der Galerie.</span></label>
+              <label className="flex items-start gap-2"><input type="radio" name={`delete-media-${entry.id}`} className="mt-1 size-4" checked={withMedia} onChange={() => setWithMedia(true)} /><span>Eintrag mit allen Dateien und Abschriften löschen.</span></label>
+            </fieldset>
+          )}
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setIsDeleting(false)}>Abbrechen</Button>
+            <Button variant="danger" disabled={busy} onClick={() => void confirmDelete()}>Endgültig löschen</Button>
+          </div>
+        </Dialog>
       </div>
     </article>
   );

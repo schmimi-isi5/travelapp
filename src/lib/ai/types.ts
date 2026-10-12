@@ -11,9 +11,11 @@ export type AiTask =
   /** Species names matching a sighting note (the species already known to the family are given as facts). */
   | 'suggest_species'
   /** A personal look back at the trip from journal entries and facts. */
-  | 'trip_review';
+  | 'trip_review'
+  /** Smooths an automatic transcript of a voice memo: fixes recognition errors and filler words, invents nothing. */
+  | 'clean_transcript';
 
-export const AI_TASKS = ['summarize_journal', 'answer_question', 'draft_day_text', 'day_briefing', 'check_plan', 'suggest_title', 'suggest_species', 'trip_review'] as const satisfies readonly AiTask[];
+export const AI_TASKS = ['summarize_journal', 'answer_question', 'draft_day_text', 'day_briefing', 'check_plan', 'suggest_title', 'suggest_species', 'trip_review', 'clean_transcript'] as const satisfies readonly AiTask[];
 
 export interface AiRequest {
   task: AiTask;

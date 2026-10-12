@@ -64,5 +64,6 @@ Umbau auf Branch `design/v3-plan-angleichung`, erst nach der Reise ausrollen. En
 - [x] Tagebuch: Entwurf aus dem Tag, Titelvorschlag; Archiv: Reise-Rückblick.
 - [x] Safari-Tracker: typische Tiere je Ort als Schnellauswahl und als Tipp, Artvorschlag aus der Notiz.
 - [x] Ausgaben: Belegfoto lesen lassen (mit Bestätigung je Foto), Referenzkurs laden.
-- [ ] **Nicht umgesetzt, braucht deine Entscheidung:** Tierart aus dem Foto (Datenschutz), Sprachmemo-Transkription (eigener Dienst und Schlüssel), Routing für echte Fahrzeiten (Anbieter und Schlüssel). Begründung in `docs/DECISIONS.md` 46.
+- [ ] **Nicht umgesetzt, braucht deine Entscheidung:** Tierart aus dem Foto (Datenschutz), Routing für echte Fahrzeiten (Anbieter und Schlüssel). Begründung in `docs/DECISIONS.md` 46.
+- [x] Sprachmemos als Text (Abschrift, Glätten, Übernahme in den Eintrag) und Einträge löschen sind gebaut. **Zum Einschalten fehlt ein Dienst:** `TRANSCRIBE_PROVIDER=openai` und `TRANSCRIBE_API_KEY` (OpenAI oder ein kompatibler Dienst wie Groq) in Coolify setzen und die App neu deployen (`docs/AI_INTEGRATION.md`).
 - [ ] Kosten im Blick behalten: Kontingent 30 KI-Anfragen pro Stunde und 100 pro Tag je Person, Belege 20 pro Stunde und 60 pro Tag; Ausgabenlimit bei Anthropic setzen.

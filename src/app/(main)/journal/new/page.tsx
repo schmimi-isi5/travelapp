@@ -4,8 +4,9 @@ import { Camera, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Badge, Button, Field, Input, Notice, PageHeader, ProgressBar, Select, Textarea } from '@/components/ui';
+import { Button, Field, Input, Notice, PageHeader, ProgressBar, Select, Textarea } from '@/components/ui';
 import { AiSuggestion } from '@/features/ai/ai-suggest';
+import { TranscribePanel } from '@/features/journal/transcribe-panel';
 import { AudioRecorder } from '@/features/media/audio-recorder';
 import { useStationWeather } from '@/features/tips/use-station-weather';
 import { requestAi } from '@/lib/ai/client';
@@ -136,6 +137,7 @@ function Editor() {
             {files.map((f, i) => (
               <li key={`${f.file.name}-${i}`} className="rounded-md bg-sand-50 p-2 text-sm">
                 <div className="flex items-center justify-between gap-2"><span className="truncate">{f.file.name} · {formatBytes(f.file.size)}</span><button type="button" aria-label={`${f.file.name} entfernen`} onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} className="grid size-8 place-items-center"><X size={16} aria-hidden /></button></div>
+                {f.file.type.startsWith('audio/') && <TranscribePanel getAudio={async () => f.file} filename={f.file.name} onUse={(text) => setBody((current) => (current.trim() ? `${current.trim()}\n\n${text}` : text))} useLabel="In den Text übernehmen" />}
                 {f.progress > 0 && <ProgressBar value={f.progress} label={`Fortschritt ${f.file.name}`} />}
                 {f.error && <p role="alert" className="text-danger">{f.error}</p>}
               </li>
@@ -143,7 +145,7 @@ function Editor() {
           </ul>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={readExif} onChange={(e) => setReadExif(e.target.checked)} /><span>Aufnahmedatum aus Foto-Metadaten (EXIF) lesen. Standortdaten im Foto werden nie ausgelesen.</span></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={shareLocation} onChange={(e) => setShareLocation(e.target.checked)} /><span>Aktuellen Standort einmalig zu diesem Eintrag speichern (Einwilligung, kein Hintergrund-Tracking).</span></label>
-          <Badge tone="info">Transkription: noch nicht verfügbar</Badge>
+          <p className="text-sm text-muted">Zu jedem Sprachmemo kannst du eine Abschrift erstellen lassen, lesen, korrigieren, glätten und in den Text übernehmen.</p>
         </fieldset>
         {isAdult(role) && (
           <label className="flex items-start gap-2 rounded-lg border border-line bg-white p-4 text-sm">

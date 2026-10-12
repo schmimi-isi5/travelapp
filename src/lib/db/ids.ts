@@ -16,6 +16,17 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+let lastQueueStamp = 0;
+
+/**
+ * Timestamp for a queue entry: strictly increasing on this device. The queue is pushed in this order (parents before children,
+ * a file before the entry that references it is removed), and two changes within the same millisecond must not swap places.
+ */
+export function queueStamp(): string {
+  lastQueueStamp = Math.max(Date.now(), lastQueueStamp + 1);
+  return new Date(lastQueueStamp).toISOString();
+}
+
 const DEVICE_KEY = 'nb-device-id';
 
 /** Stable per-browser device id used for mutation provenance. */

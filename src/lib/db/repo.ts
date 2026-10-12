@@ -1,7 +1,7 @@
 import { assertRead, assertWrite, canEditOwnedRow, ForbiddenError } from '../domain/policy';
 import { ENTITY_SCHEMAS, type Entity, type EntityName, type SyncMutation } from '../domain/schemas';
 import { getActor } from './actor';
-import { getDeviceId, newId, nowIso } from './ids';
+import { getDeviceId, newId, nowIso, queueStamp } from './ids';
 import { getLocalDb } from './local';
 
 /** Tables whose rows carry an author and may be edited by that author regardless of role. */
@@ -85,7 +85,7 @@ async function enqueue(table: EntityName, id: string, operation: 'upsert' | 'del
     payload,
     status: 'pending',
     error: null,
-    created_at: nowIso(),
+    created_at: queueStamp(),
   };
   await db.sync_mutations.put(mutation);
 }

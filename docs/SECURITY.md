@@ -78,6 +78,7 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 ## 6f. KI-Hilfen, Belegerkennung, Kursdienst
 - Alle KI-Routen teilen sich Anmeldung, Einwilligung (`consent: true`) und Kontingent (`src/lib/server/ai-guard.ts`). Texte gehen nur auf Knopfdruck und nur die sichtbaren Fakten; die Prompts behandeln `<daten>` nie als Anweisung.
 - `/api/ai/receipt` ist der einzige Weg für ein Foto zum Dienst: nur JPEG (Signatur wird geprüft), höchstens etwa 2 MB, mit Bestätigung je Foto im Browser, eigenem Kontingent (20 pro Stunde, 60 pro Tag), ohne Speicherung und mit `Cache-Control: no-store`. Das Foto wird vorher am Gerät neu kodiert (kein EXIF, kein GPS).
+- `/api/ai/transcribe` ist der einzige Weg für **Ton** zu einem Dienst: nur Audioformate der Handys, höchstens 10 MB, Bestätigung je Aufnahme im Browser, Anmeldung, Einwilligung, eigenes Kontingent (20 pro Stunde, 60 pro Tag), keine Speicherung, keine Aufnahme und kein Text in Logs. Ohne `TRANSCRIBE_PROVIDER` antwortet die Route mit 503.
 - `/api/fx` ist wie `/api/weather` kein offener Proxy: Anmeldung, strenge Prüfung der Währungscodes, Zwischenspeicher, 60 Anfragen pro Stunde.
 
 ## 7. Datenschutz
