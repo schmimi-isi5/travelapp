@@ -56,3 +56,13 @@ Umbau auf Branch `design/v3-plan-angleichung`, erst nach der Reise ausrollen. En
 - [ ] Importberichte `docs/media-system/import-report-prod-2026-10-11.json` und `…-12.json` committen oder löschen.
 - [ ] Alte Branches lokal löschen (`feat/station-recommendations`, `feat/more-images-pixabay`, `fix/backend-image-test`, `design/v3-dashboard`).
 - [ ] Prozessregel: Merge nur nach geprüfter CI. (Bei PR #12 wurde mit rotem Backend-Job gemergt, in PR #13 behoben.)
+
+## 9. KI-Hilfen und Planung (umgesetzt am 12.10.2026)
+- [x] Tagesbriefing mit Wetter, Tageslicht, späterster Abfahrt, Unterkunft, Aktivitäten, Aufgaben; KI-Tagesvorschau auf Knopfdruck.
+- [x] Reise-Check im Reiseplan (Lücken, Überschneidungen, lange Fahrtage, unbestätigte Buchungen) mit KI-„Nächste Schritte“; Hinweis im Dashboard.
+- [x] Reiseführer mit Kontext (Datum, Station, Unterkunftsart, Wetter, Gruppengröße; keine Namen).
+- [x] Tagebuch: Entwurf aus dem Tag, Titelvorschlag; Archiv: Reise-Rückblick.
+- [x] Safari-Tracker: typische Tiere je Ort als Schnellauswahl und als Tipp, Artvorschlag aus der Notiz.
+- [x] Ausgaben: Belegfoto lesen lassen (mit Bestätigung je Foto), Referenzkurs laden.
+- [ ] **Nicht umgesetzt, braucht deine Entscheidung:** Tierart aus dem Foto (Datenschutz), Sprachmemo-Transkription (eigener Dienst und Schlüssel), Routing für echte Fahrzeiten (Anbieter und Schlüssel). Begründung in `docs/DECISIONS.md` 46.
+- [ ] Kosten im Blick behalten: Kontingent 30 KI-Anfragen pro Stunde und 100 pro Tag je Person, Belege 20 pro Stunde und 60 pro Tag; Ausgabenlimit bei Anthropic setzen.

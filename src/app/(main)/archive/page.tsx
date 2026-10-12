@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Card, Chip, EmptyState, Input, Notice, PageHeader, Select, Toolbar } from '@/components/ui';
+import { AiSuggestion } from '@/features/ai/ai-suggest';
 import { buildExport } from '@/features/archive/export';
 import { searchArchive, type SearchHit } from '@/features/archive/search';
 import { canSeeEntry } from '@/features/journal/visibility';
 import { useTable } from '@/lib/db/hooks';
+import { requestAi } from '@/lib/ai/client';
 import { downloadBlob } from '@/lib/download';
 import { formatDate } from '@/lib/formatting';
 
@@ -61,6 +63,17 @@ export default function ArchivePage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Erinnerungsarchiv" subtitle="Durchsuche Texte, Sichtungen und Stationen und exportiere alles in portablen Formaten." actions={<Button onClick={() => void exportAll()} disabled={exporting}><FileArchive size={18} aria-hidden /> {exporting ? 'Exportiert …' : 'Export (ZIP + JSON)'}</Button>} />
       {summary && <Notice tone="ok" title="Export erstellt"><span data-testid="export-summary">{summary}</span></Notice>}
+      <Card data-testid="trip-review">
+        <h2 className="mb-1 text-lg font-bold">Reise-Rückblick</h2>
+        <p className="mb-3 text-sm text-slate">Ein persönlicher Rückblick aus euren Tagebucheinträgen. Gesendet werden nur die Einträge, die du sehen darfst, und ein paar Zahlen, und nur auf Knopfdruck.</p>
+        <AiSuggestion label="Rückblick schreiben" showLocal testId="trip-review-text" run={() => requestAi({
+          task: 'trip_review',
+          input: {
+            entries: journal.filter((e) => canSeeEntry(e, me)).sort((a, b) => a.entry_date.localeCompare(b.entry_date)).slice(-20).map((e) => ({ title: e.title.slice(0, 200), body: e.body.slice(0, 1500) })),
+            facts: [`${stops.length} Stationen geplant`, `${sightings.length} Tiersichtungen von ${new Set(sightings.map((s) => s.species_id)).size} Arten`],
+          },
+        })} />
+      </Card>
       <Card>
         <form role="search" onSubmit={(e) => e.preventDefault()} className="space-y-3">
           <div className="relative"><Search size={18} aria-hidden className="absolute left-3 top-3.5 text-muted" /><Input aria-label="Volltextsuche" placeholder="Suchen, z. B. Elefanten" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" /></div>

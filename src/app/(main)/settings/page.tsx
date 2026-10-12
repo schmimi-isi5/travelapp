@@ -15,7 +15,7 @@ import { getSupabase } from '@/lib/supabase/client';
 const AI_STATE_LABEL: Record<string, string> = { ready: 'bereit', disabled: 'aus', not_configured: 'nicht eingerichtet' };
 
 export default function SettingsPage() {
-  const { mode, today, setDemoToday, hasDemoDateOverride, online, isSupabase, role, familyId, currentUser, userEmail, signOut } = useApp();
+  const { mode, today, setDemoToday, hasDemoDateOverride, online, isSupabase, role, familyId, currentUser, userEmail, signOut, members } = useApp();
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<ProviderStatus | null>(null);
   const [confirm, setConfirm] = useState<'reset' | 'wipe' | null>(null);
@@ -81,7 +81,7 @@ export default function SettingsPage() {
       {isSupabase && (
         <Card>
           <h2 className="mb-2 text-lg font-bold">Mein Profil</h2>
-          {currentUser && <div className="mb-4"><ProfilePhotoField member={currentUser} /></div>}
+          {currentUser && <div className="mb-4"><ProfilePhotoField member={currentUser} isReady={members.some((m) => m.id === currentUser.id)} /></div>}
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Anzeigename">{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
             <Button variant="secondary" onClick={() => void saveName()}>Speichern</Button>

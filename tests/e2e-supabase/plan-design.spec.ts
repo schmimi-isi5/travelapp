@@ -108,6 +108,7 @@ test('Profilfoto: wählen, im Profilmenü sehen, auf dem Server gespeichert, ent
   await login(page, email);
   await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
   await page.goto('/settings');
+  await expect(page.getByRole('button', { name: 'Foto wählen' })).toBeEnabled({ timeout: 30_000 }); // the own record must have arrived first
   await page.getByLabel('Profilfoto auswählen').setInputFiles({ name: 'ich.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByRole('status').filter({ hasText: 'Profilfoto gespeichert' })).toBeVisible({ timeout: 20_000 });
   try {

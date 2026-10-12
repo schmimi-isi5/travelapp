@@ -141,6 +141,28 @@ function stayTips(kinds: readonly StayKind[], w: WeatherSummary | null): Tip[] {
 
 const MALARIA = /^(rundu|divundu|chobe|kasane|maun)$/;
 
+/**
+ * What families typically see around a place (general knowledge, not a forecast and no promise). Keys are place keys; the lists
+ * feed the "Typisch hier" tip and the quick picks in the sighting form.
+ */
+const TYPICAL_WILDLIFE: Record<string, { species: string[]; hint: string }> = {
+  etosha: { species: ['Elefant', 'Löwe', 'Giraffe', 'Zebra', 'Oryx', 'Springbock', 'Spitzmaulnashorn'], hint: 'Die Chancen sind an den Wasserlöchern am Morgen und späten Nachmittag am besten.' },
+  chobe: { species: ['Elefant', 'Flusspferd', 'Krokodil', 'Büffel', 'Kudu', 'Fischadler'], hint: 'Bootsfahrten auf dem Fluss zeigen große Elefantenherden am Ufer.' },
+  kasane: { species: ['Elefant', 'Flusspferd', 'Krokodil', 'Büffel', 'Kudu', 'Fischadler'], hint: 'Bootsfahrten auf dem Fluss zeigen große Elefantenherden am Ufer.' },
+  divundu: { species: ['Flusspferd', 'Krokodil', 'Elefant', 'Eisvogel', 'Bienenfresser'], hint: 'Am Okavango und im Bwabwata-Gebiet; Elefanten ziehen oft an den Fluss.' },
+  maun: { species: ['Elefant', 'Flusspferd', 'Letschwe', 'Fischadler', 'Löwe'], hint: 'Im Okavango-Delta sind Boots- und Mokoro-Ausflüge üblich.' },
+  nata: { species: ['Zebra', 'Springbock', 'Pelikan', 'Flamingo'], hint: 'Flamingos und Pelikane kommen nur, wenn die Pfanne nach der Regenzeit Wasser hat.' },
+  sossusvlei: { species: ['Oryx', 'Springbock', 'Strauß', 'Schakal'], hint: 'Tiere sind in der Dünenlandschaft eher selten und früh am Morgen aktiv.' },
+  swakopmund: { species: ['Zwergflamingo', 'Pelikan', 'Robbe', 'Delfin'], hint: 'Flamingos und Pelikane an der Lagune von Walvis Bay; Robben bei Cape Cross (etwa 120 km nördlich).' },
+  erongo: { species: ['Klippschliefer', 'Pavian', 'Kudu'], hint: 'Klippschliefer sitzen in den Granitfelsen; Leoparden gibt es, sie sind aber sehr scheu.' },
+  rundu: { species: ['Flusspferd', 'Krokodil', 'Eisvogel'], hint: 'Vögel und Flusstiere am Okavango, besonders morgens und abends.' },
+};
+
+/** Species names typically seen near a place, for quick picks; empty for unknown places. */
+export function typicalWildlife(placeKey: string): string[] {
+  return TYPICAL_WILDLIFE[placeKey]?.species ?? [];
+}
+
 function placeTips(placeKey: string, label: string): Tip[] {
   const tips: Tip[] = [];
   const add = (tip: Omit<Tip, 'basis' | 'reason'>) => tips.push({ ...tip, basis: 'place', reason: `Ort: ${label}` });
@@ -174,6 +196,10 @@ function placeTips(placeKey: string, label: string): Tip[] {
       break;
     default:
       break;
+  }
+  const wildlife = TYPICAL_WILDLIFE[placeKey];
+  if (wildlife) {
+    add({ id: `wildlife-${placeKey}`, category: 'Tiere & Sicherheit', tone: 'info', title: 'Typisch hier', text: `${wildlife.species.join(', ')}. ${wildlife.hint} Erfahrungswerte, keine Garantie.` });
   }
   if (MALARIA.test(placeKey)) {
     add({ id: 'malaria', category: 'Gesundheit', tone: 'warn', title: 'Malaria-Schutz klären', text: 'Diese Gegend gehört zu einem Gebiet, für das Malariaschutz üblicherweise besprochen wird. Prophylaxe vorab mit Ärztin, Arzt oder Tropeninstitut klären; abends lange Kleidung und Mückenschutz.' });

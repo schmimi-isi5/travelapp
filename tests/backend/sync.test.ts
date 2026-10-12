@@ -191,7 +191,10 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     const stay = await create('stays', { trip_id: owner.tripId, name: 'Lodge Okavango', quote_status: 'confirmed', price_minor: 1_000_000, currency: 'BWP', booking_status: 'confirmed' });
     await create('payments', { family_id: owner.familyId, stay_id: stay.id, amount_minor: 400_000, currency: 'BWP', verification_status: 'verified' });
     await create('payments', { family_id: owner.familyId, stay_id: stay.id, amount_minor: 100_000, currency: 'BWP', verification_status: 'unverified' });
+    // a sync that is already running (started by the network listener) makes the explicit call skip: run until nothing is pending
     expect((await owner.sync()).failed).toBe(0);
+    await owner.sync();
+    expect(await getLocalDb().sync_mutations.where('status').equals('pending').count()).toBe(0);
 
     const adult = new Device(fam.adult, fam).on();
     await adult.sync();

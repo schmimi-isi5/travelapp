@@ -10,6 +10,7 @@ import { STATUS_LABEL } from '@/features/bookings/booking-form';
 import { ActionChecklist } from '@/features/common/action-checklist';
 import { TipCard } from '@/features/ai/tip-card';
 import { StationRecommendations } from '@/features/tips/station-recommendations';
+import { DayBriefingCard } from '@/features/trip/day-briefing';
 import { useStopImages } from '@/features/media/use-destination-library';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { useTable, useTips } from '@/lib/db/hooks';
@@ -47,7 +48,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <Link href="/route" className="inline-flex items-center gap-1 font-semibold text-deep"><ArrowLeft size={16} aria-hidden /> Route</Link>
+      <Link href="/route" className="inline-flex items-center gap-1 font-semibold text-deep"><ArrowLeft size={16} aria-hidden /> Reiseplan</Link>
       <DestinationHero stop={stop} fallback={sceneForStop(stop)} className="rounded-xl" minHeight="h-56 md:h-80" />
       <PageHeader title={stop.title} subtitle={`${stop.country} · ${stop.arrive_at ? `${formatDate(stop.arrive_at)} bis ${formatDate(stop.depart_at)}` : 'Datum unbekannt'}`} />
       <div className="flex flex-wrap gap-2">
@@ -76,16 +77,7 @@ export default function StopDetailPage({ params }: { params: Promise<{ stopId: s
       <StationRecommendations stop={stop} stays={stopStays} />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-2 text-lg font-bold">Tagesbriefing</h2>
-          <ul className="space-y-1 text-[15px] text-slate">
-            <li>Station {stop.sequence} von {stops.length}</li>
-            <li>Offene Aufgaben hier: {stopItems.filter((i) => i.status !== 'done').length}</li>
-            <li>Geplante Aktivitäten: {activities.length || 'keine erfasst'}</li>
-            <li>Unterkunft: {stopStays.map((s) => s.name).join(', ') || 'keine erfasst'}</li>
-            <li>Wetter: nicht verfügbar (kein Dienst verbunden)</li>
-          </ul>
-        </Card>
+        <DayBriefingCard stop={stop} stopCount={stops.length} previous={from ?? null} leg={incoming} stays={stopStays} bookings={activities} items={stopItems} />
         <Card>
           <h2 className="mb-2 text-lg font-bold">Fahrtstrecke</h2>
           {incoming && from && driveSummary(incoming.distance_km, incoming.duration_minutes) ? (

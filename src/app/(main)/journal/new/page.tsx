@@ -5,12 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Field, Input, Notice, PageHeader, ProgressBar, Select, Textarea } from '@/components/ui';
+import { AiSuggestion } from '@/features/ai/ai-suggest';
 import { AudioRecorder } from '@/features/media/audio-recorder';
+import { useStationWeather } from '@/features/tips/use-station-weather';
+import { requestAi } from '@/lib/ai/client';
 import { addMedia, MediaError } from '@/lib/db/media';
 import { useTable } from '@/lib/db/hooks';
 import { create, get, update } from '@/lib/db/repo';
 import { isAdult } from '@/lib/domain/policy';
-import { formatBytes, todayIso } from '@/lib/formatting';
+import { formatBytes, formatDate, todayIso } from '@/lib/formatting';
+import { summarizeWeather } from '@/lib/tips/recommend';
 
 interface PendingFile {
   file: File;
@@ -24,6 +28,8 @@ function Editor() {
   const editId = params.get('id');
   const { tripId, familyId, currentUser, today, role } = useApp();
   const stops = useTable('trip_stops').rows;
+  const sightings = useTable('wildlife_sightings').rows;
+  const species = useTable('wildlife_species').rows;
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [date, setDate] = useState(today || todayIso());
@@ -36,6 +42,20 @@ function Editor() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const selectedStop = stops.find((s) => s.id === stopId);
+  const { weather } = useStationWeather(selectedStop);
+  // Facts of the day for the optional AI draft: only what is already recorded (place, weather, sightings, number of files).
+  const dayFacts = (): string[] => {
+    const facts = [`Datum: ${formatDate(date)}`];
+    if (selectedStop) facts.push(`Ort: ${selectedStop.title} (${selectedStop.country})`);
+    const summary = summarizeWeather((weather?.days ?? []).filter((d) => d.date === date).length ? (weather?.days ?? []).filter((d) => d.date === date) : (weather?.days ?? []));
+    if (summary) facts.push(`Wetter: ${summary.tmin ?? '?'} bis ${summary.tmax ?? '?'} Grad Celsius${summary.isClimateOnly ? ' (Durchschnitt)' : ''}`);
+    const seen = sightings.filter((s) => s.seen_at.slice(0, 10) === date).map((s) => `${species.find((x) => x.id === s.species_id)?.common_name_de ?? 'Tier'}${s.count ? ` (${s.count})` : ''}`);
+    if (seen.length) facts.push(`Gesehene Tiere an diesem Tag: ${seen.join(', ')}`);
+    if (files.length) facts.push(`${files.length} Fotos oder Dateien zum Eintrag`);
+    if (body.trim()) facts.push(`Bisheriger Text der Familie: ${body.trim().slice(0, 450)}`);
+    return facts;
+  };
   // Only adults publish to followers; private entries and drafts never can be.
   const canShare = isAdult(role) && visibility === 'family';
 
@@ -99,6 +119,11 @@ function Editor() {
           <Field label="Sichtbarkeit">{(p) => <Select {...p} value={visibility} onChange={(e) => setVisibility(e.target.value as 'family' | 'private')}><option value="family">Familie</option><option value="private">Nur ich</option></Select>}</Field>
         </div>
         <Field label="Was habt ihr erlebt?">{(p) => <Textarea {...p} value={body} onChange={(e) => setBody(e.target.value)} rows={7} />}</Field>
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="journal-ai">
+          <AiSuggestion label="Entwurf aus dem Tag" acceptLabel="In den Text übernehmen" testId="journal-draft" showLocal onAccept={(text) => setBody((current) => (current.trim() ? `${current.trim()}\n\n${text}` : text))} run={() => requestAi({ task: 'draft_day_text', input: { stopTitle: selectedStop?.title ?? 'diesem Tag', facts: dayFacts() } })} />
+          <AiSuggestion label="Titel vorschlagen" acceptLabel="Ersten Vorschlag übernehmen" testId="journal-title-ideas" showLocal onAccept={(text) => setTitle(text.split('\n')[0]?.trim() ?? '')} run={() => requestAi({ task: 'suggest_title', input: { stopTitle: selectedStop?.title, entries: [{ title, body: body.trim() || dayFacts().join('. ') }] } })} />
+        </div>
+        <p className="-mt-2 text-xs text-muted">Nur auf Knopfdruck gesendet: Ort, Datum, Wetter, gesehene Tiere und der bisherige Text dieses Eintrags. Vorschläge sind Entwürfe, bitte mit eigenen Eindrücken ergänzen.</p>
 
         <fieldset className="space-y-3 rounded-lg border border-line bg-white p-4">
           <legend className="px-1 font-bold">Medien</legend>

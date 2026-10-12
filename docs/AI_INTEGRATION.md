@@ -22,13 +22,35 @@ Der Systemprompt verlangt: Deutsch, knapp, keine erfundenen Preise, Zeiten, Rege
 ## Zugriffsschutz und Kosten
 `/api/ai/generate` beantwortet im Produktivmodus nur angemeldete Nutzer (Bearer-Token wird geprüft), sonst 401. Kontingent je Instanz: 30 Anfragen pro Stunde und 100 pro Tag je Nutzer, 500 pro Tag insgesamt (danach 429, die App fällt auf die regelbasierte Hilfe zurück). Pro Anfrage höchstens 20 Einträge à 8000 Zeichen und 1500 Ausgabe-Token (bis 4000 bei der einen Wiederholung). Das Ausgabenlimit beim Anbieter bleibt die eigentliche Obergrenze.
 
+## Aufgaben und wo sie in der App stehen
+Alle laufen über `requestAi` (Freigabe je Gerät, Anmeldung, Kontingent, regelbasierter Rückfall) und sind immer als „KI-Entwurf“ oder „Regelbasiert, keine KI“ gekennzeichnet. Gesendet wird nichts, bevor ein Knopf gedrückt wird.
+
+| Aufgabe (`task`) | Wo | Was gesendet wird | Rückfall ohne KI |
+|---|---|---|---|
+| `answer_question` | Reiseführer, Stationsempfehlungen | Frage und Kontext (Datum, Station, Unterkunftsart, Wetter, Gruppengröße; keine Namen) | passende kuratierte Hinweise |
+| `day_briefing` | Tagesbriefing der Station | die Fakten des Briefings (Reihen der Karte) | die Fakten als Liste |
+| `check_plan` | Reise-Check im Reiseplan | die regelbasiert gefundenen Hinweise | die Hinweise als Liste |
+| `draft_day_text` | Tagebuch, „Entwurf aus dem Tag“ | Ort, Datum, Wetter, gesehene Tiere, Zahl der Dateien, bisheriger Text (höchstens 450 Zeichen) | Vorlage aus den Fakten |
+| `suggest_title` | Tagebuch, „Titel vorschlagen“ | der Text des Eintrags | erste Wörter, Ortstitel |
+| `suggest_species` | Safari-Tracker, Notiz | die Notiz und die Namen der bekannten Arten | Abgleich mit den bekannten Arten |
+| `trip_review` | Archiv, „Reise-Rückblick“ | höchstens 20 sichtbare Tagebucheinträge und zwei Zahlen | Auszug (erste Sätze) |
+| `summarize_journal` | Tagebuch | die gewählten Einträge | Auszug |
+
+Die Fakten für Tagesbriefing und Reise-Check entstehen **regelbasiert** (`src/lib/domain/day-plan.ts`, `trip-check.ts`, offline, getestet); die KI formuliert nur, sie findet nichts selbst. Der Prompt verbietet Zeiten und Zahlen, die nicht in den Fakten stehen.
+
+### Belegerkennung (`/api/ai/receipt`)
+Der einzige Weg, auf dem ein **Foto** zum KI-Dienst geht, und deshalb mit eigener Bestätigung je Foto („Belegfoto an die KI senden?“). Der Browser verkleinert das Foto auf 1600 px und kodiert es neu als JPEG (ohne EXIF/GPS); die Route nimmt nur JPEG bis etwa 2 MB an, verlangt Anmeldung und `consent: true`, hat ein eigenes Kontingent (20 pro Stunde, 60 pro Tag je Nutzer, zählt zusätzlich in die 500 pro Tag insgesamt) und speichert nichts. Antwort: Betrag, Währung, Datum, Geschäft, Kategorie, jedes Feld darf `null` sein (nichts wird geraten). Die App füllt damit nur das Formular; gespeichert wird erst nach dem Prüfen. Nur `AnthropicProvider` (und der Stub) können Bilder lesen; sonst 503 mit Hinweis, selbst einzutragen.
+
+### Kursdienst (`/api/fx`)
+Kein KI-Dienst, aber im gleichen Geist: Referenzkurs von `open.er-api.com` (kostenlos, Quellenangabe „Rates By Exchange Rate API“), 6 Stunden zwischengespeichert, nur für Angemeldete, 60 Anfragen pro Stunde. Die Ausgabenseite füllt damit das Kursformular (Quelle und Stand inklusive); gespeichert wird erst nach dem Prüfen. Ein Referenzkurs ist kein Wechselstubenkurs.
+
 ## Konturos: was ungeklärt ist
 Der Handoff enthält keinen Konturos-API-Vertrag. Der Adapter erfindet deshalb keinen Endpunkt: der Pfad kommt aus `KONTUROS_COMPLETIONS_PATH`. **Angenommen (unbestätigt)**:
 
 ```
 POST {KONTUROS_BASE_URL}{KONTUROS_COMPLETIONS_PATH}
 Authorization: Bearer {KONTUROS_API_KEY}
-{ "task": "summarize_journal|answer_question|draft_day_text", "language": "de", "input": {...} }
+{ "task": "summarize_journal|answer_question|draft_day_text|day_briefing|check_plan|suggest_title|suggest_species|trip_review", "language": "de", "input": {...} }
 → 200 { "text": string, "sources"?: [{ "title": string, "url"?: string }] }
 ```
 Weicht der echte Vertrag ab, ist nur `KonturosProvider.generate` in `src/lib/ai/providers.ts` anzupassen. Gegen einen echten Konturos-Dienst wurde nichts getestet (`not_configured`); getestet ist der Adapter nur mit einem Fetch-Mock.

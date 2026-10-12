@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accommodationKind, recommendForStation, summarizeWeather, type StayKind } from '@/lib/tips/recommend';
+import { accommodationKind, recommendForStation, summarizeWeather, typicalWildlife, type StayKind } from '@/lib/tips/recommend';
 import type { WeatherDay } from '@/lib/weather/types';
 
 const day = (over: Partial<WeatherDay> = {}): WeatherDay => ({ date: '2026-10-15', source: 'forecast', tmax: 28, tmin: 15, rainMm: 0, rainChance: 0, windMax: 15, uvMax: 6, sunrise: '2026-10-15T06:23', sunset: '2026-10-15T19:02', ...over });
@@ -102,5 +102,19 @@ describe('recommendations without weather and by place', () => {
     const firstInfo = tips.findIndex((t) => t.tone === 'info');
     expect(tips.slice(0, firstInfo).every((t) => t.tone === 'warn')).toBe(true);
     expect(tips.slice(firstInfo).every((t) => t.tone === 'info')).toBe(true);
+  });
+});
+
+describe('typical wildlife per place', () => {
+  it('adds a "typical here" tip for known places, flagged as experience and not a promise, and nothing for unknown places', () => {
+    const etosha = recommendForStation({ placeKey: 'etosha', placeLabel: 'Etosha', stayKinds: [], weather: null }).find((t) => t.id === 'wildlife-etosha');
+    expect(etosha).toMatchObject({ category: 'Tiere & Sicherheit', title: 'Typisch hier' });
+    expect(etosha?.text).toContain('Elefant');
+    expect(etosha?.text).toContain('keine Garantie');
+    expect(recommendForStation({ placeKey: 'nirgendwo', placeLabel: 'X', stayKinds: [], weather: null }).some((t) => t.id.startsWith('wildlife-'))).toBe(false);
+  });
+  it('offers the species as quick picks', () => {
+    expect(typicalWildlife('chobe')).toEqual(expect.arrayContaining(['Elefant', 'Flusspferd']));
+    expect(typicalWildlife('unbekannt')).toEqual([]);
   });
 });

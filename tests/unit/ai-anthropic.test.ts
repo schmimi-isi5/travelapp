@@ -48,6 +48,20 @@ describe('AnthropicProvider', () => {
     expect(prompts[1]).toContain('120 Wörter');
   });
 
+  it('builds a prompt for each new task from the given facts only and keeps the data inside the tags', async () => {
+    const fetchMock = reply({ content: [{ type: 'text', text: 'ok' }] });
+    const provider = new AnthropicProvider({ apiKey: 'k' }, fetchMock as unknown as typeof fetch);
+    const input = { stopTitle: 'Etosha', facts: ['Wetter: trocken'], question: 'Große graue Tiere', entries: [{ title: 'Tag 1', body: 'Elefanten.' }] };
+    for (const task of ['day_briefing', 'check_plan', 'suggest_title', 'suggest_species', 'trip_review'] as const) await provider.generate({ task, input });
+    const prompts = fetchMock.mock.calls.map((call) => JSON.parse(String((call as unknown as [string, RequestInit])[1].body)).messages[0].content as string);
+    expect(prompts[0]).toMatch(/Tagesvorschau[\s\S]*Etosha[\s\S]*<daten>[\s\S]*Wetter: trocken/);
+    expect(prompts[1]).toMatch(/Auffälligkeiten[\s\S]*<daten>[\s\S]*Wetter: trocken/);
+    expect(prompts[2]).toMatch(/drei kurze Titel[\s\S]*Elefanten\./);
+    expect(prompts[3]).toMatch(/deutschen Artnamen[\s\S]*Wetter: trocken[\s\S]*<daten>\nGroße graue Tiere/);
+    expect(prompts[4]).toMatch(/Rückblick[\s\S]*Elefanten\./);
+    for (const prompt of prompts) expect(prompt).toContain('<daten>');
+  });
+
   it('fails with the status only (no response body) on HTTP errors and on empty answers', async () => {
     const denied = reply({ error: { message: 'invalid x-api-key sk-secret' } }, 401);
     await expect(new AnthropicProvider({ apiKey: 'sk-secret' }, denied as unknown as typeof fetch).generate({ task: 'answer_question', input: { question: 'x' } })).rejects.toThrow('Anthropic antwortete mit HTTP 401');

@@ -216,7 +216,7 @@ function TaskRow({ item, members, today, canEdit, onToggle }: { item: ActionItem
 }
 
 /** Compact task list: the first four open tasks, the rest on request, new tasks behind a plus. Receipts and booking checks as badges. */
-export function TasksCard({ items, members, today, role, withoutReceipt, unclearBookings, onToggle }: { items: ActionItem[]; members: readonly Member[]; today: string; role: Role; withoutReceipt: number; unclearBookings: number; onToggle: (item: ActionItem) => void }) {
+export function TasksCard({ items, members, today, role, withoutReceipt, unclearBookings, planFindings, onToggle }: { items: ActionItem[]; members: readonly Member[]; today: string; role: Role; withoutReceipt: number; unclearBookings: number; planFindings: number; onToggle: (item: ActionItem) => void }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const canEdit = isAdult(role);
@@ -233,6 +233,7 @@ export function TasksCard({ items, members, today, role, withoutReceipt, unclear
       <p className="mb-2 text-sm text-slate" data-testid="open-count">{items.length} offen</p>
       <div className="mb-2 flex flex-wrap gap-2 text-xs font-semibold">
         <Link href="/stays" data-testid="booking-check" className="rounded-full bg-ochre-50 px-3 py-1 text-ochre-700">{unclearBookings > 0 ? `${unclearBookings} Buchungen zu prüfen` : 'Buchungen alle geklärt'}</Link>
+        {canEdit && planFindings > 0 && <Link href="/route#reise-check" data-testid="plan-findings" className="rounded-full bg-sand px-3 py-1 text-deep">{planFindings} {planFindings === 1 ? 'Hinweis' : 'Hinweise'} im Reise-Check</Link>}
         {canEdit && <Link href="/stays" data-testid="missing-receipts" className="rounded-full bg-clay-50 px-3 py-1 text-clay-700">{withoutReceipt} ohne Beleg</Link>}
       </div>
       <ul aria-label="Offene Aufgaben" className="divide-y divide-line">

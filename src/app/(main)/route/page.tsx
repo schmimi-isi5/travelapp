@@ -6,10 +6,12 @@ import { useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Button, Dialog, EmptyState, PageHeader } from '@/components/ui';
 import { StopCard } from '@/features/trip/stop-card';
+import { TripCheckCard } from '@/features/trip/trip-check-card';
 import { StopForm } from '@/features/trip/stop-form';
 import { useTable } from '@/lib/db/hooks';
 import { isAdult } from '@/lib/domain/policy';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
+import { checkTripPlan } from '@/lib/domain/trip-check';
 import { driveSummary, durationSourceLabel } from '@/lib/labels';
 
 export default function RoutePage() {
@@ -17,9 +19,12 @@ export default function RoutePage() {
   const stops = useTable('trip_stops').rows;
   const routes = useTable('routes').rows;
   const items = useTable('action_items').rows;
+  const stays = useTable('stays').rows;
+  const bookings = useTable('bookings').rows;
   const [adding, setAdding] = useState(false);
   const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
   const current = buildDayBriefing(stops, items, today).currentStop;
+  const findings = checkTripPlan({ stops, routes, stays, bookings, today });
 
   return (
     <div className="mx-auto max-w-content">
@@ -40,7 +45,8 @@ export default function RoutePage() {
       {ordered.length === 0 ? (
         <EmptyState icon={<MapIcon />} title="Noch keine Stationen" text="Lege die erste Station deiner Reise an." action={isAdult(role) ? <Button onClick={() => setAdding(true)}>Station hinzufügen</Button> : undefined} />
       ) : (
-        <div>
+        <div className="space-y-6">
+          {isAdult(role) && <TripCheckCard findings={findings} />}
           <section aria-label="Stationenliste" className="min-w-0 space-y-3">
             {ordered.map((stop, index) => {
               const previous = ordered[index - 1];

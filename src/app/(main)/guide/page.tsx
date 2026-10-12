@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Card, Chip, Input, Notice, PageHeader, Select, Toolbar } from '@/components/ui';
 import { TipCard } from '@/features/ai/tip-card';
+import { useAiContext } from '@/features/ai/use-ai-context';
 import { fetchProviderStatus, getAiConsent, requestAi, type AiOutcome } from '@/lib/ai/client';
 import type { ProviderStatus } from '@/lib/ai/types';
 import { useTable, useTips } from '@/lib/db/hooks';
@@ -16,6 +17,7 @@ export default function GuidePage() {
   const { online } = useApp();
   const tips = useTips().rows;
   const stops = useTable('trip_stops').rows;
+  const context = useAiContext();
   const [stopFilter, setStopFilter] = useState('all');
   const [question, setQuestion] = useState('');
   const [outcome, setOutcome] = useState<AiOutcome | null>(null);
@@ -31,7 +33,7 @@ export default function GuidePage() {
   async function ask(text: string) {
     if (!text.trim()) return;
     setBusy(true);
-    setOutcome(await requestAi({ task: 'answer_question', input: { question: text } }, tips));
+    setOutcome(await requestAi({ task: 'answer_question', input: { question: text, facts: context.facts } }, tips));
     setBusy(false);
   }
 
@@ -55,6 +57,7 @@ export default function GuidePage() {
         <ul className="mt-3 flex flex-wrap gap-2" aria-label="Beispielfragen">
           {PROMPTS.map((p) => <li key={p}><Chip onClick={() => { setQuestion(p); void ask(p); }}>{p}</Chip></li>)}
         </ul>
+        <p className="mt-2 text-xs text-muted" data-testid="ai-context-note">Mit der Frage gehen nur Datum, aktuelle Station, Unterkunftsart, Wetter und Gruppengröße an die KI, damit die Antwort zu eurer Lage passt. Keine Namen, Beträge oder Dokumente.</p>
         {outcome && (
           <div className="mt-4 rounded-md bg-sand-50 p-4" data-testid="ai-answer" aria-live="polite">
             <div className="mb-2 flex flex-wrap gap-2">

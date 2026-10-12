@@ -1,10 +1,12 @@
 'use client';
 
-import { Download, Plus, Trash2, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { Camera, Download, Plus, Trash2, Wallet } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Notice, PageHeader, Select, StateBlock } from '@/components/ui';
+import { Badge, Button, Card, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, Select, StateBlock } from '@/components/ui';
 import { CURRENCIES } from '@/features/finance/currency';
+import { scanReceipt } from '@/lib/ai/receipt';
+import { fetchReferenceRate } from '@/lib/fx/client';
 import { useTable } from '@/lib/db/hooks';
 import { create, remove, ValidationError } from '@/lib/db/repo';
 import { downloadBlob } from '@/lib/download';
@@ -26,6 +28,12 @@ export default function ExpensesPage() {
   const [form, setForm] = useState({ category: 'verpflegung', description: '', amount: '', currency: 'NAD', spent_at: today || todayIso() });
   const [rate, setRate] = useState({ from: 'NAD', to: 'EUR', rate: '', source: '', as_of: today || todayIso() });
   const [error, setError] = useState<string | null>(null);
+  const [pendingReceipt, setPendingReceipt] = useState<File | null>(null);
+  const [receiptNote, setReceiptNote] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null);
+  const [isReading, setIsReading] = useState(false);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+  const [rateNote, setRateNote] = useState<string | null>(null);
+  const receiptRef = useRef<HTMLInputElement>(null);
 
   if (!isAdult(role)) {
     return <StateBlock kind="permission_denied" title="Kein Zugriff" text="Ausgaben und Zahlungen sind in dieser Rolle nicht sichtbar." />;
@@ -49,6 +57,38 @@ export default function ExpensesPage() {
       if (err instanceof ValidationError) setError(err.message);
       else throw err;
     }
+  }
+
+  /** Sends the confirmed receipt photo to the AI reading and puts its suggestions into the form; nothing is saved before the person checks them. */
+  async function readReceipt(file: File) {
+    setPendingReceipt(null);
+    setIsReading(true);
+    setReceiptNote(null);
+    const outcome = await scanReceipt(file);
+    setIsReading(false);
+    if (!outcome.ok) return setReceiptNote({ tone: 'warn', text: outcome.reason });
+    const { receipt } = outcome;
+    const currency = receipt.currency && (CURRENCIES as readonly string[]).includes(receipt.currency) ? receipt.currency : form.currency;
+    setForm((current) => ({
+      ...current,
+      currency,
+      amount: receipt.amount !== null ? receipt.amount.toFixed(currency === 'JPY' ? 0 : 2).replace('.', ',') : current.amount,
+      spent_at: receipt.date ?? current.spent_at,
+      description: receipt.merchant ?? current.description,
+      category: receipt.category ?? current.category,
+    }));
+    const missing = [receipt.amount === null && 'Betrag', receipt.currency === null && 'Währung', receipt.date === null && 'Datum'].filter(Boolean);
+    setReceiptNote({ tone: 'ok', text: `Von der KI vorgeschlagen (${outcome.provider}), bitte prüfen.${missing.length ? ` Nicht lesbar: ${missing.join(', ')}.` : ''}` });
+  }
+
+  async function loadReferenceRate() {
+    setIsLoadingRate(true);
+    setRateNote(null);
+    const loaded = await fetchReferenceRate(rate.from, rate.to);
+    setIsLoadingRate(false);
+    if (!loaded) return setRateNote('Der Kurs konnte nicht geladen werden (offline oder Dienst nicht erreichbar). Bitte selbst eintragen.');
+    setRate((current) => ({ ...current, rate: String(Number(loaded.rate.toPrecision(5))).replace('.', ','), source: `${loaded.source}, Referenzkurs`, as_of: loaded.asOf }));
+    setRateNote('Referenzkurs geladen. Ein Wechselstubenkurs weicht meist ab: prüfe Quelle und Stand und speichere ihn nur, wenn er für euch passt.');
   }
 
   async function saveRate(e: React.FormEvent) {
@@ -115,18 +155,36 @@ export default function ExpensesPage() {
       </section>
       <Dialog open={adding} onClose={() => setAdding(false)} title="Ausgabe erfassen">
         <form onSubmit={submit} noValidate className="space-y-4" aria-label="Ausgabe">
+          <div>
+            <input ref={receiptRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Belegfoto auswählen" tabIndex={-1} onChange={(e) => { const file = e.target.files?.[0]; if (file) setPendingReceipt(file); e.target.value = ''; }} />
+            <Button type="button" variant="secondary" size="sm" disabled={isReading} onClick={() => receiptRef.current?.click()}><Camera size={14} aria-hidden /> {isReading ? 'Beleg wird gelesen …' : 'Beleg fotografieren und Werte vorschlagen lassen'}</Button>
+            {receiptNote && <div className="mt-2"><Notice tone={receiptNote.tone}><span data-testid="receipt-note">{receiptNote.text}</span></Notice></div>}
+          </div>
           <Field label="Beschreibung">{(p) => <Input {...p} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field>
           <div className="grid grid-cols-3 gap-3"><div className="col-span-2"><Field label="Betrag" error={error}>{(p) => <Input {...p} inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />}</Field></div><Field label="Währung">{(p) => <Select {...p} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>}</Field></div>
           <div className="grid grid-cols-2 gap-3"><Field label="Kategorie">{(p) => <Select {...p} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}</Select>}</Field><Field label="Datum">{(p) => <Input {...p} type="date" value={form.spent_at} onChange={(e) => setForm({ ...form, spent_at: e.target.value })} />}</Field></div>
           <div className="flex justify-end"><Button type="submit">Speichern</Button></div>
         </form>
       </Dialog>
+      <ConfirmationDialog
+        open={pendingReceipt !== null}
+        title="Belegfoto an die KI senden?"
+        message="Das Foto wird einmal zur Auswertung an den KI-Dienst (Anthropic) gesendet und nirgends gespeichert. Vorgeschlagen werden Betrag, Währung, Datum, Geschäft und Kategorie; gespeichert wird erst, wenn du sie geprüft hast. Sende nur Belege, die du teilen möchtest."
+        confirmLabel="Foto senden"
+        tone="primary"
+        onCancel={() => setPendingReceipt(null)}
+        onConfirm={() => pendingReceipt && void readReceipt(pendingReceipt)}
+      />
       <Dialog open={rateOpen} onClose={() => setRateOpen(false)} title="Wechselkurs erfassen">
         <form onSubmit={saveRate} noValidate className="space-y-4" aria-label="Wechselkurs">
           <div className="grid grid-cols-2 gap-3"><Field label="Von">{(p) => <Select {...p} value={rate.from} onChange={(e) => setRate({ ...rate, from: e.target.value })}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>}</Field><Field label="Nach">{(p) => <Select {...p} value={rate.to} onChange={(e) => setRate({ ...rate, to: e.target.value })}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select>}</Field></div>
           <Field label="Kurs" error={error}>{(p) => <Input {...p} inputMode="decimal" value={rate.rate} onChange={(e) => setRate({ ...rate, rate: e.target.value })} />}</Field>
           <Field label="Quelle" hint="z. B. Kassenbeleg Wechselstube, Bankabrechnung">{(p) => <Input {...p} value={rate.source} onChange={(e) => setRate({ ...rate, source: e.target.value })} />}</Field>
           <Field label="Stand (Datum)">{(p) => <Input {...p} type="date" value={rate.as_of} onChange={(e) => setRate({ ...rate, as_of: e.target.value })} />}</Field>
+          <div>
+            <Button type="button" variant="secondary" size="sm" disabled={isLoadingRate || rate.from === rate.to} onClick={() => void loadReferenceRate()}>{isLoadingRate ? 'Lädt …' : 'Aktuellen Referenzkurs laden'}</Button>
+            {rateNote && <p role="status" className="mt-2 text-sm text-slate" data-testid="rate-note">{rateNote}</p>}
+          </div>
           <div className="flex justify-end"><Button type="submit">Kurs speichern</Button></div>
         </form>
       </Dialog>
