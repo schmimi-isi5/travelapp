@@ -4,12 +4,16 @@ import { Heart, PawPrint, Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, Dialog, EmptyState, Field, Input, PageHeader, Select, Textarea, Toolbar } from '@/components/ui';
+import { AiSuggestion } from '@/features/ai/ai-suggest';
 import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { MediaBody } from '@/features/media/media-tile';
 import { addMedia, MediaError } from '@/lib/db/media';
 import { useTable } from '@/lib/db/hooks';
 import { create, remove, update } from '@/lib/db/repo';
+import { requestAi } from '@/lib/ai/client';
 import { canEditOwnedRow } from '@/lib/domain/policy';
+import { placeKeyForStop } from '@/lib/media/places';
+import { typicalWildlife } from '@/lib/tips/recommend';
 import { formatDateTime } from '@/lib/formatting';
 
 function nowLocalInput(): string {
@@ -34,6 +38,15 @@ export default function SightingsPage() {
   const me = currentUser?.id ?? '';
   const sortedSpecies = [...species].sort((a, b) => a.common_name_de.localeCompare(b.common_name_de, 'de'));
   const countFor = (id: string) => sightings.filter((s) => s.species_id === id).length;
+  const formStop = stops.find((s) => s.id === form.stop_id);
+  const quickPicks = formStop ? typicalWildlife(placeKeyForStop(formStop.title)) : [];
+
+  /** Takes a species name over: the known species if there is one, else it becomes the new species to create. */
+  function pickSpecies(name: string) {
+    const known = species.find((sp) => sp.common_name_de.toLowerCase() === name.trim().toLowerCase());
+    setForm((current) => (known ? { ...current, species_id: known.id, newSpecies: '' } : { ...current, species_id: '', newSpecies: name.trim() }));
+  }
+
   const myFavs = new Set(favorites.filter((f) => f.user_id === me).map((f) => f.species_id));
 
   const log = sightings
@@ -122,7 +135,16 @@ export default function SightingsPage() {
           </div>
           <Field label="Station">{(p) => <Select {...p} value={form.stop_id} onChange={(e) => setForm({ ...form, stop_id: e.target.value })}><option value="">Keine</option>{[...stops].sort((a, b) => a.sequence - b.sequence).map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</Select>}</Field>
           <Field label="Foto (optional)">{(p) => <Input {...p} ref={fileRef} type="file" accept="image/*" />}</Field>
+          {quickPicks.length > 0 && (
+            <div data-testid="species-quick-picks">
+              <p className="mb-1 text-sm font-semibold text-slate">Typisch hier (Erfahrungswerte, keine Garantie)</p>
+              <ul className="flex flex-wrap gap-2">{quickPicks.map((name) => <li key={name}><Chip onClick={() => pickSpecies(name)}>{name}</Chip></li>)}</ul>
+            </div>
+          )}
           <Field label="Notiz">{(p) => <Textarea {...p} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />}</Field>
+          {form.notes.trim().length >= 8 && (
+            <AiSuggestion label="Art aus der Notiz vorschlagen" acceptLabel="Ersten Vorschlag übernehmen" testId="species-suggestion" showLocal onAccept={(text) => { const first = text.split(',')[0]?.trim(); if (first && first.toLowerCase() !== 'unklar') pickSpecies(first); }} run={() => requestAi({ task: 'suggest_species', input: { question: form.notes.trim().slice(0, 500), facts: sortedSpecies.map((sp) => sp.common_name_de).slice(0, 30) } })} />
+          )}
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end"><Button type="submit">Speichern</Button></div>
         </form>

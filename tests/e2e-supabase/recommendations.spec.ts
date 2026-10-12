@@ -52,7 +52,7 @@ test('die Station zeigt Wetter und Empfehlungen, zugeschnitten auf die Unterkunf
   await expect(page.getByTestId('dashboard-tips')).toContainText('Vorhersage');
 
   await page.goto('/route');
-  await page.locator('a[href^="/route/"]').filter({ hasText: campStop }).first().click();
+  await page.getByRole('region', { name: 'Stationenliste' }).locator('a[href^="/route/"]').filter({ hasText: campStop }).first().click();
   const card = page.getByTestId('station-recommendations');
   await expect(card).toContainText('deine Unterkunft (Camping)', { timeout: 30_000 });
   await expect(card.getByTestId('weather-days').locator('li')).toHaveCount(3);
@@ -68,9 +68,16 @@ test('die Station zeigt Wetter und Empfehlungen, zugeschnitten auf die Unterkunf
   await expect(stationTip(page, 'lodge-basics')).toHaveCount(0);
   await expect(card.getByRole('button', { name: /Mit KI auf unsere Reise zuschneiden/ })).toBeVisible();
 
+  // the day briefing uses the same weather: temperature, daylight and no outdated "no service" sentence
+  const briefing = page.getByTestId('day-briefing');
+  await expect(briefing).toContainText(/\d+ bis \d+ °C/);
+  await expect(briefing).toContainText('Sonnenaufgang');
+  await expect(briefing).not.toContainText('nicht verfügbar');
+  await expect(briefing.getByRole('button', { name: 'Tagesvorschau mit KI' })).toBeVisible();
+
   // same weather, other accommodation: different advice
   await page.goBack();
-  await page.locator('a[href^="/route/"]').filter({ hasText: lodgeStop }).first().click();
+  await page.getByRole('region', { name: 'Stationenliste' }).locator('a[href^="/route/"]').filter({ hasText: lodgeStop }).first().click();
   const lodgeCard = page.getByTestId('station-recommendations');
   await expect(lodgeCard).toContainText('deine Unterkunft (Lodge)', { timeout: 30_000 });
   await expect(stationTip(page, 'cold-night')).toContainText('Fleece');

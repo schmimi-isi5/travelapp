@@ -67,6 +67,34 @@ export function draftDayTextLocally(stopTitle: string, facts: readonly string[],
   };
 }
 
+function bulletList(lines: readonly string[], empty: string): string {
+  return lines.length ? lines.map((l) => `• ${l}`).join('\n') : empty;
+}
+
+/** Without a model the day preview is the list of facts itself. */
+export function dayBriefingLocally(stopTitle: string, facts: readonly string[], now = new Date()): AiResult {
+  return { ...BASE, text: `Dein Tag${stopTitle ? ` in ${stopTitle}` : ''}:\n${bulletList(facts, '• Für diesen Tag liegen noch keine Fakten vor.')}`, generated_at: now.toISOString(), availability_note: 'Zusammenstellung der vorhandenen Fakten, keine KI.' };
+}
+
+export function checkPlanLocally(facts: readonly string[], now = new Date()): AiResult {
+  return { ...BASE, text: facts.length ? `Gefundene Punkte:\n${bulletList(facts, '')}` : 'Keine Auffälligkeiten gefunden.', generated_at: now.toISOString(), availability_note: 'Regelbasierte Prüfung der Planung, keine KI.' };
+}
+
+/** A title from the first words of the first entry, or from the place. */
+export function suggestTitleLocally(entries: readonly { title: string; body: string }[], stopTitle = '', now = new Date()): AiResult {
+  const firstSentence = entries[0]?.body.trim().split(/(?<=[.!?])\s+/)[0] ?? '';
+  const words = firstSentence.split(/\s+/).filter(Boolean).slice(0, 6).join(' ').replace(/[.!?,;:]+$/, '');
+  const candidates = [words, stopTitle ? `Ein Tag in ${stopTitle}` : ''].filter(Boolean);
+  return { ...BASE, text: candidates.length ? candidates.join('\n') : 'Noch kein Text für einen Titelvorschlag.', generated_at: now.toISOString(), availability_note: 'Vorschlag aus den ersten Wörtern, keine KI.' };
+}
+
+/** Species whose name appears in the note (known species only). */
+export function suggestSpeciesLocally(note: string, knownSpecies: readonly string[], now = new Date()): AiResult {
+  const text = note.toLowerCase();
+  const matches = knownSpecies.filter((name) => text.includes(name.toLowerCase().slice(0, Math.max(4, name.length - 2))));
+  return { ...BASE, text: matches.length ? matches.slice(0, 3).join(', ') : 'unklar', generated_at: now.toISOString(), availability_note: 'Abgleich der Notiz mit bekannten Arten, keine KI.' };
+}
+
 export function runLocal(request: AiRequest, tips: readonly TravelTip[] = []): AiResult {
   switch (request.task) {
     case 'summarize_journal':
@@ -75,5 +103,15 @@ export function runLocal(request: AiRequest, tips: readonly TravelTip[] = []): A
       return answerFromTips(request.input.question ?? '', tips);
     case 'draft_day_text':
       return draftDayTextLocally(request.input.stopTitle ?? 'diesen Tag', request.input.facts ?? []);
+    case 'day_briefing':
+      return dayBriefingLocally(request.input.stopTitle ?? '', request.input.facts ?? []);
+    case 'check_plan':
+      return checkPlanLocally(request.input.facts ?? []);
+    case 'suggest_title':
+      return suggestTitleLocally(request.input.entries ?? [], request.input.stopTitle ?? '');
+    case 'suggest_species':
+      return suggestSpeciesLocally(request.input.question ?? '', request.input.facts ?? []);
+    case 'trip_review':
+      return summarizeLocally(request.input.entries ?? []);
   }
 }

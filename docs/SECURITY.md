@@ -75,6 +75,11 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - Das Profilfoto ist ein kleines JPEG in `profiles.avatar_data` (Prüfregel in der Datenbank: JPEG-Data-URL, höchstens 60 KB). Gelesen wird es nur von der Person selbst und von Familienmitgliedern, geändert nur von der Person selbst (RLS-Test in `supabase/tests/rls.test.ts`, Sync-Test in `tests/backend/sync.test.ts`).
 - Die Follower-Ansicht liefert Ortsfotos nur für bereits erreichte Stationen und nie Familienfotos über diesen Weg; die Bibliotheksbilder sind öffentliche Referenzbilder.
 
+## 6f. KI-Hilfen, Belegerkennung, Kursdienst
+- Alle KI-Routen teilen sich Anmeldung, Einwilligung (`consent: true`) und Kontingent (`src/lib/server/ai-guard.ts`). Texte gehen nur auf Knopfdruck und nur die sichtbaren Fakten; die Prompts behandeln `<daten>` nie als Anweisung.
+- `/api/ai/receipt` ist der einzige Weg für ein Foto zum Dienst: nur JPEG (Signatur wird geprüft), höchstens etwa 2 MB, mit Bestätigung je Foto im Browser, eigenem Kontingent (20 pro Stunde, 60 pro Tag), ohne Speicherung und mit `Cache-Control: no-store`. Das Foto wird vorher am Gerät neu kodiert (kein EXIF, kein GPS).
+- `/api/fx` ist wie `/api/weather` kein offener Proxy: Anmeldung, strenge Prüfung der Währungscodes, Zwischenspeicher, 60 Anfragen pro Stunde.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.

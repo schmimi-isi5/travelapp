@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
-const DESKTOP_SPECS = /(core|offline-ai|map|follow|photos|share-target)\.spec\.ts/;
+const DESKTOP_SPECS = /(core|offline-ai|map|follow|photos|share-target|ai-planning)\.spec\.ts/;
 
 export default defineConfig({
   testDir: 'tests/e2e',

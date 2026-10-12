@@ -13,6 +13,7 @@ import { useTable } from '@/lib/db/hooks';
 import { update } from '@/lib/db/repo';
 import type { ActionItem } from '@/lib/domain/schemas';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
+import { checkTripPlan } from '@/lib/domain/trip-check';
 import { formatDate } from '@/lib/formatting';
 import { imagesForStop, isScenicMotif } from '@/lib/media/places';
 
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const docsFor = new Set(documents.flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
   const withoutReceipt = [...stays.filter((s) => s.booking_status !== 'cancelled').map((s) => s.id), ...bookings.filter((b) => b.booking_status !== 'cancelled').map((b) => b.id)].filter((id) => !docsFor.has(id)).length;
   const impressions = impressionsFor(library, stops);
+  const planFindings = checkTripPlan({ stops, routes, stays, bookings, today }).length;
   const latestMedia = [...media].sort((a, b) => (b.captured_at ?? '').localeCompare(a.captured_at ?? '')).slice(0, 4);
   const toggleTask = (item: ActionItem) => void update('action_items', item.id, { status: item.status === 'done' ? 'open' : 'done' });
 
@@ -71,7 +73,7 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {impressions.length > 0 && <div className="lg:col-span-2"><ImpressionsCard impressions={impressions} /></div>}
           <div className={impressions.length > 0 ? '' : 'lg:col-span-3'}>
-            <TasksCard items={briefing.openItems} members={members} today={today} role={role} withoutReceipt={withoutReceipt} unclearBookings={unclearBookings} onToggle={toggleTask} />
+            <TasksCard items={briefing.openItems} members={members} today={today} role={role} withoutReceipt={withoutReceipt} unclearBookings={unclearBookings} planFindings={planFindings} onToggle={toggleTask} />
           </div>
         </div>
 

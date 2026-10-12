@@ -79,7 +79,7 @@ test('Dashboard, Route und Station zeigen die Bibliotheksfotos mit Bildnachweis 
   await expect.poll(() => loaded(page, '[data-testid=stop-cover] img')).toBe(true);
   await expect(cover).toContainText('Regionsmotiv'); // the card photo has no location proof
 
-  await page.locator('a[href^="/route/"]').filter({ hasText: place }).first().click();
+  await page.getByRole('region', { name: 'Stationenliste' }).locator('a[href^="/route/"]').filter({ hasText: place }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: place })).toBeVisible();
   await expect(page.getByTestId('destination-hero')).toHaveAttribute('data-image', 'photo');
   const gallery = page.getByTestId('stop-gallery');

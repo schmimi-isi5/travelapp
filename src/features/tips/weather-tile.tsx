@@ -13,7 +13,7 @@ import { useStationWeather, type WeatherStatus } from './use-station-weather';
 
 const MAX_MORE_TIPS = 4;
 
-const STATUS_TEXT: Record<Exclude<WeatherStatus, 'ready'>, string> = {
+export const STATUS_TEXT: Record<Exclude<WeatherStatus, 'ready'>, string> = {
   unavailable_in_demo: 'Wetterdaten gibt es nur in der Live-Version.',
   no_period: 'Für diese Station fehlen die Reisedaten, daher gibt es noch kein Wetter.',
   loading: 'Wetter wird geladen …',
