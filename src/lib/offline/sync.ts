@@ -38,7 +38,15 @@ function notify(): void {
 async function acknowledge(mutation: SyncMutation, version: number): Promise<void> {
   const db = getLocalDb();
   await db.transaction('rw', [db.entity(mutation.entity_type), db.sync_meta, db.sync_mutations], async () => {
+    // The entity may have been edited again while this version was on its way: the repository then folded the newer state
+    // into this very (still pending) queue entry. Acknowledge only what was actually sent and keep the newer state queued,
+    // based on the version the server just assigned; otherwise the second edit would be marked as sent and never arrive.
+    const stored = (await db.sync_mutations.get(mutation.id)) as SyncMutation | undefined;
+    const editedMeanwhile = stored !== undefined && stored.status === 'pending' && (stored.operation !== mutation.operation || JSON.stringify(stored.payload) !== JSON.stringify(mutation.payload));
     await db.sync_mutations.put({ ...mutation, status: 'acknowledged', error: null });
+    if (editedMeanwhile && mutation.operation !== 'delete') {
+      await db.sync_mutations.put({ ...stored, id: newId(), mutation_id: newId(), base_version: version, status: 'pending', error: null });
+    }
     const key = `${mutation.entity_type}:${mutation.entity_id}`;
     if (mutation.operation === 'delete') {
       await db.sync_meta.delete(key);

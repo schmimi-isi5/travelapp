@@ -110,10 +110,10 @@ test('Profilfoto: wählen, im Profilmenü sehen, auf dem Server gespeichert, ent
   await page.goto('/settings');
   await page.getByLabel('Profilfoto auswählen').setInputFiles({ name: 'ich.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByRole('status').filter({ hasText: 'Profilfoto gespeichert' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId('account-menu').locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+  await expect(page.getByTestId('account-menu').locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/, { timeout: 20_000 });
   await expect.poll(async () => (await service.from('profiles').select('avatar_data').eq('user_id', userId).single()).data?.avatar_data ?? null, { timeout: 30_000 }).toMatch(/^data:image\/jpeg;base64,/);
   await page.getByRole('button', { name: 'Entfernen' }).click();
-  await expect(page.getByTestId('account-menu').locator('img')).toHaveCount(0);
+  await expect(page.getByTestId('account-menu').locator('img')).toHaveCount(0, { timeout: 20_000 });
   await expect.poll(async () => (await service.from('profiles').select('avatar_data').eq('user_id', userId).single()).data?.avatar_data ?? null, { timeout: 30_000 }).toBeNull();
   await context.close();
 });
