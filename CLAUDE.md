@@ -63,6 +63,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
 - Ortsfotos: Quellenzeilen nicht unter den Fotos, sondern gesammelt auf `/settings/credits` (Lizenzpflicht); nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
 - KI: Fakten entstehen regelbasiert, die KI formuliert nur und läuft nur auf Knopfdruck über `requestAi`; Fotos gehen nur über `/api/ai/receipt` und nur nach Bestätigung je Foto.
+- Sprachmemos: Aufnahmen gehen nur nach Bestätigung je Aufnahme an `/api/ai/transcribe`; die Abschrift ist immer bearbeitbar und wird nie ohne Knopfdruck gespeichert.
 - Profilfoto: nur als kleines JPEG (Data-URL, höchstens 60 KB) in `profiles.avatar_data`, jede Person ändert nur ihr eigenes; Initialen als Rückfall.
 - Offline: stabile UUIDs, Mutation-IDs, Versionsprüfung, Konflikte nie still überschreiben (Journal: append-first).
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.

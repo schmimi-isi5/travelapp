@@ -52,13 +52,14 @@ describe('AnthropicProvider', () => {
     const fetchMock = reply({ content: [{ type: 'text', text: 'ok' }] });
     const provider = new AnthropicProvider({ apiKey: 'k' }, fetchMock as unknown as typeof fetch);
     const input = { stopTitle: 'Etosha', facts: ['Wetter: trocken'], question: 'Große graue Tiere', entries: [{ title: 'Tag 1', body: 'Elefanten.' }] };
-    for (const task of ['day_briefing', 'check_plan', 'suggest_title', 'suggest_species', 'trip_review'] as const) await provider.generate({ task, input });
+    for (const task of ['day_briefing', 'check_plan', 'suggest_title', 'suggest_species', 'trip_review', 'clean_transcript'] as const) await provider.generate({ task, input });
     const prompts = fetchMock.mock.calls.map((call) => JSON.parse(String((call as unknown as [string, RequestInit])[1].body)).messages[0].content as string);
     expect(prompts[0]).toMatch(/Tagesvorschau[\s\S]*Etosha[\s\S]*<daten>[\s\S]*Wetter: trocken/);
     expect(prompts[1]).toMatch(/Auffälligkeiten[\s\S]*<daten>[\s\S]*Wetter: trocken/);
     expect(prompts[2]).toMatch(/drei kurze Titel[\s\S]*Elefanten\./);
     expect(prompts[3]).toMatch(/deutschen Artnamen[\s\S]*Wetter: trocken[\s\S]*<daten>\nGroße graue Tiere/);
     expect(prompts[4]).toMatch(/Rückblick[\s\S]*Elefanten\./);
+    expect(prompts[5]).toMatch(/Abschrift eines Sprachmemos[\s\S]*Erfinde nichts[\s\S]*<daten>[\s\S]*Elefanten\./);
     for (const prompt of prompts) expect(prompt).toContain('<daten>');
   });
 

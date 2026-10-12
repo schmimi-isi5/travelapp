@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildExport } from '@/features/archive/export';
+import { deleteJournalEntry } from '@/features/journal/delete-entry';
 import { setActor } from '@/lib/db/actor';
 import { addDocument, openDocument } from '@/lib/db/documents';
 import { getLocalDb, resetDatabasesForTests, selectLocalDatabase, activeLocalDatabaseName } from '@/lib/db/local';
@@ -252,6 +253,57 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     const failedRun = await syncNow(phone.remote);
     expect(failedRun.failed).toBe(1);
     expect((await admin.from('media_assets').select('id').eq('id', lost.id)).data).toEqual([]);
+  });
+
+  it('deletes a journal entry with its files and transcripts on request, and the other devices follow', async () => {
+    const author = new Device(fam.adult, fam).on();
+    await author.sync();
+    const entry = await create('journal_entries', { trip_id: author.tripId, author_user_id: fam.adult.id, entry_date: '2026-10-20', title: 'Wird gelöscht', body: 'Text', visibility: 'family', status: 'published' });
+    const photo = await addMedia({ file: new File([PNG], 'foto.png', { type: 'image/png' }), familyId: author.familyId, tripId: author.tripId, journalEntryId: entry.id });
+    const memo = await addMedia({ file: new File([new Uint8Array(4096)], 'memo.webm', { type: 'audio/webm' }), familyId: author.familyId, tripId: author.tripId, journalEntryId: entry.id });
+    await create('voice_transcripts', { media_id: memo.id, provider: 'stub', body: 'Abschrift', language: 'de', status: 'done' });
+    expect(await author.sync()).toMatchObject({ failed: 0, conflicts: 0 });
+    expect((await admin.from('voice_transcripts').select('id').eq('media_id', memo.id)).data).toHaveLength(1);
+
+    const other = new Device(fam.owner, fam).on();
+    await other.sync();
+    expect((await list('journal_entries')).some((e) => e.id === entry.id)).toBe(true);
+
+    author.on();
+    const result = await deleteJournalEntry(entry, [photo, memo], true, { userId: fam.adult.id, role: 'adult' });
+    expect(result).toEqual({ mediaDeleted: 2, mediaKept: 0 });
+    expect(await author.sync()).toMatchObject({ failed: 0, conflicts: 0 });
+    expect((await admin.from('journal_entries').select('id').eq('id', entry.id)).data).toEqual([]);
+    expect((await admin.from('media_assets').select('id').in('id', [photo.id, memo.id])).data).toEqual([]);
+    expect((await admin.from('voice_transcripts').select('id').eq('media_id', memo.id)).data).toEqual([]);
+
+    other.on();
+    await other.sync();
+    expect((await list('journal_entries')).some((e) => e.id === entry.id)).toBe(false);
+    expect((await list('media_assets')).some((m) => m.id === photo.id)).toBe(false);
+  });
+
+  it('keeps the files when only the text is deleted, and refuses what the role may not delete', async () => {
+    const author = new Device(fam.adult, fam).on();
+    await author.sync();
+    const entry = await create('journal_entries', { trip_id: author.tripId, author_user_id: fam.adult.id, entry_date: '2026-10-21', title: 'Nur Text weg', body: 'Text', visibility: 'family', status: 'published' });
+    const photo = await addMedia({ file: new File([PNG], 'bleibt.png', { type: 'image/png' }), familyId: author.familyId, tripId: author.tripId, journalEntryId: entry.id });
+    await author.sync();
+    expect(await deleteJournalEntry(entry, [photo], false, { userId: fam.adult.id, role: 'adult' })).toEqual({ mediaDeleted: 0, mediaKept: 0 });
+    expect(await author.sync()).toMatchObject({ failed: 0, conflicts: 0 });
+    expect((await admin.from('journal_entries').select('id').eq('id', entry.id)).data).toEqual([]);
+    const kept = (await admin.from('media_assets').select('id, journal_entry_id').eq('id', photo.id)).data;
+    expect(kept).toEqual([{ id: photo.id, journal_entry_id: null }]); // the file stays, detached from the deleted entry
+
+    // a child cannot delete an adult's published entry: refused on the device and by the database
+    const adultEntry = await create('journal_entries', { trip_id: author.tripId, author_user_id: fam.adult.id, entry_date: '2026-10-22', title: 'Nur die Erwachsene', body: 'Text', visibility: 'family', status: 'published' });
+    await author.sync();
+    const child = new Device(fam.child, fam).on();
+    await child.sync();
+    await expect(deleteJournalEntry(adultEntry, [], false, { userId: fam.child.id, role: 'child' })).rejects.toThrow();
+    const direct = await fam.child.client.from('journal_entries').delete().eq('id', adultEntry.id).select('id');
+    expect(direct.data ?? []).toEqual([]);
+    expect((await admin.from('journal_entries').select('id').eq('id', adultEntry.id)).data).toHaveLength(1);
   });
 
   it('stores identity documents encrypted: the server never sees plaintext and only the passphrase opens them', async () => {

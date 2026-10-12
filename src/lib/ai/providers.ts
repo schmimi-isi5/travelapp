@@ -113,6 +113,8 @@ function taskPrompt(request: AiRequest): string {
       return `Schlage drei kurze Titel (höchstens sechs Wörter) für diesen Tagebucheintrag vor, jeweils in einer eigenen Zeile, ohne Nummerierung und ohne Anführungszeichen.\n<daten>\n${entries || facts || '(kein Text)'}\n</daten>`;
     case 'suggest_species':
       return `Welche Tierart oder Tierarten beschreibt diese Notiz? Antworte nur mit den deutschen Artnamen, durch Komma getrennt, höchstens drei. Passt nichts, antworte mit „unklar“. Bereits bekannte Arten der Familie (bevorzuge deren Schreibweise): ${(input.facts ?? []).join(', ') || 'keine'}.\n<daten>\n${input.question ?? ''}\n</daten>`;
+    case 'clean_transcript':
+      return `Das ist die automatische Abschrift eines Sprachmemos einer Familie. Mache daraus einen gut lesbaren Tagebuchtext: korrigiere offensichtliche Erkennungsfehler und die Rechtschreibung, entferne Füllwörter (äh, ähm), Wiederholungen und abgebrochene Satzanfänge, bilde vollständige Sätze und Absätze. Behalte Inhalt, Reihenfolge, Ich-/Wir-Form und Ton bei. Erfinde nichts, füge nichts hinzu und lasse Namen und Orte unverändert, wenn du dir nicht sicher bist. Antworte nur mit dem fertigen Text.\n<daten>\n${entries}\n</daten>`;
     case 'trip_review':
       return `Schreibe einen persönlichen Rückblick (höchstens 150 Wörter) auf die Reise aus den Tagebucheinträgen und Fakten. Nur was darin steht, keine Ergänzungen.\n<daten>\n${entries}${facts ? `\n\n${facts}` : ''}\n</daten>`;
   }

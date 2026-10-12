@@ -71,6 +71,21 @@ function bulletList(lines: readonly string[], empty: string): string {
   return lines.length ? lines.map((l) => `• ${l}`).join('\n') : empty;
 }
 
+const FILLERS = /(?<![\wäöüß])(?:ähm|äh|ehm|öhm|hm+|mhm)(?![\wäöüß])/gi;
+const LEADING_CONNECTORS = /^(?:also|ja|naja|okay|ok|so|und dann)[\s,]+/i;
+
+/** Rule-based tidy-up of a transcript: filler words out, spacing and capitals fixed, a full stop at the end. Corrects no wording. */
+export function cleanTranscriptLocally(raw: string, now = new Date()): AiResult {
+  let text = raw.replace(FILLERS, ' ').replace(/\s+/g, ' ').replace(/\s+([,.!?;:])/g, '$1').replace(/([,.!?;:])(?=[^\s\d])/g, '$1 ').replace(/,\s*,/g, ',').trim();
+  text = text.replace(/\b(\w+)(\s+\1\b)+/gi, '$1');
+  text = text.split(/(?<=[.!?])\s+/).map((sentence) => {
+    const cleaned = sentence.replace(/^[,\s]+/, '').replace(LEADING_CONNECTORS, '').replace(/^[,\s]+/, '');
+    return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
+  }).filter(Boolean).join(' ');
+  if (text && !/[.!?]$/.test(text)) text += '.';
+  return { ...BASE, text: text || 'Keine Abschrift zum Glätten.', generated_at: now.toISOString(), availability_note: 'Regelbasierte Glättung (Füllwörter, Leerzeichen, Satzanfänge), keine KI. Erkennungsfehler im Wortlaut bleiben stehen: bitte lesen und korrigieren.' };
+}
+
 /** Without a model the day preview is the list of facts itself. */
 export function dayBriefingLocally(stopTitle: string, facts: readonly string[], now = new Date()): AiResult {
   return { ...BASE, text: `Dein Tag${stopTitle ? ` in ${stopTitle}` : ''}:\n${bulletList(facts, '• Für diesen Tag liegen noch keine Fakten vor.')}`, generated_at: now.toISOString(), availability_note: 'Zusammenstellung der vorhandenen Fakten, keine KI.' };
@@ -113,5 +128,7 @@ export function runLocal(request: AiRequest, tips: readonly TravelTip[] = []): A
       return suggestSpeciesLocally(request.input.question ?? '', request.input.facts ?? []);
     case 'trip_review':
       return summarizeLocally(request.input.entries ?? []);
+    case 'clean_transcript':
+      return cleanTranscriptLocally(request.input.entries?.[0]?.body ?? '');
   }
 }
