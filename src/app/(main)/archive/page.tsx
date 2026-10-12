@@ -2,7 +2,7 @@
 
 import { Archive, Download, FileArchive, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Card, Chip, EmptyState, Input, Notice, PageHeader, Select, Toolbar } from '@/components/ui';
 import { buildExport } from '@/features/archive/export';
@@ -12,8 +12,8 @@ import { useTable } from '@/lib/db/hooks';
 import { downloadBlob } from '@/lib/download';
 import { formatDate } from '@/lib/formatting';
 
-const KIND_LABEL: Record<SearchHit['kind'], string> = { journal: 'Tagebuch', sighting: 'Sichtung', stop: 'Station', tip: 'Hinweis', booking: 'Buchung' };
-const HREF = (h: SearchHit) => (h.kind === 'stop' ? `/route/${h.id}` : h.kind === 'journal' ? '/journal' : h.kind === 'sighting' ? '/sightings' : h.kind === 'tip' ? '/guide' : '/bookings');
+const KIND_LABEL: Record<SearchHit['kind'], string> = { journal: 'Tagebuch', sighting: 'Sichtung', stop: 'Station', tip: 'Hinweis', booking: 'Buchung', stay: 'Unterkunft' };
+const HREF = (h: SearchHit) => (h.kind === 'stop' ? `/route/${h.id}` : h.kind === 'journal' ? '/journal' : h.kind === 'sighting' ? '/sightings' : h.kind === 'tip' ? '/guide' : h.kind === 'stay' ? '/stays' : '/bookings');
 
 export default function ArchivePage() {
   const { role, members, currentUser } = useApp();
@@ -23,6 +23,7 @@ export default function ArchivePage() {
   const stops = useTable('trip_stops').rows;
   const tips = useTable('travel_tips').rows;
   const bookings = useTable('bookings').rows;
+  const stays = useTable('stays').rows;
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('all');
   const [stopId, setStopId] = useState('all');
@@ -32,8 +33,14 @@ export default function ArchivePage() {
   const [exporting, setExporting] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
 
+  // The header search lands here with ?q=…
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get('q');
+    if (initial) setQuery(initial);
+  }, []);
+
   const me = currentUser?.id ?? '';
-  const hits = searchArchive(query, { journal: journal.filter((e) => canSeeEntry(e, me)), sightings, species, stops, tips, bookings })
+  const hits = searchArchive(query, { journal: journal.filter((e) => canSeeEntry(e, me)), sightings, species, stops, tips, bookings, stays })
     .filter((h) => (kind === 'all' ? true : h.kind === kind))
     .filter((h) => (stopId === 'all' ? true : h.stopId === stopId))
     .filter((h) => (person === 'all' ? true : h.personId === person))
@@ -63,7 +70,7 @@ export default function ArchivePage() {
             <Input aria-label="Von Datum" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <Input aria-label="Bis Datum" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
-          <Toolbar>{(['all', 'journal', 'sighting', 'stop', 'tip', 'booking'] as const).map((k) => <Chip key={k} active={kind === k} onClick={() => setKind(k)}>{k === 'all' ? 'Alle Arten' : KIND_LABEL[k]}</Chip>)}</Toolbar>
+          <Toolbar>{(['all', 'journal', 'sighting', 'stop', 'stay', 'tip', 'booking'] as const).map((k) => <Chip key={k} active={kind === k} onClick={() => setKind(k)}>{k === 'all' ? 'Alle Arten' : KIND_LABEL[k]}</Chip>)}</Toolbar>
         </form>
       </Card>
       <p className="text-sm text-slate" aria-live="polite" data-testid="hit-count">{hits.length} Treffer</p>

@@ -39,7 +39,7 @@ export default function GuidePage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="KI-Guide" subtitle="Kuratierte Tipps mit Herkunft und Aktualitätsstatus. Funktioniert offline; KI nur mit deiner Freigabe." />
+      <PageHeader title="Reiseführer" subtitle="Kuratierte Tipps mit Herkunft und Aktualitätsstatus. Funktioniert offline; KI nur mit deiner Freigabe." />
       <Card>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Sparkles size={18} aria-hidden className="text-deep" />

@@ -230,6 +230,12 @@ export class SupabaseRemote implements RemoteAdapter {
       this.assertNoTransportError(error);
       if (error) return this.classify(error, 'members', m);
     }
+    if ((payload.avatar_data ?? null) !== (current.avatar_data ?? null)) {
+      if (userId !== this.ctx.userId) return { status: 'rejected', reason: 'Das Profilfoto kann nur die Person selbst ändern' };
+      const { error } = await this.client.from('profiles').update({ avatar_data: payload.avatar_data ?? null }).eq('user_id', userId);
+      this.assertNoTransportError(error);
+      if (error) return this.classify(error, 'members', m);
+    }
     return { status: 'ok', version };
   }
 
@@ -326,11 +332,12 @@ export class SupabaseRemote implements RemoteAdapter {
     if (filter) membersQuery = filter(membersQuery);
     const [{ data: members, error: memberError }, { data: profiles, error: profileError }] = await Promise.all([
       membersQuery as unknown as Promise<{ data: Row[] | null; error: { code?: string; message?: string } | null }>,
-      this.client.from('profiles').select('user_id, display_name'),
+      this.client.from('profiles').select('user_id, display_name, avatar_data'),
     ]);
     if (memberError) throw new Error(`family_members: ${describe(memberError)}`);
     if (profileError) throw new Error(`profiles: ${describe(profileError)}`);
     const names = new Map((profiles ?? []).map((p) => [String(p.user_id), String(p.display_name)]));
+    const avatars = new Map((profiles ?? []).map((p) => [String(p.user_id), (p.avatar_data as string | null) ?? null]));
     const out: RemoteRow[] = [];
     for (const m of members ?? []) {
       const userId = String(m.user_id);
@@ -342,6 +349,7 @@ export class SupabaseRemote implements RemoteAdapter {
           role: m.role,
           status: m.status,
           avatar_color: avatarColor(userId),
+          avatar_data: avatars.get(userId) ?? null,
           version: m.version,
           created_at: m.created_at,
           updated_at: m.updated_at,

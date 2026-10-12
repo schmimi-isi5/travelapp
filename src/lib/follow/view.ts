@@ -4,6 +4,8 @@
  * drops everything that is not meant for followers (bookings, prices, documents, addresses, GPS, private items).
  */
 
+import { imagesForStop, type DestinationImage } from '@/lib/media/places';
+
 export interface FollowTrip {
   title: string;
   countries: string[];
@@ -54,12 +56,17 @@ export interface FollowSightingInput {
   shared_with_followers: boolean;
 }
 
+/** The library photo of a place, as far as followers may see it (public reference imagery, never family media). */
+export type FollowLibraryInput = DestinationImage;
+
 export interface FollowSource {
   trip: FollowTrip;
   stops: FollowStopInput[];
   entries: FollowEntryInput[];
   media: FollowMediaInput[];
   sightings: FollowSightingInput[];
+  /** Approved destination photos; optional, without them the view simply has no pictures of the places. */
+  library?: FollowLibraryInput[];
   /** user id -> display name (only the first name is exposed). */
   authorNames: Record<string, string>;
   /** species id -> German common name. */
@@ -78,6 +85,16 @@ export interface FollowerStop {
   longitude: number | null;
   arrive_at: string | null;
   depart_at: string | null;
+  image: FollowerStopImage | null;
+}
+
+export interface FollowerStopImage {
+  /** Paths below /media/destination/. */
+  path: string;
+  thumbPath: string | null;
+  alt: string;
+  /** True when the photo shows the region rather than proven this exact place. */
+  isRegionMotif: boolean;
 }
 
 export interface FollowerView {
@@ -88,6 +105,8 @@ export interface FollowerView {
   entries: { id: string; title: string; body: string; entry_date: string; author: string | null; stop: string | null }[];
   photos: { id: string; caption: string; captured_at: string | null; stop: string | null }[];
   sightings: { id: string; species: string; seen_at: string; count: number | null; notes: string; stop: string | null }[];
+  /** Credits (author, licence, source) of the library photos shown above. */
+  imageCredits: { place: string; text: string; url: string }[];
 }
 
 function tripStatus(trip: FollowTrip, visibleStops: number, today: string): FollowerView['trip']['status'] {
@@ -132,11 +151,23 @@ export function buildFollowerView(source: FollowSource): FollowerView {
   const isReachable = (stopId: string | null) => stopId === null || stopTitles.has(stopId);
   const stopTitle = (stopId: string | null) => (stopId ? (stopTitles.get(stopId) ?? null) : null);
   const current = currentStop(stops, today, status === 'finished');
+  // Place photos only for stops that are visible anyway, so no future stop leaks through its picture.
+  const credits = new Map<string, { place: string; text: string; url: string }>();
+  const imageOf = (stop: FollowStopInput): FollowerStopImage | null => {
+    const images = imagesForStop(stop, source.library ?? []);
+    const picked = images.card ?? images.hero ?? images.gallery[0];
+    if (!picked) return null;
+    const path = picked.variants.card ?? picked.variants.tablet ?? picked.variants.full ?? Object.values(picked.variants)[0];
+    if (!path) return null;
+    credits.set(picked.id, { place: picked.place_label, text: picked.attribution_text, url: picked.source_url });
+    return { path, thumbPath: picked.variants.thumb ?? null, alt: picked.alt_text, isRegionMotif: !picked.location_verified };
+  };
+  const stopViews = stops.map((s) => ({ id: s.id, sequence: s.sequence, title: s.title, country: s.country, latitude: s.latitude, longitude: s.longitude, arrive_at: s.arrive_at, depart_at: s.depart_at, image: imageOf(s) }));
 
   return {
     trip: { title: trip.title, countries: trip.countries, status },
     generatedAt: source.generatedAt,
-    stops: stops.map((s) => ({ id: s.id, sequence: s.sequence, title: s.title, country: s.country, latitude: s.latitude, longitude: s.longitude, arrive_at: s.arrive_at, depart_at: s.depart_at })),
+    stops: stopViews,
     currentStopId: current?.id ?? null,
     entries: source.entries
       .filter((e) => e.shared_with_followers && e.visibility === 'family' && e.status === 'published' && isReachable(e.stop_id))
@@ -150,6 +181,7 @@ export function buildFollowerView(source: FollowSource): FollowerView {
       .filter((s) => s.shared_with_followers && isReachable(s.stop_id))
       .sort(byDateDesc((s) => s.seen_at))
       .map((s) => ({ id: s.id, species: source.speciesNames[s.species_id] ?? 'Unbekannte Art', seen_at: s.seen_at, count: s.count, notes: s.notes ?? '', stop: stopTitle(s.stop_id) })),
+    imageCredits: [...credits.values()].sort((a, b) => a.place.localeCompare(b.place, 'de')),
   };
 }
 

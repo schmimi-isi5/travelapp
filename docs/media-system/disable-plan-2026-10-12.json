@@ -1,0 +1,152 @@
+[
+ {
+  "place": "erongo",
+  "match": "Akwamaryna",
+  "reason": "Mineral-Nahaufnahme, kein Landschaftsmotiv"
+ },
+ {
+  "place": "erongo",
+  "match": "1846659",
+  "reason": "Strand und Seebrücke passen nicht zu Erongo"
+ },
+ {
+  "place": "erongo",
+  "match": "4636601",
+  "reason": "Etosha-Motiv gehört nicht zu Erongo"
+ },
+ {
+  "place": "erongo",
+  "match": "3651929",
+  "reason": "Köcherbaum bei Keetmanshoop, weit weg von Erongo"
+ },
+ {
+  "place": "erongo",
+  "match": "4071817",
+  "reason": "Köcherbaum bei Keetmanshoop, weit weg von Erongo"
+ },
+ {
+  "place": "maun",
+  "match": "Cessna",
+  "reason": "Flugzeug, kein Landschaftsmotiv"
+ },
+ {
+  "place": "maun",
+  "match": "Airport",
+  "reason": "Flughafen, kein Landschaftsmotiv"
+ },
+ {
+  "place": "maun",
+  "match": "Letišt",
+  "reason": "Flughafen, kein Landschaftsmotiv"
+ },
+ {
+  "place": "maun",
+  "match": "4268869",
+  "reason": "Löwenbild trägt das Etikett Chobe, nicht Maun"
+ },
+ {
+  "place": "kasane",
+  "match": "Airport",
+  "reason": "Flughafen, kein Landschaftsmotiv"
+ },
+ {
+  "place": "rundu",
+  "match": "Flughafen",
+  "reason": "Flughafen, kein Landschaftsmotiv"
+ },
+ {
+  "place": "rundu",
+  "match": "Beerhouse",
+  "reason": "Straßenszene, kein Landschaftsmotiv"
+ },
+ {
+  "place": "rundu",
+  "match": "3832516",
+  "reason": "Etosha-Motiv gehört nicht zu Rundu"
+ },
+ {
+  "place": "divundu",
+  "match": "Kostel",
+  "reason": "Kirche, kein Landschaftsmotiv"
+ },
+ {
+  "place": "swakopmund",
+  "match": "Buchhandlung",
+  "reason": "Gebäude, kein Landschaftsmotiv"
+ },
+ {
+  "place": "swakopmund",
+  "match": "Kaserne",
+  "reason": "Gebäude, kein Landschaftsmotiv"
+ },
+ {
+  "place": "windhoek",
+  "match": "Iglesia",
+  "reason": "Kirche, kein Landschaftsmotiv"
+ },
+ {
+  "place": "windhoek",
+  "match": "Estación",
+  "reason": "Bahnhof, kein Landschaftsmotiv"
+ },
+ {
+  "place": "windhoek",
+  "match": "Frans Indongo Lodge",
+  "reason": "Foto einer fremden Lodge, könnte als Unterkunftsfoto missverstanden werden"
+ },
+ {
+  "place": "windhoek",
+  "match": "4863278",
+  "reason": "Küste und Wüste aus der Vogelperspektive, mit dem Ortsnamen nur überetikettiert"
+ },
+ {
+  "place": "windhoek",
+  "match": "4853830",
+  "reason": "Kormoran an der Küste, passt nicht zu Windhoek"
+ },
+ {
+  "place": "windhoek",
+  "match": "4956610",
+  "reason": "Wüstenmotiv passt nicht zu Windhoek"
+ },
+ {
+  "place": "windhoek",
+  "match": "5128876",
+  "reason": "Wüstenmotiv passt nicht zu Windhoek"
+ },
+ {
+  "place": "windhoek",
+  "match": "Pinkyhouses",
+  "reason": "Gebäude, kein Landschaftsmotiv"
+ },
+ {
+  "place": "kasane",
+  "match": "Comercios",
+  "reason": "Geschäfte, kein Landschaftsmotiv"
+ },
+ {
+  "place": "rundu",
+  "match": "6770677",
+  "reason": "Safaritier passt nicht zu Rundu"
+ },
+ {
+  "place": "rundu",
+  "match": "4780251",
+  "reason": "Safaritier passt nicht zu Rundu"
+ },
+ {
+  "place": "rundu",
+  "match": "5891080",
+  "reason": "Safaritier passt nicht zu Rundu"
+ },
+ {
+  "place": "rundu",
+  "match": "8054175",
+  "reason": "Safaritier passt nicht zu Rundu"
+ },
+ {
+  "place": "etosha",
+  "match": "face close-up",
+  "reason": "Nahaufnahme, kein Landschaftsmotiv"
+ }
+]

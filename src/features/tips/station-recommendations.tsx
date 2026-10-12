@@ -14,7 +14,7 @@ import { useStationWeather, type WeatherStatus } from './use-station-weather';
 const KIND_TEXT: Record<StayKind, string> = { camping: 'Camping', lodge: 'Lodge', tented: 'Zelt-Lodge', unknown: 'Unterkunft unbekannt' };
 const CATEGORY_ORDER: TipCategory[] = ['Hitze & Wasser', 'Wetter & Kleidung', 'Schlafen & Unterkunft', 'Unterwegs', 'Tiere & Sicherheit', 'Gesundheit'];
 
-function rainText(day: WeatherDay): string {
+export function rainText(day: WeatherDay): string {
   if ((day.rainMm ?? 0) < 1 && (day.rainChance ?? 0) < 20) return 'trocken';
   return day.source === 'forecast' ? `Regen ${Math.round(day.rainChance ?? 0)} %${day.rainMm ? `, ${day.rainMm} mm` : ''}` : `Regen in ${Math.round(day.rainChance ?? 0)} % der Jahre`;
 }
@@ -135,28 +135,6 @@ export function StationRecommendations({ stop, stays }: { stop: TripStop; stays:
       {tips.length > 0 ? <TipList tips={tips} /> : <p className="text-slate">Für diese Station liegen noch keine Hinweise vor.</p>}
       <p className="mt-4 text-xs text-muted">Regelbasierte Empfehlungen aus Wetter, Unterkunftsart und Ort, keine Gewähr. Öffnungszeiten, Regeln und Gesundheitsfragen vor Ort und bei offiziellen Stellen prüfen.</p>
       {status !== 'unavailable_in_demo' && <AiTailoring stop={stop} kinds={kinds} days={days} tips={tips} />}
-    </Card>
-  );
-}
-
-/** Short version for the dashboard: the day's weather and the most important tips of the current or next station. */
-export function StationTipsSummary({ stop, stays }: { stop: TripStop; stays: readonly Stay[] }) {
-  const { weather, status } = useStationWeather(stop);
-  const kinds = stays.map(accommodationKind);
-  const days = weather?.days ?? [];
-  const tips = recommendForStation({ placeKey: placeKeyForStop(stop.title), placeLabel: stop.title, stayKinds: kinds, weather: days.length ? days : null }).slice(0, 3);
-  return (
-    <Card data-testid="dashboard-tips">
-      <h2 className="mb-1 text-lg font-bold">Tipps für {stop.title.split('/').pop()?.trim()}</h2>
-      {days[0] && <p className="mb-2 text-sm text-slate tabular">{formatDate(days[0].date, { weekday: 'short', day: '2-digit', month: '2-digit' })}: {days[0].tmin !== null && days[0].tmax !== null ? `${Math.round(days[0].tmin)} bis ${Math.round(days[0].tmax)} °C, ` : ''}{rainText(days[0])} ({days[0].source === 'forecast' ? 'Vorhersage' : 'Durchschnitt'})</p>}
-      {!days[0] && status === 'loading' && <p className="mb-2 text-sm text-slate">Wetter wird geladen …</p>}
-      <ul className="space-y-2">
-        {tips.map((tip) => (
-          <li key={tip.id} className="text-[15px]"><strong>{tip.title}:</strong> <span className="text-slate">{tip.text.split('. ')[0]}.</span></li>
-        ))}
-        {tips.length === 0 && <li className="text-slate">Noch keine Hinweise.</li>}
-      </ul>
-      <a href={`/route/${stop.id}`} className="mt-3 inline-block font-semibold text-deep underline">Alle Empfehlungen</a>
     </Card>
   );
 }

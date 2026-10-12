@@ -1,8 +1,8 @@
-import type { JournalEntry, TravelTip, TripStop, WildlifeSighting, WildlifeSpecies, Booking } from '@/lib/domain/schemas';
+import type { JournalEntry, Stay, TravelTip, TripStop, WildlifeSighting, WildlifeSpecies, Booking } from '@/lib/domain/schemas';
 
 export interface SearchHit {
   id: string;
-  kind: 'journal' | 'sighting' | 'stop' | 'tip' | 'booking';
+  kind: 'journal' | 'sighting' | 'stop' | 'tip' | 'booking' | 'stay';
   title: string;
   snippet: string;
   date: string | null;
@@ -33,6 +33,8 @@ export interface SearchSources {
   stops: TripStop[];
   tips: TravelTip[];
   bookings: Booking[];
+  /** Optional: accommodation names, places and notes (finance fields are never searched). */
+  stays?: Stay[];
 }
 
 /** Full-text search over text content on the device. All terms must match (AND), accents/case ignored. */
@@ -51,5 +53,6 @@ export function searchArchive(query: string, src: SearchSources): SearchHit[] {
   for (const s of src.stops) add({ id: s.id, kind: 'stop', title: s.title, date: s.arrive_at, stopId: s.id, personId: null }, `${s.title} ${s.country} ${s.summary} ${s.highlights.join(' ')}`);
   for (const t of src.tips) add({ id: t.id, kind: 'tip', title: t.title, date: null, stopId: t.stop_id, personId: null }, `${t.title} ${t.body}`);
   for (const b of src.bookings) add({ id: b.id, kind: 'booking', title: b.title, date: b.starts_at, stopId: b.stop_id, personId: null }, `${b.title} ${b.notes ?? ''}`);
+  for (const s of src.stays ?? []) add({ id: s.id, kind: 'stay', title: s.name, date: s.check_in, stopId: s.stop_id, personId: null }, `${s.name} ${s.address ?? ''} ${s.notes ?? ''}`);
   return hits.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
 }

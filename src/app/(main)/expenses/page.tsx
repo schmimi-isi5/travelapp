@@ -3,7 +3,7 @@
 import { Download, Plus, Trash2, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Notice, PageHeader, Select } from '@/components/ui';
+import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Notice, PageHeader, Select, StateBlock } from '@/components/ui';
 import { CURRENCIES } from '@/features/finance/currency';
 import { useTable } from '@/lib/db/hooks';
 import { create, remove, ValidationError } from '@/lib/db/repo';
@@ -28,7 +28,7 @@ export default function ExpensesPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (!isAdult(role)) {
-    return <EmptyState icon={<Wallet />} title="Kein Zugriff" text="Ausgaben und Zahlungen sind in dieser Rolle nicht sichtbar." />;
+    return <StateBlock kind="permission_denied" title="Kein Zugriff" text="Ausgaben und Zahlungen sind in dieser Rolle nicht sichtbar." />;
   }
 
   const totals = sumByCurrency(expenses);

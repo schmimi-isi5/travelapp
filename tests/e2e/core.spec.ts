@@ -7,7 +7,8 @@ test.describe('Demo, Route und Dashboard', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await open(page);
     await expect(page.getByTestId('demo-banner')).toContainText('fiktiv');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Abreise in');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Willkommen zu');
+    await expect(page.getByTestId('destination-hero')).toContainText('bis zum Abflug');
     await expect(page.getByTestId('featured-stop')).toContainText('Windhoek');
     await expect(page.getByTestId('booking-check')).toContainText('zu prüfen');
     // no weather card without a weather source: nothing is claimed that cannot be shown
@@ -17,10 +18,14 @@ test.describe('Demo, Route und Dashboard', () => {
     expect((await health.json()).mode).toBe('demo');
   });
 
-  test('Route zeigt Liste, Karte, Fahrtstrecken als Schätzung und Stationsdetails', async ({ page }) => {
-    await open(page, '/route');
-    await expect(page.getByRole('link', { name: /Station 1: Windhoek/ })).toBeVisible();
+  test('Reiseplan zeigt Liste und Fahrtstrecken als Schätzung, Karte eigene Seite, Stationsdetails', async ({ page }) => {
+    await open(page, '/map');
+    await expect(page.getByRole('heading', { level: 1, name: 'Karte' })).toBeVisible();
     await expect(page.getByLabel('Routenkarte mit Stationen')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Station 1: Windhoek/ })).toBeVisible();
+    await open(page, '/route');
+    await expect(page.getByRole('heading', { level: 1, name: 'Reiseplan' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Windhoek/ }).first()).toBeVisible();
     await expect(page.getByTestId('route-leg').first()).toContainText('grobe Offline-Schätzung');
     await page.getByRole('link', { name: /Etosha Nationalpark/ }).first().click();
     await expect(page.getByRole('heading', { level: 1, name: 'Etosha Nationalpark' })).toBeVisible();
@@ -36,8 +41,9 @@ test.describe('Demo, Route und Dashboard', () => {
   test('Tagesbriefing zeigt die korrekte Station und offene Aufgaben für das Demo-Datum', async ({ page }) => {
     await open(page);
     await setDemoDate(page, '2026-10-21');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Etosha Nationalpark');
-    await expect(page.getByTestId('featured-stop')).toContainText('Heute');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Willkommen zu\s*unserer Reise/);
+    await expect(page.getByTestId('featured-stop')).toContainText('Heute: Etosha Nationalpark');
+    await expect(page.getByTestId('destination-hero')).toContainText('Tag');
     await expect(page.getByTestId('open-count')).toContainText('5 offen');
   });
 
@@ -51,7 +57,7 @@ test.describe('Demo, Route und Dashboard', () => {
     await page.getByLabel('Breitengrad').fill('-27.6');
     await page.getByLabel('Längengrad').fill('17.6');
     await page.getByRole('button', { name: 'Station speichern' }).click();
-    await expect(page.getByRole('link', { name: /Station 7: Fish River Canyon/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Fish River Canyon/ }).first()).toBeVisible();
     await expect(page.getByTestId('route-leg')).toHaveCount(6);
   });
 });

@@ -73,7 +73,7 @@ test.describe('Offline-First', () => {
   });
 });
 
-test.describe('KI-Guide', () => {
+test.describe('Reiseführer', () => {
   test('ohne Freigabe antwortet nur die lokale, als regelbasiert gekennzeichnete Hilfe', async ({ page }) => {
     await open(page, '/guide');
     await page.getByLabel('Deine Frage').fill('Wasserloch Tierbeobachtung');
@@ -95,7 +95,7 @@ test.describe('KI-Guide', () => {
     await expect(page.getByTestId('ai-answer')).toContainText('Stub-KI-Entwurf');
     await page.goto('/offline');
     await page.getByTestId('toggle-offline').click();
-    await page.getByRole('link', { name: 'KI-Guide' }).first().click().catch(() => page.goto('/guide'));
+    await page.getByRole('link', { name: 'Reiseführer' }).first().click().catch(() => page.goto('/guide'));
     await page.goto('/guide');
     await page.getByLabel('Deine Frage').fill('Schotterpisten fahren');
     await page.getByRole('button', { name: 'Fragen' }).click();

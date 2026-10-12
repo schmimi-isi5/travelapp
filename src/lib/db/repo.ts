@@ -107,9 +107,9 @@ export async function create<K extends EntityName>(table: K, input: Input<K>): P
 
 export async function update<K extends EntityName>(table: K, id: string, patch: Input<K>): Promise<Entity<K>> {
   const actor = getActor();
-  // Everyone may rename themselves; all other member changes (roles, removal) are owner-only.
-  const isOwnDisplayName = table === 'members' && id === actor.userId && Object.keys(patch).every((key) => key === 'display_name');
-  if (!isOwnDisplayName) assertWrite(actor.role, table);
+  // Everyone may rename themselves and change their own photo; all other member changes (roles, removal) are owner-only.
+  const isOwnProfileChange = table === 'members' && id === actor.userId && Object.keys(patch).every((key) => key === 'display_name' || key === 'avatar_data');
+  if (!isOwnProfileChange) assertWrite(actor.role, table);
   const db = getLocalDb();
   return db.transaction('rw', [db.entity(table), db.sync_mutations, db.sync_meta], async () => {
     const existing = (await db.entity(table).get(id)) as Record<string, unknown> | undefined;

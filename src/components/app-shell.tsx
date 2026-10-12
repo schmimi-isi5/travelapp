@@ -1,32 +1,24 @@
 'use client';
 
 import clsx from 'clsx';
-import { RefreshCw, TriangleAlert, WifiOff } from 'lucide-react';
+import { RefreshCw, Search, TriangleAlert, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from './app-provider';
+import { AccountMenu, HeaderSearch, NotificationBell } from './app-header';
+import { MemberAvatar } from './avatar';
+import { SidebarArt } from './sidebar-art';
 import { InstallHint, usePersistentStorage } from './install-hint';
-import { roleLabel } from '@/lib/labels';
-import { isActive, MOBILE_TABS, MORE_NAV, PRIMARY_NAV, visibleFor } from './nav-items';
-import { useState } from 'react';
-import { Badge, Button, ConfirmationDialog, Notice, Select, Skeleton } from './ui';
+import { isActive, MOBILE_TABS, SIDEBAR_NAV, visibleFor } from './nav-items';
+import { Badge, Button, Notice, Select, Skeleton } from './ui';
 import type { Member } from '@/lib/domain/schemas';
-import { readableTextColor } from '@/lib/formatting';
-
-/** Two letters for the avatar: first letters of the first two words, or the first two letters of a single word. */
-export function initials(name: string): string {
-  const words = name.replace('Demo-', '').split(/[\s._-]+/).filter(Boolean);
-  const letters = words.length >= 2 ? `${words[0]![0]}${words[1]![0]}` : (words[0] ?? '?').slice(0, 2);
-  return letters.toUpperCase();
-}
 
 export function FamilyAvatarGroup({ members, size = 36 }: { members: Member[]; size?: number }) {
   return (
     <ul className="flex -space-x-2" aria-label="Familienmitglieder">
       {members.filter((m) => m.status === 'active').map((m) => (
-        <li key={m.id} title={`${m.display_name} (${m.role})`} className="grid place-items-center rounded-full border-2 border-white text-xs font-bold" style={{ width: size, height: size, background: m.avatar_color, color: readableTextColor(m.avatar_color) }}>
-          <span aria-hidden>{initials(m.display_name)}</span>
-          <span className="sr-only">{m.display_name}</span>
+        <li key={m.id} title={`${m.display_name} (${m.role})`}>
+          <MemberAvatar member={m} size={size} className="border-2 border-white" />
         </li>
       ))}
     </ul>
@@ -58,56 +50,6 @@ export function OfflineSyncBanner() {
   );
 }
 
-/** Quiet sync status for the header (read-only view of the sync state): a dot plus a short word. */
-export function SyncIndicator() {
-  const { online, pendingCount, conflictCount, syncing } = useApp();
-  const state = !online ? { label: 'Offline', dot: 'bg-ochre-700' } : conflictCount > 0 ? { label: 'Konflikt', dot: 'bg-clay-700' } : syncing ? { label: 'Synchronisiert …', dot: 'bg-teal-700 animate-pulse' } : pendingCount > 0 ? { label: `${pendingCount} offen`, dot: 'bg-ochre-700' } : { label: 'Aktuell', dot: 'bg-savanna-700' };
-  return (
-    <span role="status" data-testid="sync-indicator" className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-      <span aria-hidden className={clsx('size-2.5 rounded-full', state.dot)} />
-      <span className="hidden sm:inline">{state.label}</span>
-      <span className="sr-only sm:hidden">{state.label}</span>
-    </span>
-  );
-}
-
-export function AccountMenu() {
-  const { currentUser, userEmail, role, signOut } = useApp();
-  const [pending, setPending] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function logout(discard: boolean) {
-    setBusy(true);
-    try {
-      const result = await signOut({ discardUnsynced: discard });
-      setPending(result.ok ? null : result.pending);
-    } catch (cause) {
-      setPending(null);
-      window.alert(`Abmelden war nicht vollständig: ${cause instanceof Error ? cause.message : String(cause)}. Bitte schließe alle anderen Tabs dieser App und versuche es erneut.`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="hidden text-right text-sm leading-tight sm:block" data-testid="account-name">
-        <span className="block font-semibold">{currentUser?.display_name ?? userEmail}</span>
-        <span className="block text-xs text-muted">{roleLabel[role]}</span>
-      </span>
-      <Button size="sm" variant="secondary" disabled={busy} onClick={() => void logout(false)}>Abmelden</Button>
-      <ConfirmationDialog
-        open={pending !== null}
-        title="Nicht synchronisierte Änderungen"
-        message={`Es gibt ${pending} Änderung(en), die noch nicht auf den Server übertragen wurden (offline, Konflikt oder Fehler). Beim Abmelden werden die lokalen Daten dieses Geräts gelöscht und diese Änderungen gehen verloren.`}
-        confirmLabel="Trotzdem abmelden"
-        onCancel={() => setPending(null)}
-        onConfirm={() => void logout(true)}
-      />
-    </div>
-  );
-}
-
 function DemoBanner() {
   const { mode, isSupabase } = useApp();
   if (isSupabase) return null;
@@ -123,7 +65,7 @@ function DemoBanner() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { ready, error, members, currentUser, switchUser, role, isSupabase } = useApp();
-  const sideItems = [...visibleFor(PRIMARY_NAV, role), ...visibleFor(MORE_NAV, role)];
+  const sideItems = visibleFor(SIDEBAR_NAV, role);
   usePersistentStorage(ready && isSupabase);
 
   return (
@@ -133,30 +75,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </a>
       <DemoBanner />
       <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 md:px-6">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-4 md:px-6">
+          <Link href="/" className="flex min-w-0 shrink items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/icon.svg" alt="" width={36} height={36} className="rounded-lg" />
-            <span className="leading-tight">
-              <span className="block text-lg font-bold text-deep">Namibia & Botswana</span>
+            <img src="/icons/icon.svg" alt="" width={36} height={36} className="shrink-0 rounded-lg" />
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-lg font-bold text-deep">Namibia & Botswana</span>
               <span className="hidden text-xs font-semibold uppercase tracking-wider text-muted sm:block">Unsere Reise. Unsere Geschichte.</span>
             </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <SyncIndicator />
-            <FamilyAvatarGroup members={members} size={32} />
-            {isSupabase && <div className="hidden sm:block"><AccountMenu /></div>}
+          <HeaderSearch className="mx-auto hidden w-full max-w-xl md:block" />
+          <div className="ml-auto flex items-center gap-1 md:ml-0 md:gap-2">
+            <Link href="/archive" aria-label="Suchen" className="grid size-11 place-items-center rounded-full text-deep hover:bg-sand-50 md:hidden"><Search size={22} aria-hidden /></Link>
+            <NotificationBell />
+            {isSupabase && <AccountMenu />}
             {!isSupabase && currentUser && (
-              <label className="hidden items-center gap-2 text-sm sm:flex">
-                <span className="sr-only">Angemeldet als</span>
-                <Select aria-label="Profil wechseln (Demo)" value={currentUser.id} onChange={(e) => switchUser(e.target.value)} className="min-h-10 py-1.5 text-sm">
-                  {members.filter((m) => m.status === 'active').map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.display_name} ({m.role})
-                    </option>
-                  ))}
-                </Select>
-              </label>
+              <>
+                <div className="hidden sm:block"><FamilyAvatarGroup members={members} size={32} /></div>
+                <label className="hidden items-center gap-2 text-sm sm:flex">
+                  <span className="sr-only">Angemeldet als</span>
+                  <Select aria-label="Profil wechseln (Demo)" value={currentUser.id} onChange={(e) => switchUser(e.target.value)} className="min-h-10 py-1.5 text-sm">
+                    {members.filter((m) => m.status === 'active').map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.display_name} ({m.role})
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              </>
             )}
           </div>
         </div>
@@ -164,12 +110,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="mx-auto flex max-w-[1440px]">
-        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-line p-4 lg:block">
+        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 flex-col overflow-y-auto border-r border-line p-4 lg:flex">
           <nav aria-label="Hauptnavigation">
             <ul className="space-y-1">
               {sideItems.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} aria-current={isActive(pathname, item.href) ? 'page' : undefined} className={clsx('flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold', isActive(pathname, item.href) ? 'bg-deep-50 text-deep' : 'text-slate hover:bg-sand')}>
+                  <Link href={item.href} aria-current={isActive(pathname, item.href) ? 'page' : undefined} className={clsx('flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold', isActive(pathname, item.href) ? 'bg-deep text-white' : 'text-slate hover:bg-sand-50')}>
                     <item.icon size={18} aria-hidden />
                     {item.label}
                   </Link>
@@ -177,6 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </ul>
           </nav>
+          <SidebarArt />
         </aside>
         <main id="main" tabIndex={-1} className="min-w-0 flex-1 px-4 pb-28 pt-6 md:px-8 lg:pb-12">
           {error ? (

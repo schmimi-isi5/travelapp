@@ -110,6 +110,27 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect(headers.get('x-robots-tag')).toContain('noindex');
   });
 
+  it('shows library photos and their credits for reached stops only, never for a stop that is still ahead', async () => {
+    const tag = randomBytes(4).toString('hex');
+    const row = (placeKey: string, label: string, alt: string) => ({
+      place_key: placeKey, place_label: label, country: 'Namibia', latitude: null, longitude: null, radius_km: 30, role: 'card', variants: { card: `${placeKey}/${tag}00000000-card-card.webp`, thumb: `${placeKey}/${tag}00000000-card-thumb.webp` },
+      width: 800, height: 600, alt_text: alt, source_provider: 'wikimedia_commons', source_id: `File:${tag}-${placeKey}.jpg`, source_url: `https://commons.example/${tag}-${placeKey}`, photographer: 'Test', license_type: 'CC BY-SA 4.0',
+      attribution_text: `Fotograf ${tag}-${placeKey} / Wikimedia Commons / CC BY-SA 4.0`, license_verified: true, location_verified: true, location_basis: 'file_coordinates_within_30km', content_hash: `${tag}${placeKey}`, approved: true,
+    });
+    const inserted = await admin.from('destination_images').insert([row('windhoek', 'Windhoek', 'Windhoek bei Sonnenuntergang'), row('chobe', 'Chobe', 'ZUKUNFT-CHOBE-BILD')]);
+    expect(inserted.error).toBeNull();
+    try {
+      const { token } = await createLink(a, a.adult, 'Bilder');
+      const v = (await view(token)).body as FollowerView;
+      expect(v.stops.find((s) => s.title === 'Windhoek')?.image).toMatchObject({ path: expect.stringContaining('windhoek/'), isRegionMotif: false });
+      expect(v.imageCredits.some((c) => c.place === 'Windhoek' && c.text.includes('Wikimedia Commons'))).toBe(true); // the local library may hold more Windhoek photos
+      expect(JSON.stringify(v)).not.toContain('ZUKUNFT-CHOBE-BILD');
+      expect(JSON.stringify(v)).not.toContain(`${tag}-chobe`);
+    } finally {
+      await admin.from('destination_images').delete().in('content_hash', [`${tag}windhoek`, `${tag}chobe`]);
+    }
+  });
+
   it('counts visits on the link', async () => {
     const { id, token } = await createLink(a, a.owner, 'Zähler');
     await view(token);

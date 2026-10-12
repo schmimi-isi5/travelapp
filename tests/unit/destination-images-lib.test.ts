@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkLocation, chooseRoles, classifyLicense, fitsRole, haversineKm, highlightQueries, isUsableCandidate, MIN_SCORE, namesPlace, placeFromStop, scoreCandidate, slugify, subjectScore, type Candidate, type Scored } from '../../scripts/destination-images/lib.mjs';
+import { checkLocation, chooseRoles, classifyLicense, fitsRole, haversineKm, highlightQueries, isUsableCandidate, MIN_SCORE, motifPlausibleForPlace, namesPlace, placeFromStop, scoreCandidate, slugify, subjectScore, type Candidate, type Scored } from '../../scripts/destination-images/lib.mjs';
 import { placesFromStops } from '../../scripts/destination-images/pipeline.mjs';
 import { imagesForStop, placeKeyForStop, srcSetFor, type DestinationImage } from '@/lib/media/places';
 
@@ -148,5 +148,54 @@ describe('library lookup in the app', () => {
 
   it('builds a srcset over the variants that exist, widest last, from the app origin only', () => {
     expect(srcSetFor(image({}), ['mobile', 'tablet', 'desktop'])).toBe('/media/destination/sossusvlei/abc123def456-hero-mobile.webp 800w, /media/destination/sossusvlei/abc123def456-hero-desktop.webp 1920w');
+  });
+});
+
+describe('unsuitable motifs are rejected before scoring', () => {
+  const usable = (title: string, categories = '') => isUsableCandidate({ title, categories }).ok;
+  it('rejects airports, aircraft, churches, stations, streets, minerals and accommodation', () => {
+    for (const title of ['File:Cessna 182 Maun Botswana.jpg', 'File:Apron Airport Maun (2015).jpg', 'File:Flughafen Rundu (2018).jpg', 'File:Iglesia de Cristo, Windhoek.jpg', 'File:Kostel nedaleko Popa Falls.jpg', 'File:Estación de ferrocarril, Windhoek.jpg', 'File:Ozzys Beerhouse and Eugen Kakukuru Street.jpg', 'File:Akwamaryna - Erongo.JPG', 'File:19-Frans Indongo Lodge.jpg', 'File:Windhoek City Informal Settlements 02.jpg', 'File:101 African bush elephant face close-up in Etosha National Park Photo by Giles Laurent.jpg', 'Pixabay 1 hotel, pool, namibia.jpg']) {
+      expect(usable(title), title).toBe(false);
+    }
+  });
+  it('keeps landscapes and wildlife, also when a title merely contains "station" as part of a longer word or "lodge" is absent', () => {
+    for (const title of ['File:Sossusvlei Dune Rippled cropped.jpg', 'File:Hippopotamus in Chobe National Park 09.jpg', 'File:Popa Falls 2022 (02).jpg', 'Pixabay 7 elephant, safari, botswana, sunset.jpg']) {
+      expect(usable(title), title).toBe(true);
+    }
+  });
+  it('also looks at the categories, not only the title', () => {
+    expect(usable('File:IMG_0042.jpg', 'Churches in Namibia|Windhoek')).toBe(false);
+  });
+});
+
+describe('stock photos must suit the place even when their tags name it', () => {
+  const place = (key: string) => ({ key, label: key, country: 'Namibia', latitude: null, longitude: null, radiusKm: 30, queries: [] });
+  const photo = (tags: string) => ({ title: `Pixabay 1 ${tags}.jpg`, categories: tags.replace(/, /g, '|') });
+  it('rejects coast and desert photos for the capital and animals in town, although the tags say "windhoek"', () => {
+    expect(motifPlausibleForPlace(place('windhoek'), photo('ocean, sand, coast, desert, windhoek, namibia'))).toBe(false);
+    expect(motifPlausibleForPlace(place('windhoek'), photo('cormorant, ocean, coast, windhoek'))).toBe(false);
+    expect(motifPlausibleForPlace(place('rundu'), photo('elephant, namibia, safari'))).toBe(false);
+  });
+  it('accepts what fits: dunes at Sossusvlei, the sea at Swakopmund, elephants at Chobe, granite mountains at Erongo', () => {
+    expect(motifPlausibleForPlace(place('sossusvlei'), photo('dune, desert, namibia'))).toBe(true);
+    expect(motifPlausibleForPlace(place('swakopmund'), photo('ocean, coast, namibia'))).toBe(true);
+    expect(motifPlausibleForPlace(place('chobe'), photo('elephant, river, botswana'))).toBe(true);
+    expect(motifPlausibleForPlace(place('erongo'), photo('africa, nature, namibia, savannah, mountains, rock, erongo, safari'))).toBe(true);
+  });
+});
+
+describe('a photo of a well-known sight does not stand for another place', () => {
+  const place = (key: string) => ({ key, label: key, country: 'Namibia', latitude: null, longitude: null, radiusKm: 30, queries: [] });
+  const photo = (tags: string) => ({ title: `Pixabay 1 ${tags}.jpg`, categories: tags.replace(/, /g, '|') });
+  it('keeps Etosha, Deadvlei and quiver trees out of Windhoek, Erongo and Rundu', () => {
+    expect(motifPlausibleForPlace(place('windhoek'), photo('etosha national park, sunset, namibia'))).toBe(false);
+    expect(motifPlausibleForPlace(place('windhoek'), photo('quiver tree, sunset, namibia'))).toBe(false);
+    expect(motifPlausibleForPlace(place('erongo'), photo('deadvlei, desert, namibia'))).toBe(false);
+    expect(motifPlausibleForPlace(place('rundu'), photo('namibia, wildlife, etosha, landscape'))).toBe(false);
+  });
+  it('lets a sight belong to its own place and rejects shops as a motif', () => {
+    expect(motifPlausibleForPlace(place('etosha'), photo('etosha national park, sunset, namibia'))).toBe(true);
+    expect(motifPlausibleForPlace(place('sossusvlei'), photo('deadvlei, dune, namibia'))).toBe(true);
+    expect(isUsableCandidate({ title: 'File:Comercios en Kasane, Botsuana, 2018-07-28, DD 03.jpg', categories: '' }).ok).toBe(false);
   });
 });

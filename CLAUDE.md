@@ -10,7 +10,7 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0007 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0008 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure
@@ -23,6 +23,9 @@ src/components/**       AppShell, Navigation, UI-Primitive, SVG-Illustrationen, 
 src/features/**         Fachkomponenten je Modul
 src/lib/domain/**       Zod-Schemas, Geldlogik (Minor Units), Rollenpolicy, Tagesbriefing
 src/lib/follow/**       Was Follower sehen dürfen (view.ts, einzige Entscheidungsstelle)
+src/lib/domain/notifications.ts  Benachrichtigungen (Fristen, überfällige Aufgaben, Sync-Konflikte) aus den Gerätedaten, kein Push
+src/lib/map/**          Layout der illustrierten Dashboard-Karte (Pins, Beschriftungen)
+src/lib/share-inbox.ts  Android "Teilen mit …": Dateien im Posteingang (Cache) bis zum Import in die Galerie
 src/lib/tips/**         Regelbasierte Empfehlungen je Station (Wetter, Unterkunftsart, Ort)
 src/lib/weather/**      Wetterdaten je Station (Client, Zwischenspeicher); Server: src/lib/server/weather.ts
 src/lib/media/**        Bildbibliothek der Reiseziele (Zuordnung Station → Foto, Laden, Vorwärmen)
@@ -57,6 +60,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten.
 - Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
 - Ortsfotos: Quellenzeilen nicht unter den Fotos, sondern gesammelt auf `/settings/credits` (Lizenzpflicht); nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
+- Profilfoto: nur als kleines JPEG (Data-URL, höchstens 60 KB) in `profiles.avatar_data`, jede Person ändert nur ihr eigenes; Initialen als Rückfall.
 - Offline: stabile UUIDs, Mutation-IDs, Versionsprüfung, Konflikte nie still überschreiben (Journal: append-first).
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.
 - Demo-Daten sind fiktiv, `is_demo = true`, `source_type = 'demo'`. Keine Fremdbilder, nur eigene SVG-Illustrationen.

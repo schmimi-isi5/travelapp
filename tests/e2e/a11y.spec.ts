@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { open } from './helpers';
 
-const PAGES = ['/', '/route', '/route/demo-stop-etosha', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/guide', '/sightings', '/expenses', '/safety', '/family', '/archive', '/offline', '/settings', '/more'];
+const PAGES = ['/', '/route', '/route/demo-stop-etosha', '/stays', '/bookings', '/journal', '/journal/new', '/gallery', '/map', '/guide', '/sightings', '/expenses', '/safety', '/family', '/archive', '/offline', '/settings', '/settings/design-system', '/more'];
 
 for (const path of PAGES) {
   test(`Barrierefreiheit (axe, WCAG A/AA): ${path}`, async ({ page }) => {

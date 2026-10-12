@@ -64,7 +64,7 @@ test('falsches Passwort zeigt eine verständliche Meldung, danach gelingt die An
   await owner.getByRole('button', { name: 'Reise anlegen' }).click();
   await expect(owner).toHaveURL(/\/$/);
   await expect(owner.getByTestId('demo-banner')).toHaveCount(0);
-  await expect(owner.getByRole('heading', { level: 1 })).toContainText('Reisetermine fehlen');
+  await expect(owner.getByTestId('destination-hero')).toContainText('Reisetermine fehlen');
   await owner.goto('/stays');
   await expect(owner.getByText('Noch keine Unterkünfte')).toBeVisible();
   await owner.goto('/journal');
@@ -83,7 +83,7 @@ test('der Owner legt Station, Unterkunft mit Teilzahlung und Buchung an', async 
   await stop.getByLabel('Ankunft').fill('2026-10-13');
   await stop.getByLabel('Abreise').fill('2026-10-15');
   await stop.getByRole('button', { name: 'Station speichern' }).click();
-  await expect(owner.getByRole('link', { name: /Station 1: Windhoek/ })).toBeVisible();
+  await expect(owner.getByRole('link', { name: /Windhoek/ }).first()).toBeVisible();
 
   await owner.goto('/stays');
   await owner.getByRole('button', { name: 'Unterkunft anlegen' }).first().click();
@@ -118,7 +118,7 @@ test('Einladung per Link: Mitglied registriert sich, sieht die Reise aber keine 
   await waitSynced(owner);
   await registerViaInvite(member, token, 'Kind A');
   await member.goto('/route');
-  await expect(member.getByRole('link', { name: /Station 1: Windhoek/ })).toBeVisible();
+  await expect(member.getByRole('link', { name: /Windhoek/ }).first()).toBeVisible();
   await member.goto('/stays');
   await expect(member.getByText('Preise, Zahlungen und Belege sind in dieser Rolle ausgeblendet.')).toBeVisible();
   await member.getByTestId('stay-card').filter({ hasText: 'Gästehaus Windhoek' }).click();
@@ -302,6 +302,13 @@ test('Export enthält die synchronisierten Daten und keine Demo-Daten', async ()
   await expect(owner.getByTestId('hit').first()).toBeVisible();
 });
 
+/** Sign-out lives in the profile menu; the menu stays open after cancelling the warning, so open it only when needed. */
+async function clickSignOut(page: import('@playwright/test').Page) {
+  const signOut = page.getByRole('button', { name: 'Abmelden' });
+  if (!(await signOut.isVisible())) await page.getByTestId('account-menu').click();
+  await signOut.click();
+}
+
 test('Abmelden löscht die lokalen Daten, warnt bei ungesendeten Änderungen und sperrt die App', async () => {
   await member.goto('/journal/new');
   await expect(member.getByLabel('Titel')).toBeVisible();
@@ -309,7 +316,7 @@ test('Abmelden löscht die lokalen Daten, warnt bei ungesendeten Änderungen und
   await member.getByLabel('Titel').fill('Nicht gesendet');
   await member.getByRole('button', { name: 'Veröffentlichen' }).click();
   await expect(member.getByText('Nicht gesendet')).toBeVisible();
-  await member.getByRole('button', { name: 'Abmelden' }).first().click();
+  await clickSignOut(member);
   await expect(member.getByRole('dialog', { name: 'Nicht synchronisierte Änderungen' })).toBeVisible();
   await member.getByRole('button', { name: 'Abbrechen' }).click();
   await member.context().setOffline(false);
@@ -319,7 +326,7 @@ test('Abmelden löscht die lokalen Daten, warnt bei ungesendeten Änderungen und
     await new Promise((resolve) => setTimeout(resolve, 2500));
     await route.continue();
   });
-  await member.getByRole('button', { name: 'Abmelden' }).first().click();
+  await clickSignOut(member);
   await expect(member).toHaveURL(/\/login/, { timeout: 20_000 });
   const leftovers = await member.evaluate(async () => ({
     dbs: (await indexedDB.databases()).map((d) => d.name).filter((n) => n?.startsWith('nb-sb-')),

@@ -4,5 +4,6 @@ Selbst gehostet (keine Anfragen an Google zur Laufzeit, passt zur CSP `default-s
 
 - **Fraunces** (Variable Font, Achsen `opsz` 9–144 und `wght` 400–700), SIL Open Font License 1.1, Autoren: Undercase Type, Phaedra Charles, Flavia Zimbardi. Quelle: Google Fonts.
 - **Inter** (Variable Font, `wght` 400–700), SIL Open Font License 1.1, Autor: Rasmus Andersson. Quelle: Google Fonts.
+- **Caveat** (Variable Font, `wght` 400–700), SIL Open Font License 1.1, Autor: Impallari Type. Quelle: Google Fonts. Nur für handschriftliche Akzente (Zitat im Hero, Spruch in der Seitenleiste), nie für Funktionstexte.
 
 Enthalten ist die Teilmenge `latin` (deutsche Umlaute und ß, Afrikaans- und Setswana-Namen).

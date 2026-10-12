@@ -4,8 +4,7 @@ import { Map as MapIcon, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { TripMap } from '@/components/trip-map';
-import { Button, Dialog, EmptyState, Notice, PageHeader } from '@/components/ui';
+import { Button, Dialog, EmptyState, PageHeader } from '@/components/ui';
 import { StopCard } from '@/features/trip/stop-card';
 import { StopForm } from '@/features/trip/stop-form';
 import { useTable } from '@/lib/db/hooks';
@@ -19,29 +18,30 @@ export default function RoutePage() {
   const routes = useTable('routes').rows;
   const items = useTable('action_items').rows;
   const [adding, setAdding] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
   const ordered = [...stops].sort((a, b) => a.sequence - b.sequence);
   const current = buildDayBriefing(stops, items, today).currentStop;
-  const selectedStop = ordered.find((s) => s.id === selected);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-content">
       <PageHeader
-        title="Route"
-        subtitle="Stationen nach Datum, mit Karte und Fahrtstrecken. Zeiten sind grobe Schätzungen, keine Navigation."
+        title="Reiseplan"
+        subtitle="Stationen nach Datum mit Fahrtstrecken und Tagesbriefing. Zeiten sind grobe Schätzungen, keine Navigation."
         actions={
-          isAdult(role) && (
-            <Button onClick={() => setAdding(true)}>
-              <Plus size={18} aria-hidden /> Station hinzufügen
-            </Button>
-          )
+          <div className="flex flex-wrap gap-2">
+            <Link href="/map" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white px-5 font-semibold text-deep hover:bg-sand-50"><MapIcon size={18} aria-hidden /> Karte ansehen</Link>
+            {isAdult(role) && (
+              <Button onClick={() => setAdding(true)}>
+                <Plus size={18} aria-hidden /> Station hinzufügen
+              </Button>
+            )}
+          </div>
         }
       />
       {ordered.length === 0 ? (
         <EmptyState icon={<MapIcon />} title="Noch keine Stationen" text="Lege die erste Station deiner Reise an." action={isAdult(role) ? <Button onClick={() => setAdding(true)}>Station hinzufügen</Button> : undefined} />
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-          <section aria-label="Stationenliste" className="min-w-0 space-y-3 lg:col-span-3">
+        <div>
+          <section aria-label="Stationenliste" className="min-w-0 space-y-3">
             {ordered.map((stop, index) => {
               const previous = ordered[index - 1];
               const leg = previous ? routes.find((r) => r.from_stop_id === previous.id && r.to_stop_id === stop.id) : undefined;
@@ -57,22 +57,6 @@ export default function RoutePage() {
                 </div>
               );
             })}
-          </section>
-          <section aria-label="Karte" className="min-w-0 lg:col-span-2">
-            <div className="lg:sticky lg:top-28">
-              <TripMap stops={ordered} routes={routes} selectedId={selected} onSelect={setSelected} />
-              {selectedStop && (
-                <p className="mt-2 text-sm">
-                  Ausgewählt: <strong>{selectedStop.title}</strong> ·{' '}
-                  <Link className="font-semibold text-deep underline" href={`/route/${selectedStop.id}`}>
-                    Details
-                  </Link>
-                </p>
-              )}
-              <div className="mt-3">
-                <Notice tone="info">Die Karte nutzt OpenStreetMap-Daten vom eigenen Server. Wer sie auf dem Gerät speichert, kann sie auch ohne Netz verwenden. Fehlen die Kartendaten, zeigt die App eine schematische Karte.</Notice>
-              </div>
-            </div>
           </section>
         </div>
       )}

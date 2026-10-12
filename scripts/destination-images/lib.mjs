@@ -110,10 +110,17 @@ export function classifyLicense(meta) {
 const EXCLUDED_CATEGORY = /\b(maps?|diagrams?|logos?|flags?|coats? of arms|portraits?|people|persons?|women|men|children|selfies?|tourists?|stamps?|banknotes?|coins?|paintings?|drawings?|illustrations?|screenshots?|posters?|advertisements?)\b/i;
 const EXCLUDED_TITLE = /\b(map|karte|logo|flag|coat of arms|diagram|panoramic?|collage|montage|stitch|screenshot|poster)\b/i;
 
+/**
+ * Motifs that never stand for a place in this app: transport hubs and aircraft, churches and other single buildings, streets,
+ * minerals and close-ups, and accommodation (a stranger's lodge photo could pass for ours). Matched on the file title / tags.
+ */
+const UNSUITABLE_MOTIF = /airport|flughafen|letišt|aerodrome|\bapron\b|cessna|aircraft|airplane|helicopter|\bplane\b|church|kirche|iglesia|kostel|cathedral|station\b|estaci|bahnhof|bookshop|buchhandlung|kaserne|barracks|beerhouse|\bstreet\b|strasse|supermarket|\bhotel\b|\blodge\b|\bresort\b|guest ?house|gästehaus|\bcamp ?site\b|mineral|crystal|quartz|akwamaryna|aquamarine|specimen|portrait|selfie|close-?up|\\bface\\b|texture|informal settlement|slum|township|shack|comercio|\\bshops?\\b|\\bmarket\\b|\\bmall\\b|supermercado/i;
+
 export function isUsableCandidate(candidate) {
   if (EXCLUDED_TITLE.test(candidate.title)) return { ok: false, reason: 'title_excluded' };
   const categories = String(candidate.categories ?? '').split('|');
   if (categories.some((c) => EXCLUDED_CATEGORY.test(c))) return { ok: false, reason: 'category_excluded' };
+  if (UNSUITABLE_MOTIF.test(`${candidate.title} ${candidate.categories ?? ''}`.replace(/\|/g, ' '))) return { ok: false, reason: 'motif_unsuitable' };
   if (!/\.(jpe?g|png|webp)$/i.test(candidate.title)) return { ok: false, reason: 'format_not_supported' };
   return { ok: true };
 }
@@ -217,23 +224,52 @@ export function namesPlace(place, candidate) {
 const COAST_TERMS = /beach|coast|ocean|\bsea\b|küste|strand|harbou?r|\bpier\b|\bdock\b|lighthouse|seal/i;
 const DESERT_TERMS = /dune|düne|desert|wüste|sossus|\bnamib\b|deadvlei|\bpan\b/i;
 const WATER_TERMS = /river|fluss|delta|okavango|zambezi|chobe|waterfall|falls|wetland|hippo|crocodile/i;
-const SAFARI_PLACES = new Set(['etosha', 'chobe', 'kasane', 'divundu', 'nata', 'maun', 'rundu']);
-const DESERT_PLACES = new Set(['sossusvlei', 'swakopmund']);
+const SAFARI_PLACES = new Set(['etosha', 'chobe', 'kasane', 'divundu', 'nata', 'maun']);
+const DESERT_PLACES = new Set(['sossusvlei', 'swakopmund', 'nata']);
 const WATER_PLACES = new Set(['chobe', 'kasane', 'divundu', 'maun', 'rundu']);
 const COAST_PLACES = new Set(['swakopmund']);
-const SAFARI_TERMS = /elephant|elefant|lion|löwe|giraffe|zebra|antelope|oryx|springbok|kudu|rhino|buffalo|leopard|wildlife|safari|savanna|savannah|waterhole/i;
+const SAFARI_TERMS = /elephant|elefant|lion|löwe|giraffe|zebra|antelope|oryx|springbok|kudu|rhino|buffalo|leopard|cheetah|gepard|hyena|wildebeest/i;
+
+/** Well-known sights and the places they belong to; a photo of one of them never stands for another place of the trip. */
+const LANDMARKS = [
+  [/etosha/i, ['etosha']],
+  [/deadvlei|dead vlei|sossus|dune 45|namib-naukluft|namib desert/i, ['sossusvlei']],
+  [/keetmanshoop|quiver tree|köcherbaum|fish river|kolmanskop|l[üu]deritz/i, []],
+  [/chobe/i, ['chobe', 'kasane']],
+  [/okavango/i, ['divundu', 'maun', 'rundu']],
+  [/victoria falls/i, []],
+  [/walvis|skeleton coast|cape cross|swakop/i, ['swakopmund']],
+  [/erongo|spitzkoppe/i, ['erongo']],
+  [/makgadikgadi|kalahari|\bnata\b/i, ['nata']],
+];
+
+/** True when the title or tags name a landmark that belongs to another place (or to none of ours). */
+export function namesOtherPlace(place, candidate) {
+  const text = `${candidate.title} ${candidate.categories ?? ''}`.replace(/\|/g, ' ');
+  return LANDMARKS.some(([pattern, owners]) => pattern.test(text) && !owners.includes(place.key));
+}
 
 /**
- * Stock photos carry no coordinates. A photo whose tags name the country (but not the place) may still serve as a regional motif when
- * its subject is plausible for this place: no sea for the bush, no dunes for the river, no safari animals in town. Never a verified place.
+ * Whether the subject suits this place: no sea for the bush or the capital, no dunes at the river, no safari animals in town.
+ * Stock photos are often tagged with many place names at once, so this check applies to them even when the tags name the place.
  */
-export function regionMotifFits(place, candidate) {
+export function motifPlausibleForPlace(place, candidate) {
+  if (namesOtherPlace(place, candidate)) return false;
   const text = `${candidate.title} ${candidate.categories ?? ''}`;
-  if (!slugify(text).includes(slugify(place.country))) return false;
-  if (POOR_SUBJECT.test(text) || MACRO.test(text) || !SCENIC.test(text)) return false;
   if (COAST_TERMS.test(text) && !COAST_PLACES.has(place.key)) return false;
   if (DESERT_TERMS.test(text) && !DESERT_PLACES.has(place.key)) return false;
   if (WATER_TERMS.test(text) && !WATER_PLACES.has(place.key)) return false;
   if (SAFARI_TERMS.test(text) && !SAFARI_PLACES.has(place.key)) return false;
   return true;
+}
+
+/**
+ * Stock photos carry no coordinates. A photo whose tags name the country (but not the place) may still serve as a regional motif
+ * when its subject is plausible for this place and shows scenery or wildlife (no buildings, no close-ups). Never a verified place.
+ */
+export function regionMotifFits(place, candidate) {
+  const text = `${candidate.title} ${candidate.categories ?? ''}`;
+  if (!slugify(text).includes(slugify(place.country))) return false;
+  if (POOR_SUBJECT.test(text) || MACRO.test(text) || !SCENIC.test(text)) return false;
+  return motifPlausibleForPlace(place, candidate);
 }
