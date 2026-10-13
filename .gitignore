@@ -21,3 +21,6 @@ data/map/*.pmtiles
 data/map/*.tmp
 public/map/worker/
 public/mail-templates/
+
+# editor swap files
+*.swp
