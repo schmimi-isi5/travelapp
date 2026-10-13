@@ -48,6 +48,21 @@ test.describe('Demo, Route und Dashboard', () => {
     await expect(page.getByTestId('open-count')).toContainText('5 offen');
   });
 
+  test('Die Seitenleiste hat keine eigene Scrollleiste, die Seite läuft als Ganzes weiter', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 560 });
+    await open(page);
+    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
+    await expect(nav).toBeVisible();
+    const aside = await nav.evaluate((el) => {
+      const side = el.closest('aside') as HTMLElement;
+      const style = getComputedStyle(side);
+      return { overflowY: style.overflowY, position: style.position, isClipped: side.scrollHeight > side.clientHeight };
+    });
+    expect(aside).toEqual({ overflowY: 'visible', position: 'static', isClipped: false });
+    await page.getByRole('link', { name: 'Einstellungen', exact: true }).first().scrollIntoViewIfNeeded();
+    await expect(page.getByRole('link', { name: 'Einstellungen', exact: true }).first()).toBeInViewport();
+  });
+
   test('Station hinzufügen berechnet eine Strecke und validiert Eingaben', async ({ page }) => {
     await open(page, '/route');
     await page.getByRole('button', { name: 'Station hinzufügen' }).first().click();
@@ -185,6 +200,17 @@ test.describe('Unterkünfte, Zahlungen, Aufgaben', () => {
     await item.getByRole('button', { name: 'Nachricht löschen' }).click();
     await page.getByRole('dialog', { name: 'Nachricht löschen?' }).getByRole('button', { name: 'Endgültig löschen' }).click();
     await expect(section.getByTestId('correspondence-item')).toHaveCount(0);
+  });
+
+  test('Zahlungsübersicht trennt Offenes von Zuklärendem und ist für Kinder verborgen', async ({ page }) => {
+    await open(page, '/stays');
+    const overview = page.getByTestId('payment-overview');
+    await expect(overview.getByRole('heading', { name: 'Noch zu zahlen' })).toBeVisible();
+    await expect(overview.getByRole('heading', { name: 'Zu klären' })).toBeVisible();
+    await expect(overview.getByTestId('clarify-payment').first()).toBeVisible();
+    await expect(page.getByTestId('clarify-payments-count')).toContainText('offenen Fragen');
+    await switchUser(page, 'Demo-Kind B (child)');
+    await expect(page.getByTestId('payment-overview')).toHaveCount(0);
   });
 
   test('Ausgaben: Summen je Währung, keine EUR-Summe ohne Wechselkurs', async ({ page }) => {
