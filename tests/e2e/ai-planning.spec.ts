@@ -4,6 +4,11 @@ import { open, PNG_1PX } from './helpers';
 const allowAi = (page: Page) => page.evaluate(() => localStorage.setItem('nb-ai-consent', '1'));
 
 test.describe('KI-Hilfen und Planung', () => {
+  // the demo trip starts on 13 Oct 2026: a fixed demo date keeps the checks independent of the real date
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('nb-demo-today', '2026-10-05'));
+  });
+
   test('Tagesbriefing zeigt, was bekannt ist, ohne den alten "kein Dienst"-Satz, und die KI-Vorschau ist nur auf Knopfdruck', async ({ page }) => {
     await open(page, '/route');
     await page.getByRole('link', { name: /STATION 04.*Etosha/i }).click();

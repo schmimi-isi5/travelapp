@@ -16,6 +16,13 @@ services:
       GOTRUE_SMTP_USER: ""
       GOTRUE_SMTP_PASS: ""
       GOTRUE_SMTP_ADMIN_EMAIL: admin@travelapp.local
+      # HTML templates only when MAIL_TEMPLATE_BASE is set (the local auth container cannot reach SITE_URL=localhost)
+      GOTRUE_MAILER_TEMPLATES_INVITE: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/invite.html}
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/confirmation.html}
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/recovery.html}
+      GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/magic_link.html}
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/email_change.html}
+      GOTRUE_MAILER_TEMPLATES_REAUTHENTICATION: ${MAIL_TEMPLATE_BASE:+${MAIL_TEMPLATE_BASE}/reauthentication.html}
   mailpit:
     image: axllent/mailpit:v1.31.4
     restart: unless-stopped

@@ -28,6 +28,7 @@ src/lib/domain/trip-check.ts Regelbasierte Planprüfung (Reise-Check)
 src/lib/domain/notifications.ts  Benachrichtigungen (Fristen, überfällige Aufgaben, Sync-Konflikte) aus den Gerätedaten, kein Push
 src/lib/map/**          Layout der illustrierten Dashboard-Karte (Pins, Beschriftungen)
 src/lib/share-inbox.ts  Android "Teilen mit …": Dateien im Posteingang (Cache) bis zum Import in die Galerie
+src/lib/mail/templates.mjs  Alle E-Mails (App und Auth-Dienst) in einem HTML-Layout; scripts/build-mail-templates.mjs erzeugt public/mail-templates
 src/lib/tips/**         Regelbasierte Empfehlungen je Station (Wetter, Unterkunftsart, Ort)
 src/lib/weather/**      Wetterdaten je Station (Client, Zwischenspeicher); Server: src/lib/server/weather.ts
 src/lib/media/**        Bildbibliothek der Reiseziele (Zuordnung Station → Foto, Laden, Vorwärmen)

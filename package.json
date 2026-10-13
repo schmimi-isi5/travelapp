@@ -5,7 +5,7 @@
   "scripts": {
     "predev": "node scripts/sync-map-worker.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-map-worker.mjs",
+    "prebuild": "node scripts/sync-map-worker.mjs && node scripts/build-mail-templates.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

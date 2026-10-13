@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { renderMail } from '../mail/templates.mjs';
 
 export interface MailConfig {
   host: string;
@@ -25,17 +26,9 @@ export interface InvitationMail {
   inviterName: string | null;
 }
 
-const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-export function renderInvitation({ link, familyName, inviterName }: Omit<InvitationMail, 'to'>): { subject: string; text: string; html: string } {
-  const sentence = (name: string | null, family: string | null) =>
-    `${name ? `${name} lädt dich` : 'Du wirst'} ${family ? `in die Reise-App der Familie „${family}“` : 'in die Familien-Reise-App „Namibia & Botswana“'} ${name ? 'ein' : 'eingeladen'}.`;
-  const note = 'Der Link ist 7 Tage gültig und nur für diese E-Mail-Adresse bestimmt. Wenn du die Einladung nicht erwartest, ignoriere diese Nachricht.';
-  return {
-    subject: 'Einladung: Namibia & Botswana – Unsere Reise',
-    text: `${sentence(inviterName, familyName)}\n\nEinladung annehmen: ${link}\n\n${note}`,
-    html: `<p>${escapeHtml(sentence(inviterName, familyName))}</p><p><a href="${escapeHtml(link)}">Einladung annehmen</a></p><p>${escapeHtml(note)}</p>`,
-  };
+/** The invitation mail (HTML and plain text, same layout as the mails of the auth service). */
+export function renderInvitation({ link, familyName, inviterName }: Omit<InvitationMail, 'to'>, siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''): { subject: string; text: string; html: string } {
+  return renderMail('invitation', { link, familyName, inviterName, siteUrl: siteUrl.replace(/\/+$/, '') });
 }
 
 export async function sendInvitationMail(config: MailConfig, mail: InvitationMail): Promise<void> {

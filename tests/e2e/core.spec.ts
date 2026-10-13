@@ -5,6 +5,7 @@ test.describe('Demo, Route und Dashboard', () => {
   test('startet ohne API-Schlüssel, kennzeichnet Demo und behauptet keine echten Buchungen', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
+    await page.addInitScript(() => localStorage.setItem('nb-demo-today', '2026-10-05')); // before departure, independent of the real date
     await open(page);
     await expect(page.getByTestId('demo-banner')).toContainText('fiktiv');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Willkommen zu');
