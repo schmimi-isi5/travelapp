@@ -15,6 +15,7 @@ import { isAdult } from '@/lib/domain/policy';
 import type { ActionItem, DocumentRecord, Payment, Stay, TripStop } from '@/lib/domain/schemas';
 import { formatDate } from '@/lib/formatting';
 import { nights as formatNights } from '@/lib/labels';
+import { CorrespondenceSection, isCorrespondence } from './correspondence';
 import { StayForm, STATUS_LABEL } from './stay-form';
 
 export function clarificationReasons(stay: Stay, payments: Payment[], docs: DocumentRecord[]): string[] {
@@ -24,7 +25,7 @@ export function clarificationReasons(stay: Stay, payments: Payment[], docs: Docu
   if (stay.quote_status !== 'confirmed') reasons.push(stay.quote_status === 'quoted' ? 'Preis nur angeboten' : 'Preis nicht erfasst');
   if (fin.unverifiedMinor > 0) reasons.push('Zahlung nicht verifiziert');
   if (fin.foreignCurrencyPayments.length) reasons.push('Zahlung in anderer Währung');
-  if (docs.length === 0) reasons.push('Kein Beleg hinterlegt');
+  if (docs.filter((d) => !isCorrespondence(d)).length === 0) reasons.push('Kein Beleg hinterlegt');
   return reasons;
 }
 
@@ -65,6 +66,7 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
   const adult = isAdult(role);
   const fin = computeStayFinancials(stay, payments);
   const reasons = clarificationReasons(stay, payments, documents);
+  const receipts = documents.filter((d) => !isCorrespondence(d));
   const [editing, setEditing] = useState(false);
   const [paying, setPaying] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -157,8 +159,8 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
           {!adult ? <p className="text-sm text-muted">Belege sind für diese Rolle nicht sichtbar.</p> : (
             <>
               <ul className="space-y-1">
-                {documents.length === 0 && <li className="text-sm text-muted">Kein Beleg hinterlegt.</li>}
-                {documents.map((d) => <li key={d.id} className="flex items-center gap-2 text-sm"><FileText size={16} aria-hidden /><button type="button" className="font-semibold text-deep underline" onClick={() => void view(d)}>{d.title ?? d.original_name}</button></li>)}
+                {receipts.length === 0 && <li className="text-sm text-muted">Kein Beleg hinterlegt.</li>}
+                {receipts.map((d) => <li key={d.id} className="flex items-center gap-2 text-sm"><FileText size={16} aria-hidden /><button type="button" className="font-semibold text-deep underline" onClick={() => void view(d)}>{d.title ?? d.original_name}</button></li>)}
               </ul>
               <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" aria-label={`Beleg hochladen für ${stay.name}`} onChange={upload} />
               <Button className="mt-2" variant="secondary" size="sm" onClick={() => fileRef.current?.click()}><Upload size={14} aria-hidden /> Beleg hochladen</Button>
@@ -166,6 +168,8 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
             </>
           )}
         </section>
+
+        {adult && <CorrespondenceSection stay={stay} documents={documents} />}
 
         <section aria-label={`Checkliste ${stay.name}`}>
           <h4 className="mb-1 font-bold">Hotel-Checkliste</h4>

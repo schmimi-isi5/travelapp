@@ -9,7 +9,7 @@ import { Scene } from '@/components/scene';
 import { ResponsiveTravelImage } from '@/components/destination-image';
 import { IllustratedTripMap, type IllustratedStop } from '@/components/trip-map-illustrated';
 import { Card } from '@/components/ui';
-import { AddActionForm } from '@/features/common/action-checklist';
+import { AddActionForm, EditActionButton } from '@/features/common/action-checklist';
 import { useStopImages } from '@/features/media/use-destination-library';
 import { sceneForStop } from '@/features/trip/stop-card';
 import { roleLabel, driveSummary } from '@/lib/labels';
@@ -211,6 +211,7 @@ function TaskRow({ item, members, today, canEdit, onToggle }: { item: ActionItem
           <span className="sr-only">{urgency === 'critical' ? 'dringend' : 'bald fällig'}</span>
         </>
       )}
+      {canEdit && <EditActionButton item={item} />}
     </li>
   );
 }

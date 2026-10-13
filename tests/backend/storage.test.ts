@@ -86,6 +86,15 @@ describe.skipIf(!available)('private storage (real Supabase Storage + RLS)', () 
     expect(await remoteFor(b.adult, b.family.id, 'adult').download(p, 'documents')).toBeNull();
   });
 
+  it('accepts typed correspondence notes (text/plain) in the documents bucket for adults only', async () => {
+    const p = `${a.family.id}/documents/${uniq()}-mail.txt`;
+    const note = new Blob(['Wir kommen gegen 16 Uhr an.'], { type: 'text/plain' });
+    await expect(remoteFor(a.member, a.family.id, 'member').uploadBlob(p, note, 'documents')).rejects.toThrow();
+    await remoteFor(a.adult, a.family.id, 'adult').uploadBlob(p, note, 'documents');
+    const stored = await remoteFor(a.owner, a.family.id, 'owner').download(p, 'documents');
+    expect(await stored?.text()).toBe('Wir kommen gegen 16 Uhr an.');
+  });
+
   it('rejects documents above the 20 MB bucket limit', async () => {
     const big = new Blob([new Uint8Array(21 * 1024 * 1024)], { type: 'application/pdf' });
     await expect(remoteFor(a.owner, a.family.id, 'owner').uploadBlob(`${a.family.id}/documents/${uniq()}-big.pdf`, big, 'documents')).rejects.toThrow();
