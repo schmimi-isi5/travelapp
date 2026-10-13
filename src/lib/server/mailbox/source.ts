@@ -20,8 +20,8 @@ export interface MailSourceResult {
 
 /** Where mails come from. The real one reads IMAP; tests bring their own. Implementations never change the mailbox. */
 export interface MailSource {
-  /** Connects and opens the inbox without reading mails: proves host, port, encryption and login. */
-  probe(): Promise<{ messageCount: number }>;
+  /** Connects and looks at the folder without reading mails: proves host, port, encryption, login and folder. Also lists the folders. */
+  probe(): Promise<{ messageCount: number; folders: string[] }>;
   fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult>;
 }
 
@@ -34,6 +34,8 @@ export interface ImapConfig {
   user: string;
   password: string;
   isSecure: boolean;
+  /** Folder to read; the inbox when absent. */
+  folder?: string;
 }
 
 export function imapConfigFromEnv(env: Record<string, string | undefined> = process.env): ImapConfig | null {
@@ -42,13 +44,17 @@ export function imapConfigFromEnv(env: Record<string, string | undefined> = proc
   const password = env.MAILBOX_IMAP_PASSWORD;
   if (!host || !user || !password) return null;
   const port = Number(env.MAILBOX_IMAP_PORT) || 993;
-  return { host, port, user, password, isSecure: env.MAILBOX_IMAP_SECURE ? env.MAILBOX_IMAP_SECURE !== 'false' : port !== 143 };
+  return { host, port, user, password, isSecure: env.MAILBOX_IMAP_SECURE ? env.MAILBOX_IMAP_SECURE !== 'false' : port !== 143, folder: env.MAILBOX_IMAP_FOLDER?.trim() || 'INBOX' };
 }
 
 /** Read-only IMAP access (the folder is opened read-only: nothing is flagged, moved or deleted). */
 export class ImapMailSource implements MailSource {
   /** `requireTls`: without direct TLS the connection must be upgraded with STARTTLS; only a local test server may run without. */
-  constructor(private readonly config: ImapConfig, private readonly folder = 'INBOX', private readonly requireTls = true) {}
+  constructor(private readonly config: ImapConfig, private readonly requireTls = true) {}
+
+  private get folder(): string {
+    return this.config.folder || 'INBOX';
+  }
 
   private client(): ImapFlow {
     return new ImapFlow({
@@ -63,12 +69,14 @@ export class ImapMailSource implements MailSource {
     });
   }
 
-  async probe(): Promise<{ messageCount: number }> {
+  async probe(): Promise<{ messageCount: number; folders: string[] }> {
     const client = this.client();
     await client.connect();
     try {
+      const folders = (await client.list()).filter((f) => !f.flags.has('\\Noselect')).map((f) => f.path).sort((a, b) => a.localeCompare(b));
+      if (!folders.includes(this.folder)) throw Object.assign(new Error('Folder not found'), { code: 'FOLDER_NOT_FOUND' });
       const status = await client.status(this.folder, { messages: true });
-      return { messageCount: status === false ? 0 : (status.messages ?? 0) };
+      return { messageCount: status === false ? 0 : (status.messages ?? 0), folders };
     } finally {
       await client.logout().catch(() => undefined);
     }
@@ -112,8 +120,8 @@ export class ImapMailSource implements MailSource {
 /** Test double (MAILBOX_SOURCE=stub): mails come from MAILBOX_STUB_MAILS (JSON array). Never for production. */
 export class StubMailSource implements MailSource {
   constructor(private readonly mails: RawMail[]) {}
-  async probe(): Promise<{ messageCount: number }> {
-    return { messageCount: this.mails.length };
+  async probe(): Promise<{ messageCount: number; folders: string[] }> {
+    return { messageCount: this.mails.length, folders: ['INBOX', 'Reise'] };
   }
   async fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult> {
     const fresh = this.mails.filter((m) => m.uid > since.lastUid).sort((a, b) => a.uid - b.uid).slice(0, limit);
@@ -139,6 +147,7 @@ export function describeImapError(error: unknown): string {
   const code = e?.code ?? '';
   const message = e?.message ?? '';
   if (e?.authenticationFailed || /AUTHENTICATIONFAILED|Invalid credentials|LOGIN failed/i.test(message)) return 'Anmeldung abgelehnt: Benutzername oder Passwort stimmen nicht (bei manchen Anbietern braucht es ein App-Passwort).';
+  if (code === 'FOLDER_NOT_FOUND') return 'Diesen Ordner gibt es im Postfach nicht. Bitte einen der angezeigten Ordner wählen und die Schreibweise genau übernehmen.';
   if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'Der Server wurde nicht gefunden. Bitte den Servernamen prüfen.';
   if (code === 'ECONNREFUSED') return 'Der Server nimmt auf diesem Port keine Verbindung an. Bitte Port und Verschlüsselung prüfen.';
   if (code === 'ETIMEDOUT' || code === 'ESOCKETTIMEDOUT' || /timeout|timed out/i.test(message)) return 'Der Server antwortet nicht. Bitte Servername, Port und Verschlüsselung prüfen.';

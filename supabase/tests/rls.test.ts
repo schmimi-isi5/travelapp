@@ -158,6 +158,7 @@ beforeAll(async () => {
   await run('0010_mailbox', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
   await run('0011_mailbox_settings', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
   await run('0012_travel_documents', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
+  await run('0013_mailbox_folder', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -959,6 +960,20 @@ describe('migration 0012 (travel documents for the family)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0012_again', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0013 (mailbox folder)', () => {
+  it('reads the inbox unless a folder is named, rejects empty names, and stays closed to every client role', async () => {
+    await admin(`insert into public.mailbox_settings(family_id,host,port,username,password_enc) values($1,'imap.example.test',993,'u','v1:x:y:z') on conflict (family_id) do nothing`, [fam.B]);
+    expect((await admin(`select folder from public.mailbox_settings where family_id=$1`, [fam.B])).rows[0].folder).toBe('INBOX');
+    await admin(`update public.mailbox_settings set folder='INBOX.Reise' where family_id=$1`, [fam.B]);
+    await expect(admin(`update public.mailbox_settings set folder='' where family_id=$1`, [fam.B])).rejects.toThrow();
+    for (const who of [users.B.owner, users.B.adult, users.A.owner]) await expectDenied(as(who, `select folder from public.mailbox_settings`));
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0013_again', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
   });
 });
 

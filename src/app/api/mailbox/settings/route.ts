@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   if (!access.ok) return access.response;
   const { admin, familyId, isOwner } = access.caller;
   const stored = await loadStoredSettings(admin, familyId);
-  const settings = stored ? { host: stored.host, port: stored.port, isSecure: stored.isSecure, user: stored.user, hasPassword: stored.password !== null, passwordUnreadable: stored.password === null, updatedAt: stored.updatedAt } : null;
+  const settings = stored ? { host: stored.host, port: stored.port, isSecure: stored.isSecure, user: stored.user, folder: stored.folder, hasPassword: stored.password !== null, passwordUnreadable: stored.password === null, updatedAt: stored.updatedAt } : null;
   return NextResponse.json({ settings, canEdit: isOwner }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
@@ -46,6 +46,7 @@ export async function PUT(request: Request) {
     port: input.port,
     is_secure: input.isSecure,
     username: input.user,
+    folder: input.folder,
     password_enc: input.password ? encryptSecret(input.password) : (existing.data!.password_enc as string),
     updated_by: userId,
     updated_at: new Date().toISOString(),

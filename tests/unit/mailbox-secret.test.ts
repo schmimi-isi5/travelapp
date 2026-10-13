@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { assertPublicHost, HostNotAllowedError, isPrivateAddress } from '@/lib/server/mailbox/hosts';
 import { decryptSecret, encryptSecret } from '@/lib/server/mailbox/secret';
-import { describeImapError } from '@/lib/server/mailbox/source';
+import { mailboxSettingsInput } from '@/lib/server/mailbox/settings-schema';
+import { describeImapError, imapConfigFromEnv } from '@/lib/server/mailbox/source';
 
 const env = { SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-for-tests-0123456789' };
 
@@ -57,5 +58,27 @@ describe('describeImapError', () => {
     expect(describeImapError({ code: 'ETIMEDOUT' })).toMatch(/antwortet nicht/);
     expect(describeImapError({ code: 'DEPTH_ZERO_SELF_SIGNED_CERT' })).toMatch(/Zertifikat/);
     expect(describeImapError(new Error('secret@user leaked'))).not.toContain('secret@user');
+  });
+});
+
+describe('mailbox folder', () => {
+  const base = { host: 'imap.example.com', port: 993, isSecure: true, user: 'reise' };
+  it('defaults to the inbox and accepts a subfolder in the server spelling', () => {
+    expect(mailboxSettingsInput.parse(base).folder).toBe('INBOX');
+    expect(mailboxSettingsInput.parse({ ...base, folder: ' Reise ' }).folder).toBe('Reise');
+    expect(mailboxSettingsInput.parse({ ...base, folder: 'INBOX.Reise/Unterkünfte' }).folder).toBe('INBOX.Reise/Unterkünfte');
+  });
+  it('rejects empty folder names and control characters', () => {
+    expect(mailboxSettingsInput.safeParse({ ...base, folder: '' }).success).toBe(false);
+    expect(mailboxSettingsInput.safeParse({ ...base, folder: 'a\r\nb' }).success).toBe(false);
+    expect(mailboxSettingsInput.safeParse({ ...base, folder: 'x'.repeat(201) }).success).toBe(false);
+  });
+  it('reads the folder from the server variables, inbox by default', () => {
+    const env = { MAILBOX_IMAP_HOST: 'h', MAILBOX_IMAP_USER: 'u', MAILBOX_IMAP_PASSWORD: 'p' };
+    expect(imapConfigFromEnv(env)?.folder).toBe('INBOX');
+    expect(imapConfigFromEnv({ ...env, MAILBOX_IMAP_FOLDER: ' Reise ' })?.folder).toBe('Reise');
+  });
+  it('explains a folder that does not exist', () => {
+    expect(describeImapError({ code: 'FOLDER_NOT_FOUND' })).toMatch(/Ordner gibt es im Postfach nicht/);
   });
 });

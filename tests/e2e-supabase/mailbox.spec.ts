@@ -84,21 +84,25 @@ test('Zugang in der App einrichten: testen, speichern, ändern ohne Passwort, en
   await expect(setup.getByRole('button', { name: 'Verbindung testen' })).toBeDisabled();
   await setup.getByLabel('IMAP-Server').fill('imap.example.test');
   await setup.getByLabel('Passwort').fill('geheim-12345');
+  await expect(setup.getByLabel('Ordner')).toHaveValue('INBOX'); // the inbox unless a subfolder is named
+  await setup.getByLabel('Ordner').fill('Reise');
   await setup.getByLabel('Verschlüsselung').selectOption('starttls');
   await expect(setup.getByLabel('Port')).toHaveValue('143');
   await setup.getByLabel('Verschlüsselung').selectOption('tls');
   await expect(setup.getByLabel('Port')).toHaveValue('993');
 
   await setup.getByRole('button', { name: 'Verbindung testen' }).click();
-  await expect(page.getByTestId('mailbox-test-result')).toContainText('Verbindung steht');
+  await expect(page.getByTestId('mailbox-test-result')).toContainText('Ordner „Reise“');
+  await expect(setup).toContainText('Gefunden: INBOX, Reise'); // the folders of the mailbox are offered after a test
   await setup.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByTestId('mailbox-test-result')).toContainText('Gespeichert');
-  await expect(page.getByTestId('mailbox-summary')).toContainText('imap.example.test, Port 993, SSL/TLS');
+  await expect(page.getByTestId('mailbox-summary')).toContainText('imap.example.test, Port 993, SSL/TLS, Ordner „Reise“');
   await expect(page.getByTestId('mailbox-setup')).not.toContainText('geheim-12345');
 
   // after a reload the password is not shown anywhere, but a change works without typing it again
   await page.reload();
   await page.getByTestId('mailbox-setup').getByRole('button', { name: 'Zugang ändern' }).click();
+  await expect(page.getByLabel('Ordner')).toHaveValue('Reise');
   await expect(page.getByLabel('Passwort')).toHaveValue('');
   await expect(page.getByTestId('mailbox-setup')).toContainText('Gespeichert. Leer lassen, um es zu behalten.');
   await page.getByLabel('IMAP-Server').fill('imap2.example.test');

@@ -11,7 +11,7 @@ const available = await new ImapFlow({ host: config.host, port: config.port, sec
 
 describe.skipIf(!available)('IMAP mail source (real IMAP server)', () => {
   const smtp = nodemailer.createTransport({ host: HOST, port: Number(process.env.SMTP_TEST_PORT ?? 3025), secure: false, tls: { rejectUnauthorized: false } });
-  const source = new ImapMailSource(config, 'INBOX', false);
+  const source = new ImapMailSource(config, false);
 
   // other test files write into the same test inbox: this file only looks at its own mails
   const tag = Date.now();
@@ -58,6 +58,31 @@ describe.skipIf(!available)('IMAP mail source (real IMAP server)', () => {
       lock.release();
       await client.logout();
     }
+  });
+
+  it('reads only the chosen subfolder, not the inbox, and lists the folders', async () => {
+    const folder = `Reise-${tag}`;
+    const client = new ImapFlow({ host: config.host, port: config.port, secure: false, auth: { user: config.user, pass: config.password }, logger: false });
+    await client.connect();
+    await client.mailboxCreate(folder);
+    const raw = (subject: string) => `From: Rezeption <info@lodge.test>\r\nTo: reise@example.test\r\nSubject: ${subject}\r\nMessage-ID: <${subject.replace(/\W+/g, '-')}@lodge.test>\r\nDate: Tue, 13 Oct 2026 09:00:00 +0000\r\n\r\nBooking reference: FO-24680\r\n`;
+    await client.append(folder, raw(`Nur im Unterordner [${tag}]`));
+    await client.logout();
+
+    const sub = new ImapMailSource({ ...config, folder }, false);
+    const read = await sub.fetchNew({ uidValidity: null, lastUid: 0 }, 40);
+    expect(read.mails.map((m) => m.subject)).toEqual([`Nur im Unterordner [${tag}]`]);
+    expect(read.mails[0]!.text).toContain('FO-24680');
+    const probe = await sub.probe();
+    expect(probe.messageCount).toBe(1);
+    expect(probe.folders).toEqual(expect.arrayContaining(['INBOX', folder]));
+    // the inbox is a different folder with different mails
+    expect(mine((await source.fetchNew({ uidValidity: null, lastUid: 0 }, 40)).mails)).toHaveLength(2);
+    expect(mine(read.mails).map((m) => m.subject)).toEqual([`Nur im Unterordner [${tag}]`]); // and the inbox mails are not in the subfolder
+  });
+
+  it('says so when the folder does not exist', async () => {
+    await expect(new ImapMailSource({ ...config, folder: 'Gibt-es-nicht' }, false).probe()).rejects.toMatchObject({ code: 'FOLDER_NOT_FOUND' });
   });
 
   it('is configured from the environment only with host, user and password', () => {

@@ -17,6 +17,8 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
   const [mode, setMode] = useState(TLS);
   const [port, setPort] = useState('993');
   const [user, setUser] = useState('reise@schmeckseler.de');
+  const [folder, setFolder] = useState('INBOX');
+  const [folders, setFolders] = useState<string[]>([]);
   const [password, setPassword] = useState('');
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -32,6 +34,7 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
       setMode(loaded.settings.isSecure ? TLS : STARTTLS);
       setPort(String(loaded.settings.port));
       setUser(loaded.settings.user);
+      setFolder(loaded.settings.folder);
     }
     setIsOpen(!loaded.settings && origin === 'none' && loaded.canEdit);
   }, [origin]);
@@ -40,8 +43,8 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
     void reload();
   }, [reload]);
 
-  const input = (): SettingsInput => ({ host: host.trim(), port: Number(port), isSecure: mode === TLS, user: user.trim(), ...(password ? { password } : {}) });
-  const isComplete = host.trim().length > 2 && Number(port) > 0 && user.trim().length > 0 && (password.length > 0 || Boolean(settings?.hasPassword));
+  const input = (): SettingsInput => ({ host: host.trim(), port: Number(port), isSecure: mode === TLS, user: user.trim(), folder: folder.trim() || 'INBOX', ...(password ? { password } : {}) });
+  const isComplete = host.trim().length > 2 && Number(port) > 0 && user.trim().length > 0 && folder.trim().length > 0 && (password.length > 0 || Boolean(settings?.hasPassword));
 
   function chooseMode(next: string) {
     setMode(next);
@@ -63,6 +66,7 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
   const test = () => run(async () => {
     const outcome = await testSettings(input());
     setResult({ ok: outcome.ok, text: outcome.message });
+    if (outcome.folders) setFolders(outcome.folders);
   });
   const save = () => run(async () => {
     await saveSettings(input());
@@ -82,7 +86,7 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
   });
 
   const summary = settings
-    ? `${settings.user} auf ${settings.host}, Port ${settings.port}, ${settings.isSecure ? 'SSL/TLS' : 'STARTTLS'} · zuletzt geändert ${formatDateTime(settings.updatedAt)}`
+    ? `${settings.user} auf ${settings.host}, Port ${settings.port}, ${settings.isSecure ? 'SSL/TLS' : 'STARTTLS'}, ${settings.folder === 'INBOX' ? 'Posteingang' : `Ordner „${settings.folder}“`} · zuletzt geändert ${formatDateTime(settings.updatedAt)}`
     : origin === 'env' ? 'Der Zugang kommt aus den Server-Einstellungen (Coolify).' : null;
 
   return (
@@ -103,6 +107,8 @@ export function MailboxSetup({ origin, onChanged }: { origin: 'app' | 'env' | 's
             <Field label="Port">{(p) => <Input {...p} inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))} />}</Field>
           </div>
           <Field label="Benutzername">{(p) => <Input {...p} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="off" />}</Field>
+          <Field label="Ordner" hint={folders.length > 0 ? `Gefunden: ${folders.join(', ')}` : 'INBOX ist der Posteingang. Für einen Unterordner den Namen eintragen (z. B. Reise) und „Verbindung testen“ drücken, dann zeigt die App die vorhandenen Ordner.'}>{(p) => <Input {...p} list="mailbox-folders" value={folder} onChange={(e) => setFolder(e.target.value)} autoComplete="off" />}</Field>
+          <datalist id="mailbox-folders">{folders.map((f) => <option key={f} value={f} />)}</datalist>
           <Field label="Passwort" hint={settings?.hasPassword ? 'Gespeichert. Leer lassen, um es zu behalten.' : 'Bei manchen Anbietern ist ein App-Passwort nötig.'}>{(p) => <Input {...p} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />}</Field>
           {result && <Notice tone={result.ok ? 'info' : 'warn'}><span data-testid="mailbox-test-result">{result.text}</span></Notice>}
           <div className="flex flex-wrap justify-between gap-2">

@@ -17,6 +17,7 @@ const call = (handler: (r: Request) => Promise<Response> | Response, token: stri
   handler(new Request('http://localhost/api/mailbox/x', { method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }));
 const settings = { host: 'imap.lodge.test', port: 993, isSecure: true, user: 'reise@lodge.test', password: 'sehr-geheim-123' };
 
+
 describe.skipIf(!available)('mailbox setup in the app (real database)', () => {
   let ctx: Awaited<ReturnType<typeof createFamilyWithRoles>>;
   const previous = { ...process.env };
@@ -80,6 +81,16 @@ describe.skipIf(!available)('mailbox setup in the app (real database)', () => {
     expect(mailbox).toMatchObject({ state: 'ready', origin: 'app', address: 'reise@lodge.test' });
   });
 
+  it('stores the folder (inbox by default), shows it, and refuses unusable names', async () => {
+    expect((await (await call(getSettings, ctx.adult.accessToken, undefined, 'GET')).json()).settings).toMatchObject({ folder: 'INBOX' });
+    expect((await call(putSettings, ctx.owner.accessToken, { ...settings, folder: 'Reise' }, 'PUT')).status).toBe(200);
+    expect((await (await call(getSettings, ctx.adult.accessToken, undefined, 'GET')).json()).settings).toMatchObject({ folder: 'Reise' });
+    expect((await (await call(getInbox, ctx.adult.accessToken, undefined, 'GET')).json()).mailbox.detail).toContain('Ordner „Reise“');
+    for (const folder of ['', 'a\nb', 'x'.repeat(201)]) expect((await call(putSettings, ctx.owner.accessToken, { ...settings, folder }, 'PUT')).status, JSON.stringify(folder)).toBe(400);
+    expect((await call(putSettings, ctx.owner.accessToken, { ...settings, folder: undefined, password: undefined }, 'PUT')).status).toBe(200);
+    expect((await (await call(getSettings, ctx.owner.accessToken, undefined, 'GET')).json()).settings).toMatchObject({ folder: 'INBOX' });
+  });
+
   it('reports an unreadable password instead of failing when the server secret changed', async () => {
     await admin.from('mailbox_settings').update({ password_enc: 'v1:AAAA:AAAA:AAAA' }).eq('family_id', ctx.family.id);
     expect((await (await call(getSettings, ctx.owner.accessToken, undefined, 'GET')).json()).settings).toMatchObject({ hasPassword: false, passwordUnreadable: true });
@@ -113,5 +124,29 @@ describe.skipIf(!available)('mailbox setup in the app (real database)', () => {
     expect((await res.json()).stored).toBeGreaterThanOrEqual(1);
     const inbox = await (await call(getInbox, ctx.adult.accessToken, undefined, 'GET')).json();
     expect(inbox.mails.some((m: { suggestions: { kind: string }[] }) => m.suggestions.some((s) => s.kind === 'payment_received'))).toBe(true);
+  });
+
+  it.skipIf(!greenmail)('reads only the chosen subfolder with the access saved in the app, and tells which folders exist', async () => {
+    const folder = `Anbieter-${Date.now()}`;
+    const client = new ImapFlow({ host: imapHost, port: imapPort, secure: false, auth: { user: 'reise', pass: 'secret' }, logger: false });
+    await client.connect();
+    await client.mailboxCreate(folder);
+    await client.append(folder, `From: Rezeption <info@lodge.test>\r\nTo: reise@example.test\r\nSubject: Aus dem Unterordner ${folder}\r\nMessage-ID: <${folder}@lodge.test>\r\nDate: Tue, 13 Oct 2026 09:00:00 +0000\r\n\r\nWe have received your payment of EUR 75.00.\r\n`);
+    await client.logout();
+    const local = { host: imapHost, port: imapPort, isSecure: false, user: 'reise', password: 'secret' };
+    const fresh = await createFamilyWithRoles(); // no mails filed yet: what shows up can only come from the chosen folder
+
+    const probed = await (await call(postTest, fresh.owner.accessToken, { ...local, folder })).json();
+    expect(probed).toMatchObject({ ok: true, messageCount: 1, message: expect.stringContaining(`Ordner „${folder}“`) });
+    expect(probed.folders).toEqual(expect.arrayContaining(['INBOX', folder]));
+    const missing = await (await call(postTest, fresh.owner.accessToken, { ...local, folder: 'Gibt-es-nicht' })).json();
+    expect(missing).toMatchObject({ ok: false, message: expect.stringContaining('Ordner gibt es im Postfach nicht') });
+
+    expect((await call(putSettings, fresh.owner.accessToken, { ...local, folder }, 'PUT')).status).toBe(200);
+    const res = await (await call(postSync, fresh.adult.accessToken)).json();
+    expect(res.stored).toBe(1);
+    const inbox = await (await call(getInbox, fresh.adult.accessToken, undefined, 'GET')).json();
+    expect(inbox.mails.map((m: { subject: string }) => m.subject)).toContain(`Aus dem Unterordner ${folder}`);
+    expect(inbox.mails.filter((m: { subject: string }) => !m.subject.startsWith('Aus dem Unterordner')).length).toBe(0);
   });
 });
