@@ -4,18 +4,13 @@ import { aiBudgetExceeded } from '@/lib/server/ai-guard';
 import { log, requestId } from '@/lib/server/logger';
 import { authorizeMailbox } from '@/lib/server/mailbox/access';
 import { runMailboxSync } from '@/lib/server/mailbox/ingest';
-import { createMailSourceFromEnv, mailboxStatusFromEnv } from '@/lib/server/mailbox/source';
+import { resolveMailbox } from '@/lib/server/mailbox/config';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 /** One run at a time per instance: a second click while a run is going waits for the same result. */
 let running: Promise<unknown> | null = null;
-
-/** Whether the mailbox is connected. Open to everyone, so it says nothing but the state: no address, no variable names. */
-export function GET() {
-  return NextResponse.json({ state: mailboxStatusFromEnv().state }, { headers: { 'Cache-Control': 'no-store' } });
-}
 
 /**
  * Fetches new mails of the trip mailbox, files them at the stays and bookings and prepares suggestions. Adults of the family,
@@ -27,8 +22,8 @@ export async function POST(request: Request) {
   if (!access.ok) return access.response;
   const { caller } = access;
   if (aiBudgetExceeded('mailbox-sync', caller.key, 20, 100)) return NextResponse.json({ error: 'RATE_LIMITED', message: 'Zu viele Abrufe. Bitte später erneut versuchen.' }, { status: 429 });
-  const source = createMailSourceFromEnv();
-  if (!source) return NextResponse.json({ error: 'MAILBOX_NOT_CONFIGURED', message: mailboxStatusFromEnv().detail }, { status: 503 });
+  const { source, detail } = await resolveMailbox(caller.admin, caller.familyId);
+  if (!source) return NextResponse.json({ error: 'MAILBOX_NOT_CONFIGURED', message: detail }, { status: 503 });
   if (running) return NextResponse.json({ error: 'ALREADY_RUNNING', message: 'Ein Abruf läuft gerade. Bitte kurz warten.' }, { status: 409 });
   const aiProvider = process.env.MAILBOX_AI === 'off' ? null : createProviderFromEnv();
   const run = runMailboxSync({ admin: caller.admin, familyId: caller.familyId, tripId: caller.tripId, source, aiProvider, log: (message, fields) => log('info', message, { requestId: id, ...fields }) });

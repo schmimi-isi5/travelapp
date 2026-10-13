@@ -156,6 +156,7 @@ beforeAll(async () => {
   await run('0008_profile_avatar', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
   await run('0009_correspondence', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
   await run('0010_mailbox', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
+  await run('0011_mailbox_settings', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -893,6 +894,25 @@ describe('migration 0010 (mailbox)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0010_again', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0011 (mailbox settings)', () => {
+  const insertSettings = (family: string) => admin(`insert into public.mailbox_settings(family_id,host,port,username,password_enc) values($1,'imap.example.test',993,'reise','v1:x:y:z') on conflict (family_id) do nothing`, [family]);
+
+  it('is not readable or writable by any client role, owner included', async () => {
+    await insertSettings(fam.A);
+    for (const who of [users.A.owner, users.A.adult, users.A.member, users.A.child, users.B.owner]) {
+      await expectDenied(as(who, `select 1 from public.mailbox_settings`));
+      await expectDenied(as(who, `update public.mailbox_settings set host='evil.example'`));
+      await expectDenied(as(who, `insert into public.mailbox_settings(family_id,host,port,username,password_enc) values($1,'imap.example.test',993,'u','p')`, [fam.A]));
+    }
+    expect((await admin(`select count(*)::int c from public.mailbox_settings where family_id=$1`, [fam.A])).rows[0].c).toBe(1);
+  });
+
+  it('rejects impossible ports and is idempotent when applied twice', async () => {
+    await expect(admin(`insert into public.mailbox_settings(family_id,host,port,username,password_enc) values($1,'imap.example.test',0,'u','p')`, [fam.B])).rejects.toThrow();
+    await run('0011_again', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
   });
 });
 

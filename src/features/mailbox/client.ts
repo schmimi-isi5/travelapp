@@ -16,7 +16,7 @@ export interface InboxMail {
 }
 
 export interface Inbox {
-  mailbox: { state: 'ready' | 'not_configured'; detail: string; address: string | null };
+  mailbox: { state: 'ready' | 'not_configured'; detail: string; address: string | null; origin: 'app' | 'env' | 'stub' | 'none' };
   state: { last_run_at: string | null; last_error: string | null; fetched_total: number } | null;
   mails: InboxMail[];
 }
@@ -44,3 +44,25 @@ export const resolveSuggestion = (ingestId: string, suggestionId: string, status
   call<{ ok: true }>('/api/mailbox/resolve', { method: 'POST', body: JSON.stringify({ ingestId, suggestionId, status }) });
 export const assignMail = (ingestId: string, target: { stayId: string | null; bookingId: string | null }) =>
   call<{ ok: true }>('/api/mailbox/assign', { method: 'POST', body: JSON.stringify({ ingestId, ...target }) });
+
+export interface MailboxSettings {
+  host: string;
+  port: number;
+  isSecure: boolean;
+  user: string;
+  hasPassword: boolean;
+  passwordUnreadable: boolean;
+  updatedAt: string;
+}
+export interface SettingsInput {
+  host: string;
+  port: number;
+  isSecure: boolean;
+  user: string;
+  password?: string;
+}
+
+export const loadSettings = () => call<{ settings: MailboxSettings | null; canEdit: boolean }>('/api/mailbox/settings');
+export const saveSettings = (input: SettingsInput) => call<{ ok: true }>('/api/mailbox/settings', { method: 'PUT', body: JSON.stringify(input) });
+export const removeSettings = () => call<{ ok: true }>('/api/mailbox/settings', { method: 'DELETE' });
+export const testSettings = (input: SettingsInput) => call<{ ok: boolean; message: string }>('/api/mailbox/test', { method: 'POST', body: JSON.stringify(input) });
