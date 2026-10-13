@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="mx-auto flex max-w-[1440px]">
-        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 flex-col overflow-y-auto border-r border-line p-4 lg:flex">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-line p-4 lg:flex">
           <nav aria-label="Hauptnavigation">
             <ul className="space-y-1">
               {sideItems.map((item) => (
