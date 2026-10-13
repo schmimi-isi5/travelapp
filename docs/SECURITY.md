@@ -81,6 +81,9 @@ Dieses Dokument beschreibt, was die Anwendung schützt, wo die Durchsetzung stat
 - `/api/ai/transcribe` ist der einzige Weg für **Ton** zu einem Dienst: nur Audioformate der Handys, höchstens 10 MB, Bestätigung je Aufnahme im Browser, Anmeldung, Einwilligung, eigenes Kontingent (20 pro Stunde, 60 pro Tag), keine Speicherung, keine Aufnahme und kein Text in Logs. Ohne `TRANSCRIBE_PROVIDER` antwortet die Route mit 503.
 - `/api/fx` ist wie `/api/weather` kein offener Proxy: Anmeldung, strenge Prüfung der Währungscodes, Zwischenspeicher, 60 Anfragen pro Stunde.
 
+## 6g. E-Mail-Vorlagen
+- Die Dateien in `/mail-templates/` sind öffentlich abrufbar (der Auth-Dienst holt sie ohne Anmeldung), enthalten aber nur Layout, Texte und Platzhalter, keine Daten. Werte in der App-Mail (Namen, Links) werden HTML-maskiert, die Mail enthält weder Skripte noch externe Stylesheets. Links in der Einladungsmail tragen den Einladungs-Token, der nur ein Mal und 7 Tage gilt.
+
 ## 7. Datenschutz
 - Datensparsam: Standort nur einmalig und mit Einwilligung, EXIF-Datum nur mit Opt-in (Standortdaten aus Fotos werden nie gelesen), keine Hintergrundverfolgung, kein Tracking, keine Drittanbieter-Skripte.
 - KI ist aus (`AI_PROVIDER=disabled`); ohne ausdrückliche Einwilligung wird nichts an einen KI-Dienst gesendet.

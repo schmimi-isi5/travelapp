@@ -20,15 +20,15 @@ const smtpUp = await smtpReachable();
 
 interface MailSummary { ID: string; Subject: string; To: { Address: string }[] }
 
-async function waitForMail(to: string, timeoutMs = 15_000): Promise<{ summary: MailSummary; text: string }> {
+async function waitForMail(to: string, timeoutMs = 15_000): Promise<{ summary: MailSummary; text: string; html: string }> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const res = await fetch(`${MAILPIT_API}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}`);
     const body = (await res.json()) as { messages?: MailSummary[] };
     const summary = body.messages?.[0];
     if (summary) {
-      const full = (await (await fetch(`${MAILPIT_API}/api/v1/message/${summary.ID}`)).json()) as { Text: string };
-      return { summary, text: full.Text };
+      const full = (await (await fetch(`${MAILPIT_API}/api/v1/message/${summary.ID}`)).json()) as { Text: string; HTML: string };
+      return { summary, text: full.Text, html: full.HTML };
     }
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -68,6 +68,13 @@ describe.skipIf(!available || !mailpitUp)('e-mail delivery (auth service SMTP an
     const mail = await waitForMail(email);
     expect(mail.text).toContain(`https://reise.example.test/invite?token=${token}`);
     expect(mail.summary.To[0]?.Address).toBe(email);
+    // a real HTML mail with a plain-text twin, in the app's layout
+    expect(mail.html).toContain('<html lang="de">');
+    expect(mail.html).toContain('Du bist eingeladen');
+    expect(mail.html).toContain(`href="https://reise.example.test/invite?token=${token}"`);
+    expect(mail.html).toContain('Einladung annehmen');
+    expect(mail.text).not.toMatch(/<[a-z/][^>]*>/i);
+    expect(mail.summary.Subject).toContain('Einladung');
     expect(family.id).toBeTruthy();
     void createFamily;
   });

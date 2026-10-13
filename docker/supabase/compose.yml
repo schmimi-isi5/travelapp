@@ -101,6 +101,20 @@ services:
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
       GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+      # HTML mails: layout and texts come from src/lib/mail/templates.mjs (built into public/mail-templates, served by the app).
+      # MAIL_TEMPLATE_BASE overrides the default (SITE_URL); if the app is unreachable the auth service falls back to its plain default mail.
+      GOTRUE_MAILER_SUBJECTS_INVITE: "Einladung: Namibia & Botswana – Unsere Reise"
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "Bitte bestätige deine E-Mail-Adresse"
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: "Neues Passwort für „Unsere Reise“"
+      GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "Dein Anmeldelink für „Unsere Reise“"
+      GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "Bitte bestätige deine neue E-Mail-Adresse"
+      GOTRUE_MAILER_SUBJECTS_REAUTHENTICATION: "Dein Bestätigungscode für „Unsere Reise“"
+      GOTRUE_MAILER_TEMPLATES_INVITE: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/invite.html
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/confirmation.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/recovery.html
+      GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/magic_link.html
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/email_change.html
+      GOTRUE_MAILER_TEMPLATES_REAUTHENTICATION: ${MAIL_TEMPLATE_BASE:-${SITE_URL}}/mail-templates/reauthentication.html
     networks: [backend]
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
