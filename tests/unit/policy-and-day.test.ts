@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canRead, canWrite, ForbiddenError, assertRead, canEditOwnedRow } from '@/lib/domain/policy';
+import { canRead, canReadRow, canWrite, ForbiddenError, assertRead, canEditOwnedRow, visibleRows } from '@/lib/domain/policy';
 import { buildDayBriefing } from '@/lib/domain/trip-day';
 import { buildDemoData } from '@/lib/db/demo-data';
 import { estimateRoute } from '@/lib/domain/geo';
@@ -7,9 +7,17 @@ import { daysBetween } from '@/lib/formatting';
 import type { ActionItem, TripStop } from '@/lib/domain/schemas';
 
 describe('role policy', () => {
-  it.each(['child', 'member'] as const)('%s cannot read finance or documents', (role) => {
-    for (const table of ['payments', 'documents', 'expenses', 'fx_rates'] as const) expect(canRead(role, table)).toBe(false);
+  it.each(['child', 'member'] as const)('%s cannot read finance', (role) => {
+    for (const table of ['payments', 'expenses', 'fx_rates'] as const) expect(canRead(role, table)).toBe(false);
     expect(() => assertRead(role, 'payments')).toThrow(ForbiddenError);
+  });
+  it.each(['child', 'member'] as const)('%s reads only the documents released for the family', (role) => {
+    expect(canRead(role, 'documents')).toBe(true);
+    const rows = [{ id: 'a', access_level: 'adult' }, { id: 'b', access_level: 'sensitive' }, { id: 'c', access_level: 'family' }];
+    expect(visibleRows(role, 'documents', rows).map((r) => r.id)).toEqual(['c']);
+    expect(canReadRow(role, 'documents', { access_level: 'adult' })).toBe(false);
+    expect(canReadRow(role, 'stays', {})).toBe(true);
+    for (const adult of ['owner', 'adult'] as const) expect(visibleRows(adult, 'documents', rows)).toHaveLength(3);
   });
   it('adults read finance', () => {
     expect(canRead('adult', 'payments')).toBe(true);

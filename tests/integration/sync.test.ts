@@ -33,7 +33,8 @@ describe('repository', () => {
   it('child cannot read or write finance (no hidden API either)', async () => {
     setActor({ userId: DEMO_USERS.childB, role: 'child' });
     await expect(list('payments')).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(list('documents')).rejects.toBeInstanceOf(ForbiddenError);
+    // documents: only what the adults released for the family (nothing in the demo data)
+    expect(await list('documents')).toEqual([]);
     await expect(get('expenses', 'demo-exp-1')).rejects.toBeInstanceOf(ForbiddenError);
     await expect(create('payments', { family_id: DEMO_FAMILY_ID, stay_id: 'demo-stay-etosha', amount_minor: 1, currency: 'NAD' })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(update('stays', 'demo-stay-etosha', { name: 'x' })).rejects.toBeInstanceOf(ForbiddenError);

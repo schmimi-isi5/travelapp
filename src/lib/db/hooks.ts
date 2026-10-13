@@ -2,7 +2,7 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useApp } from '@/components/app-provider';
-import { canRead } from '../domain/policy';
+import { canRead, visibleRows } from '../domain/policy';
 import type { Entity, EntityName } from '../domain/schemas';
 import { EDITORIAL_TIPS } from './editorial-tips';
 import { getLocalDb } from './local';
@@ -11,7 +11,7 @@ import { getLocalDb } from './local';
 export function useTable<K extends EntityName>(table: K): { rows: Entity<K>[]; loading: boolean } {
   const { role, ready } = useApp();
   const allowed = canRead(role, table);
-  const rows = useLiveQuery(async () => (allowed ? ((await getLocalDb().entity(table).toArray()) as unknown as Entity<K>[]) : []), [table, allowed, ready]);
+  const rows = useLiveQuery(async () => (allowed ? (visibleRows(role, table, (await getLocalDb().entity(table).toArray()) as { access_level?: unknown }[]) as unknown as Entity<K>[]) : []), [table, allowed, ready, role]);
   return { rows: rows ?? [], loading: rows === undefined };
 }
 

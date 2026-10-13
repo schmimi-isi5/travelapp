@@ -144,8 +144,9 @@ export const bookingSchema = z.object({
   notes: z.string().nullable().default(null),
 });
 
-export const DOCUMENT_CLASSIFICATIONS = ['invoice', 'receipt', 'confirmation', 'correspondence', 'ticket', 'passport', 'insurance', 'visa', 'voucher', 'other'] as const;
-export const ACCESS_LEVELS = ['adult', 'sensitive'] as const;
+export const DOCUMENT_CLASSIFICATIONS = ['invoice', 'receipt', 'confirmation', 'correspondence', 'contract', 'ticket', 'passport', 'insurance', 'visa', 'voucher', 'other'] as const;
+/** 'family' = visible to every family member (e.g. boarding passes); 'adult' and 'sensitive' = adults only. */
+export const ACCESS_LEVELS = ['adult', 'sensitive', 'family'] as const;
 
 export const documentSchema = z.object({
   ...baseShape,
