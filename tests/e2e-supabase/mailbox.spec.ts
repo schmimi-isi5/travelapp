@@ -71,3 +71,45 @@ test('der Besitzer sieht den Eintrag Postfach in der Navigation', async ({ brows
   await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Postfach' })).toBeVisible({ timeout: 30_000 });
   await context.close();
 });
+
+test('Zugang in der App einrichten: testen, speichern, ändern ohne Passwort, entfernen', async ({ browser }) => {
+  const { context, page } = await newUserContext(browser);
+  await login(page, email);
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await page.goto('/mailbox');
+  const setup = page.getByTestId('mailbox-setup');
+  await setup.getByRole('button', { name: 'Zugang einrichten' }).click();
+
+  // the buttons stay off until the form is complete
+  await expect(setup.getByRole('button', { name: 'Verbindung testen' })).toBeDisabled();
+  await setup.getByLabel('IMAP-Server').fill('imap.example.test');
+  await setup.getByLabel('Passwort').fill('geheim-12345');
+  await setup.getByLabel('Verschlüsselung').selectOption('starttls');
+  await expect(setup.getByLabel('Port')).toHaveValue('143');
+  await setup.getByLabel('Verschlüsselung').selectOption('tls');
+  await expect(setup.getByLabel('Port')).toHaveValue('993');
+
+  await setup.getByRole('button', { name: 'Verbindung testen' }).click();
+  await expect(page.getByTestId('mailbox-test-result')).toContainText('Verbindung steht');
+  await setup.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByTestId('mailbox-test-result')).toContainText('Gespeichert');
+  await expect(page.getByTestId('mailbox-summary')).toContainText('imap.example.test, Port 993, SSL/TLS');
+  await expect(page.getByTestId('mailbox-setup')).not.toContainText('geheim-12345');
+
+  // after a reload the password is not shown anywhere, but a change works without typing it again
+  await page.reload();
+  await page.getByTestId('mailbox-setup').getByRole('button', { name: 'Zugang ändern' }).click();
+  await expect(page.getByLabel('Passwort')).toHaveValue('');
+  await expect(page.getByTestId('mailbox-setup')).toContainText('Gespeichert. Leer lassen, um es zu behalten.');
+  await page.getByLabel('IMAP-Server').fill('imap2.example.test');
+  await page.getByRole('button', { name: 'Verbindung testen' }).click();
+  await expect(page.getByTestId('mailbox-test-result')).toContainText('Verbindung steht');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByTestId('mailbox-summary')).toContainText('imap2.example.test');
+
+  await page.getByRole('button', { name: 'Zugang ändern' }).click();
+  await page.getByRole('button', { name: 'Zugang entfernen' }).click();
+  await page.getByRole('dialog', { name: 'Zugang entfernen?' }).getByRole('button', { name: 'Entfernen' }).click();
+  await expect(page.getByTestId('mailbox-summary')).toHaveCount(0);
+  await context.close();
+});

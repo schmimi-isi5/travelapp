@@ -8,6 +8,8 @@ export interface MailboxCaller {
   /** Client acting as the signed-in adult (RLS applies); null for the scheduler secret. */
   user: SupabaseClient | null;
   userId: string | null;
+  /** The family owner may set up the mailbox; the scheduler never. */
+  isOwner: boolean;
   familyId: string;
   tripId: string;
   key: string;
@@ -37,7 +39,7 @@ export async function authorizeMailbox(request: Request, options: { allowSchedul
     const familyId = families[0]!.id as string;
     const tripId = await tripOf(admin, familyId);
     if (!tripId) return { ok: false, response: fail(409, 'NO_TRIP', 'Es gibt noch keine Reise.') };
-    return { ok: true, caller: { admin, user: null, userId: null, familyId, tripId, key: 'scheduler' } };
+    return { ok: true, caller: { admin, user: null, userId: null, isOwner: false, familyId, tripId, key: 'scheduler' } };
   }
   const token = bearerToken(request);
   if (!token) return { ok: false, response: fail(401, 'UNAUTHENTICATED', 'Bitte anmelden.') };
@@ -49,7 +51,7 @@ export async function authorizeMailbox(request: Request, options: { allowSchedul
   const familyId = membership.family_id as string;
   const tripId = await tripOf(admin, familyId);
   if (!tripId) return { ok: false, response: fail(409, 'NO_TRIP', 'Es gibt noch keine Reise.') };
-  return { ok: true, caller: { admin, user, userId: data.user.id, familyId, tripId, key: `user:${data.user.id}` } };
+  return { ok: true, caller: { admin, user, userId: data.user.id, isOwner: membership.role === 'owner', familyId, tripId, key: `user:${data.user.id}` } };
 }
 
 async function tripOf(admin: SupabaseClient, familyId: string): Promise<string | null> {

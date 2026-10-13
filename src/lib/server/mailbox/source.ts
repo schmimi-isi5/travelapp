@@ -20,6 +20,8 @@ export interface MailSourceResult {
 
 /** Where mails come from. The real one reads IMAP; tests bring their own. Implementations never change the mailbox. */
 export interface MailSource {
+  /** Connects and opens the inbox without reading mails: proves host, port, encryption and login. */
+  probe(): Promise<{ messageCount: number }>;
   fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult>;
 }
 
@@ -45,17 +47,35 @@ export function imapConfigFromEnv(env: Record<string, string | undefined> = proc
 
 /** Read-only IMAP access (the folder is opened read-only: nothing is flagged, moved or deleted). */
 export class ImapMailSource implements MailSource {
-  constructor(private readonly config: ImapConfig, private readonly folder = 'INBOX') {}
+  /** `requireTls`: without direct TLS the connection must be upgraded with STARTTLS; only a local test server may run without. */
+  constructor(private readonly config: ImapConfig, private readonly folder = 'INBOX', private readonly requireTls = true) {}
 
-  async fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult> {
-    const client = new ImapFlow({
+  private client(): ImapFlow {
+    return new ImapFlow({
       host: this.config.host,
       port: this.config.port,
       secure: this.config.isSecure,
+      doSTARTTLS: this.config.isSecure ? undefined : this.requireTls,
       auth: { user: this.config.user, pass: this.config.password },
       logger: false,
       socketTimeout: TIMEOUT_MS,
+      greetingTimeout: 20_000,
     });
+  }
+
+  async probe(): Promise<{ messageCount: number }> {
+    const client = this.client();
+    await client.connect();
+    try {
+      const status = await client.status(this.folder, { messages: true });
+      return { messageCount: status === false ? 0 : (status.messages ?? 0) };
+    } finally {
+      await client.logout().catch(() => undefined);
+    }
+  }
+
+  async fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult> {
+    const client = this.client();
     await client.connect();
     const lock = await client.getMailboxLock(this.folder, { readOnly: true });
     try {
@@ -92,6 +112,9 @@ export class ImapMailSource implements MailSource {
 /** Test double (MAILBOX_SOURCE=stub): mails come from MAILBOX_STUB_MAILS (JSON array). Never for production. */
 export class StubMailSource implements MailSource {
   constructor(private readonly mails: RawMail[]) {}
+  async probe(): Promise<{ messageCount: number }> {
+    return { messageCount: this.mails.length };
+  }
   async fetchNew(since: { uidValidity: number | null; lastUid: number }, limit: number): Promise<MailSourceResult> {
     const fresh = this.mails.filter((m) => m.uid > since.lastUid).sort((a, b) => a.uid - b.uid).slice(0, limit);
     return { uidValidity: 1, mails: fresh, lastUid: fresh.reduce((max, m) => Math.max(max, m.uid), since.lastUid) };
@@ -110,10 +133,16 @@ export function createMailSourceFromEnv(env: Record<string, string | undefined> 
   return config ? new ImapMailSource(config) : null;
 }
 
-export function mailboxStatusFromEnv(env: Record<string, string | undefined> = process.env): { state: 'ready' | 'not_configured'; detail: string; address: string | null } {
-  const source = createMailSourceFromEnv(env);
-  const address = env.MAILBOX_IMAP_USER?.trim() || null;
-  return source
-    ? { state: 'ready', detail: 'Das Postfach ist angebunden (nur Lesen).', address }
-    : { state: 'not_configured', detail: 'Postfach nicht eingerichtet: MAILBOX_IMAP_HOST, MAILBOX_IMAP_USER und MAILBOX_IMAP_PASSWORD fehlen.', address };
+/** What a person can do about a failed connection, without the server's raw message (it may echo the user name). */
+export function describeImapError(error: unknown): string {
+  const e = error as { authenticationFailed?: boolean; code?: string; message?: string } | null;
+  const code = e?.code ?? '';
+  const message = e?.message ?? '';
+  if (e?.authenticationFailed || /AUTHENTICATIONFAILED|Invalid credentials|LOGIN failed/i.test(message)) return 'Anmeldung abgelehnt: Benutzername oder Passwort stimmen nicht (bei manchen Anbietern braucht es ein App-Passwort).';
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'Der Server wurde nicht gefunden. Bitte den Servernamen prüfen.';
+  if (code === 'ECONNREFUSED') return 'Der Server nimmt auf diesem Port keine Verbindung an. Bitte Port und Verschlüsselung prüfen.';
+  if (code === 'ETIMEDOUT' || code === 'ESOCKETTIMEDOUT' || /timeout|timed out/i.test(message)) return 'Der Server antwortet nicht. Bitte Servername, Port und Verschlüsselung prüfen.';
+  if (/CERT|certificate|self.signed|hostname/i.test(`${code} ${message}`)) return 'Das Zertifikat des Servers ist nicht gültig oder passt nicht zum Servernamen.';
+  if (/STARTTLS/i.test(message)) return 'Der Server bietet keine Verschlüsselung (STARTTLS) an. Bitte SSL/TLS mit Port 993 wählen.';
+  return 'Die Verbindung zum Postfach hat nicht geklappt. Bitte Servername, Port, Verschlüsselung und Zugangsdaten prüfen.';
 }

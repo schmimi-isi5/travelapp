@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { POST as postAssign } from '@/app/api/mailbox/assign/route';
 import { GET as getInbox } from '@/app/api/mailbox/inbox/route';
 import { POST as postResolve } from '@/app/api/mailbox/resolve/route';
-import { GET as getStatus, POST as postSync } from '@/app/api/mailbox/sync/route';
+import { POST as postSync } from '@/app/api/mailbox/sync/route';
 import { admin, backendAvailable, createFamilyWithRoles, createUser, deleteCreatedUsers, uniq } from './harness';
 
 const available = await backendAvailable();
@@ -37,9 +37,10 @@ describe.skipIf(!available)('mailbox (real database, stub mail source, no AI)', 
     await deleteCreatedUsers();
   });
 
-  it('reports whether the mailbox is connected, without secrets', async () => {
-    const body = await (await getStatus()).json();
-    expect(body).toEqual({ state: 'ready' });
+  it('reports the mailbox state to adults, with the access in use and without secrets', async () => {
+    const body = await (await call(getInbox, '/api/mailbox/inbox', ctx.adult.accessToken)).json();
+    expect(body.mailbox).toMatchObject({ state: 'ready', origin: 'stub' });
+    expect(JSON.stringify(body.mailbox)).not.toMatch(/password|secret/i);
   });
 
   it('is for adults of a family only', async () => {

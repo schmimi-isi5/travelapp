@@ -11,20 +11,25 @@ const available = await new ImapFlow({ host: config.host, port: config.port, sec
 
 describe.skipIf(!available)('IMAP mail source (real IMAP server)', () => {
   const smtp = nodemailer.createTransport({ host: HOST, port: Number(process.env.SMTP_TEST_PORT ?? 3025), secure: false, tls: { rejectUnauthorized: false } });
-  const source = new ImapMailSource(config);
+  const source = new ImapMailSource(config, 'INBOX', false);
+
+  // other test files write into the same test inbox: this file only looks at its own mails
+  const tag = Date.now();
+  const mine = (mails: { subject: string }[]) => mails.filter((m) => m.subject.endsWith(`[${tag}]`));
 
   beforeAll(async () => {
-    await smtp.sendMail({ from: 'Rezeption <info@lodge.test>', to: 'reise@example.test', subject: 'Anzahlung erhalten', text: 'We have received your deposit of NAD 2,340.00.\nBooking reference: AB-12345', attachments: [{ filename: 'rechnung.pdf', content: Buffer.from('%PDF-1.4 test') }] });
-    await smtp.sendMail({ from: 'host@lodge.test', to: 'reise@example.test', subject: 'Zweite Mail', html: '<p>Hallo <b>Welt</b></p>' });
+    await smtp.sendMail({ from: 'Rezeption <info@lodge.test>', to: 'reise@example.test', subject: `Anzahlung erhalten [${tag}]`, text: 'We have received your deposit of NAD 2,340.00.\nBooking reference: AB-12345', attachments: [{ filename: 'rechnung.pdf', content: Buffer.from('%PDF-1.4 test') }] });
+    await smtp.sendMail({ from: 'host@lodge.test', to: 'reise@example.test', subject: `Zweite Mail [${tag}]`, html: '<p>Hallo <b>Welt</b></p>' });
   });
   afterAll(() => smtp.close());
 
   it('reads new mails with sender, subject, text and attachment names, and continues after the last UID', async () => {
     const first = await source.fetchNew({ uidValidity: null, lastUid: 0 }, 40);
-    expect(first.mails.map((m) => m.subject)).toEqual(['Anzahlung erhalten', 'Zweite Mail']);
-    expect(first.mails[0]).toMatchObject({ from: expect.stringContaining('info@lodge.test'), attachmentNames: ['rechnung.pdf'] });
-    expect(first.mails[0]!.text).toContain('NAD 2,340.00');
-    expect(first.mails[1]!.text).toContain('Hallo Welt');
+    const own = mine(first.mails) as typeof first.mails;
+    expect(own.map((m) => m.subject)).toEqual([`Anzahlung erhalten [${tag}]`, `Zweite Mail [${tag}]`]);
+    expect(own[0]).toMatchObject({ from: expect.stringContaining('info@lodge.test'), attachmentNames: ['rechnung.pdf'] });
+    expect(own[0]!.text).toContain('NAD 2,340.00');
+    expect(own[1]!.text).toContain('Hallo Welt');
     expect(first.mails.every((m) => m.messageId.length > 3 && m.receivedAt)).toBe(true);
 
     const again = await source.fetchNew({ uidValidity: first.uidValidity, lastUid: first.lastUid }, 40);
@@ -36,7 +41,7 @@ describe.skipIf(!available)('IMAP mail source (real IMAP server)', () => {
     const limited = await source.fetchNew({ uidValidity: null, lastUid: 0 }, 1);
     expect(limited.mails).toHaveLength(1);
     const restarted = await source.fetchNew({ uidValidity: 999_999, lastUid: 1_000 }, 40);
-    expect(restarted.mails).toHaveLength(2);
+    expect(mine(restarted.mails)).toHaveLength(2);
   });
 
   it('only reads: the mails stay unread and in place', async () => {

@@ -6,6 +6,7 @@ import { useApp } from '@/components/app-provider';
 import { Button, EmptyState, Notice, PageHeader } from '@/components/ui';
 import { loadInbox, syncMailbox, type Inbox } from '@/features/mailbox/client';
 import { MailCard } from '@/features/mailbox/mail-card';
+import { MailboxSetup } from '@/features/mailbox/setup';
 import { useTable } from '@/lib/db/hooks';
 import { isAdult } from '@/lib/domain/policy';
 import { formatDateTime } from '@/lib/formatting';
@@ -64,7 +65,7 @@ export default function MailboxPage() {
         subtitle="Mails von Unterkünften und Anbietern: abgelegt an der passenden Unterkunft oder Buchung. Zahlungen, Fristen und Nummern trägst Du mit einem Klick ein."
         actions={<Button onClick={() => void fetchMails()} disabled={isBusy || inbox?.mailbox.state === 'not_configured'}><RefreshCw size={16} aria-hidden /> {isBusy ? 'Wird abgerufen …' : 'Postfach abrufen'}</Button>}
       />
-      {inbox?.mailbox.state === 'not_configured' && <Notice tone="warn" title="Postfach noch nicht eingerichtet">{inbox.mailbox.detail}</Notice>}
+      {inbox && <MailboxSetup origin={inbox.mailbox.origin} onChanged={() => void reload()} />}
       {inbox?.mailbox.state === 'ready' && (
         <p className="text-sm text-slate" data-testid="mailbox-status">
           {inbox.mailbox.address ?? 'Postfach'} · nur Lesen · {inbox.state?.last_run_at ? `zuletzt abgerufen ${formatDateTime(inbox.state.last_run_at)}` : 'noch nie abgerufen'}
