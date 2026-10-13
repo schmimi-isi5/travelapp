@@ -9,15 +9,16 @@ export interface StoredSettings {
   port: number;
   isSecure: boolean;
   user: string;
+  folder: string;
   updatedAt: string;
   /** null = stored password cannot be decrypted (server secret changed): has to be entered again. */
   password: string | null;
 }
 
 export async function loadStoredSettings(admin: SupabaseClient, familyId: string): Promise<StoredSettings | null> {
-  const { data } = await admin.from('mailbox_settings').select('host,port,is_secure,username,password_enc,updated_at').eq('family_id', familyId).maybeSingle();
+  const { data } = await admin.from('mailbox_settings').select('host,port,is_secure,username,folder,password_enc,updated_at').eq('family_id', familyId).maybeSingle();
   if (!data) return null;
-  return { host: data.host as string, port: Number(data.port), isSecure: Boolean(data.is_secure), user: data.username as string, updatedAt: data.updated_at as string, password: decryptSecret(data.password_enc as string) };
+  return { host: data.host as string, port: Number(data.port), isSecure: Boolean(data.is_secure), user: data.username as string, folder: (data.folder as string | null) || 'INBOX', updatedAt: data.updated_at as string, password: decryptSecret(data.password_enc as string) };
 }
 
 export interface ResolvedMailbox {
@@ -33,8 +34,8 @@ export async function resolveMailbox(admin: SupabaseClient, familyId: string, en
   const stored = await loadStoredSettings(admin, familyId);
   if (stored) {
     if (!stored.password) return { origin: 'app', source: null, address: stored.user, detail: 'Das gespeicherte Passwort kann nicht mehr gelesen werden. Bitte das Passwort neu eingeben.' };
-    const config: ImapConfig = { host: stored.host, port: stored.port, user: stored.user, password: stored.password, isSecure: stored.isSecure };
-    return { origin: 'app', source: new ImapMailSource(config, 'INBOX', env.MAILBOX_ALLOW_PLAINTEXT !== 'true'), address: stored.user, detail: 'Das Postfach ist in der App eingerichtet (nur Lesen).' };
+    const config: ImapConfig = { host: stored.host, port: stored.port, user: stored.user, password: stored.password, isSecure: stored.isSecure, folder: stored.folder };
+    return { origin: 'app', source: new ImapMailSource(config, env.MAILBOX_ALLOW_PLAINTEXT !== 'true'), address: stored.user, detail: `Das Postfach ist in der App eingerichtet (nur Lesen, Ordner „${stored.folder}“).` };
   }
   if (imapConfigFromEnv(env)) return { origin: 'env', source: createMailSourceFromEnv(env), address: env.MAILBOX_IMAP_USER?.trim() || null, detail: 'Das Postfach ist über die Server-Einstellungen angebunden (nur Lesen).' };
   return { origin: 'none', source: null, address: null, detail: 'Postfach noch nicht eingerichtet.' };

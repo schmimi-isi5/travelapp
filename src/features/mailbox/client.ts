@@ -50,6 +50,7 @@ export interface MailboxSettings {
   port: number;
   isSecure: boolean;
   user: string;
+  folder: string;
   hasPassword: boolean;
   passwordUnreadable: boolean;
   updatedAt: string;
@@ -59,10 +60,11 @@ export interface SettingsInput {
   port: number;
   isSecure: boolean;
   user: string;
+  folder: string;
   password?: string;
 }
 
 export const loadSettings = () => call<{ settings: MailboxSettings | null; canEdit: boolean }>('/api/mailbox/settings');
 export const saveSettings = (input: SettingsInput) => call<{ ok: true }>('/api/mailbox/settings', { method: 'PUT', body: JSON.stringify(input) });
 export const removeSettings = () => call<{ ok: true }>('/api/mailbox/settings', { method: 'DELETE' });
-export const testSettings = (input: SettingsInput) => call<{ ok: boolean; message: string }>('/api/mailbox/test', { method: 'POST', body: JSON.stringify(input) });
+export const testSettings = (input: SettingsInput) => call<{ ok: boolean; message: string; folders?: string[] }>('/api/mailbox/test', { method: 'POST', body: JSON.stringify(input) });
