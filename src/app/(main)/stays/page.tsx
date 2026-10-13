@@ -5,16 +5,18 @@ import { useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Button, Chip, Dialog, EmptyState, Notice, PageHeader, Toolbar } from '@/components/ui';
 import { AccommodationCard, clarificationReasons } from '@/features/stays/accommodation-card';
+import { PaymentOverview } from '@/features/stays/payment-overview';
 import { StayForm } from '@/features/stays/stay-form';
 import { useTable } from '@/lib/db/hooks';
 import { computeStayFinancials } from '@/lib/domain/money';
+import { buildPaymentOverview } from '@/lib/domain/payment-overview';
 import { isAdult } from '@/lib/domain/policy';
 
 type Filter = 'all' | 'open' | 'partial' | 'paid' | 'clarify';
 const FILTERS: [Filter, string][] = [['all', 'Alle'], ['open', 'Offen'], ['partial', 'Teilbezahlt'], ['paid', 'Bezahlt'], ['clarify', 'Klärbedarf']];
 
 export default function StaysPage() {
-  const { role } = useApp();
+  const { role, today } = useApp();
   const adult = isAdult(role);
   const stays = useTable('stays').rows;
   const stops = useTable('trip_stops').rows;
@@ -33,6 +35,7 @@ export default function StaysPage() {
     });
   const matches = (e: (typeof enriched)[number], f: Filter) =>
     f === 'all' ? true : f === 'clarify' ? e.clarify : f === 'open' ? e.state === 'open' : f === 'partial' ? e.state === 'partial' : e.state === 'paid' || e.state === 'overpaid';
+  const overview = buildPaymentOverview(stays, payments, today);
   const visible = enriched.filter((e) => matches(e, filter));
 
   return (
@@ -53,6 +56,7 @@ export default function StaysPage() {
           <Notice tone="info">Preise, Zahlungen und Belege sind in dieser Rolle ausgeblendet.</Notice>
         </div>
       )}
+      {adult && stays.length > 0 && <PaymentOverview overview={overview} />}
       {adult && (
         <Toolbar>
           {FILTERS.map(([key, label]) => (
