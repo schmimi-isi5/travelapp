@@ -67,6 +67,8 @@ export interface AddDocumentOptions {
   title?: string | null;
   /** Required for sensitive classifications; the file is stored encrypted and never in plaintext. */
   passphrase?: string;
+  /** Readable by the whole family including children (boarding passes); never for sensitive documents. Default: adults only. */
+  isFamilyVisible?: boolean;
 }
 
 export const SENSITIVE_CLASSIFICATIONS: ReadonlySet<DocumentRecord['classification']> = new Set(['passport', 'insurance']);
@@ -90,7 +92,7 @@ export async function addDocument(options: AddDocumentOptions): Promise<Document
     mime_type: file.type,
     size_bytes: file.size,
     classification: options.classification,
-    access_level: sensitive ? 'sensitive' : 'adult',
+    access_level: sensitive ? 'sensitive' : options.isFamilyVisible ? 'family' : 'adult',
     upload_state: 'queued',
   });
 }
@@ -108,4 +110,40 @@ export async function openDocument(doc: DocumentRecord, passphrase?: string, rem
   if (!passphrase) throw new DocumentError('PASSPHRASE_REQUIRED', 'Passphrase erforderlich.');
   const bytes = new Uint8Array(await stored.arrayBuffer());
   return new Blob([await decryptBytes(bytes, passphrase)], { type: doc.mime_type });
+}
+
+export interface OfflineCacheResult {
+  /** Newly stored on this device in this run. */
+  cached: number;
+  /** Were already on this device. */
+  alreadyLocal: number;
+  failed: number;
+}
+
+/**
+ * Stores the files of the given documents on this device so they open without network (airport, car). Files that are already here
+ * are left alone. Sensitive files are stored as they are on the server: still encrypted. Failures are counted, never thrown.
+ */
+export async function cacheDocumentsOffline(docs: readonly DocumentRecord[], remote: Pick<RemoteAdapter, 'download'>, onProgress?: (done: number, total: number) => void): Promise<OfflineCacheResult> {
+  const db = getLocalDb();
+  const present = new Set(await db.blobs.toCollection().primaryKeys());
+  const result: OfflineCacheResult = { cached: 0, alreadyLocal: 0, failed: 0 };
+  let done = 0;
+  for (const doc of docs) {
+    if (present.has(doc.id)) result.alreadyLocal += 1;
+    else {
+      try {
+        const blob = await remote.download(doc.storage_path, 'documents');
+        if (blob) {
+          await storeBlob(db, doc.id, blob, doc.original_name);
+          result.cached += 1;
+        } else result.failed += 1;
+      } catch {
+        result.failed += 1;
+      }
+    }
+    done += 1;
+    onProgress?.(done, docs.length);
+  }
+  return result;
 }

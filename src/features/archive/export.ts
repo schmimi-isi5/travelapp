@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { canRead } from '@/lib/domain/policy';
+import { canRead, visibleRows } from '@/lib/domain/policy';
 import { ENTITY_NAMES, type EntityName, type Role } from '@/lib/domain/schemas';
 import { loadBlob } from '@/lib/db/blob-store';
 import { getLocalDb } from '@/lib/db/local';
@@ -51,7 +51,7 @@ export async function buildExport(role: Role): Promise<ExportResult> {
 
   for (const table of ENTITY_NAMES) {
     if (SKIPPED_FOR_EXPORT.has(table) || !canRead(role, table)) continue;
-    const rows = (await db.entity(table).toArray()) as Record<string, unknown>[];
+    const rows = visibleRows(role, table, (await db.entity(table).toArray()) as Record<string, unknown>[]);
     data[table] = rows;
     if (rows.some((r) => r.is_demo === true)) manifest.contains_demo_data = true;
     const columns = [...new Set(rows.flatMap((r) => Object.keys(r)))];

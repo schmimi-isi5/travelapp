@@ -95,6 +95,33 @@ describe.skipIf(!available)('private storage (real Supabase Storage + RLS)', () 
     expect(await stored?.text()).toBe('Wir kommen gegen 16 Uhr an.');
   });
 
+  it('shares a boarding pass with the whole family (file and row) while contracts stay with the adults', async () => {
+    const family = `${a.family.id}/documents/${uniq()}-bordkarte.pdf`;
+    const adultOnly = `${a.family.id}/documents/${uniq()}-mietvertrag.pdf`;
+    const pdf = new Blob(['%PDF-1.4 test'], { type: 'application/pdf' });
+    const adult = remoteFor(a.adult, a.family.id, 'adult');
+    await adult.uploadBlob(family, pdf, 'documents');
+    await adult.uploadBlob(adultOnly, pdf, 'documents');
+    const row = (storage_path: string, classification: string, access_level: string) => ({ family_id: a.family.id, storage_path, original_name: 'x.pdf', mime_type: 'application/pdf', classification, access_level });
+    const { error } = await a.adult.client.from('documents').insert([row(family, 'ticket', 'family'), row(adultOnly, 'contract', 'adult')]);
+    expect(error).toBeNull();
+
+    for (const who of [a.owner, a.adult, a.member, a.child]) {
+      const remote = remoteFor(who, a.family.id, who.role);
+      expect(await remote.download(family, 'documents'), `${who.role} reads the boarding pass`).not.toBeNull();
+      const paths = (await remote.pull('documents')).map((r) => String(r.storage_path));
+      expect(paths.includes(family), `${who.role} sees the boarding pass row`).toBe(true);
+      expect(paths.includes(adultOnly), `${who.role} sees the contract row`).toBe(who.role === 'owner' || who.role === 'adult');
+      expect((await remote.download(adultOnly, 'documents')) !== null, `${who.role} reads the contract`).toBe(who.role === 'owner' || who.role === 'adult');
+    }
+    expect(await remoteFor(b.child, b.family.id, 'child').download(family, 'documents')).toBeNull();
+    expect((await remoteFor(b.owner, b.family.id, 'owner').pull('documents')).map((r) => String(r.storage_path))).not.toContain(family);
+    // children cannot write documents, not even family-level ones
+    expect((await a.child.client.from('documents').insert(row(`${a.family.id}/documents/${uniq()}-evil.pdf`, 'ticket', 'family'))).error).not.toBeNull();
+    expect((await a.child.client.from('documents').update({ title: 'x' }).eq('storage_path', family).select('id')).data ?? []).toEqual([]);
+    await expect(remoteFor(a.child, a.family.id, 'child').uploadBlob(`${a.family.id}/documents/${uniq()}-evil.pdf`, pdf, 'documents')).rejects.toThrow();
+  });
+
   it('rejects documents above the 20 MB bucket limit', async () => {
     const big = new Blob([new Uint8Array(21 * 1024 * 1024)], { type: 'application/pdf' });
     await expect(remoteFor(a.owner, a.family.id, 'owner').uploadBlob(`${a.family.id}/documents/${uniq()}-big.pdf`, big, 'documents')).rejects.toThrow();

@@ -1,4 +1,4 @@
-import { assertRead, assertWrite, canEditOwnedRow, ForbiddenError } from '../domain/policy';
+import { assertRead, assertWrite, canEditOwnedRow, canReadRow, ForbiddenError, visibleRows } from '../domain/policy';
 import { ENTITY_SCHEMAS, type Entity, type EntityName, type SyncMutation } from '../domain/schemas';
 import { getActor } from './actor';
 import { getDeviceId, newId, nowIso, queueStamp } from './ids';
@@ -53,12 +53,13 @@ function assertOwnRow(table: EntityName, row: Record<string, unknown>): void {
 export async function list<K extends EntityName>(table: K): Promise<Entity<K>[]> {
   assertRead(getActor().role, table);
   const rows = await getLocalDb().entity(table).toArray();
-  return rows as unknown as Entity<K>[];
+  return visibleRows(getActor().role, table, rows as { access_level?: unknown }[]) as unknown as Entity<K>[];
 }
 
 export async function get<K extends EntityName>(table: K, id: string): Promise<Entity<K> | undefined> {
   assertRead(getActor().role, table);
   const row = await getLocalDb().entity(table).get(id);
+  if (row && !canReadRow(getActor().role, table, row as { access_level?: unknown })) return undefined;
   return row as unknown as Entity<K> | undefined;
 }
 

@@ -5,7 +5,8 @@ import type { EntityName, Role } from './schemas';
  * authority; in demo mode this module is the only guard, and the UI must additionally hide what it denies.
  */
 
-const FINANCE_TABLES: ReadonlySet<EntityName> = new Set(['payments', 'documents', 'expenses', 'fx_rates', 'invitations']);
+/** Documents are not listed here: members and children read the rows marked for the whole family (see visibleRows). */
+const FINANCE_TABLES: ReadonlySet<EntityName> = new Set(['payments', 'expenses', 'fx_rates', 'invitations']);
 const ADULT_ROLES: ReadonlySet<Role> = new Set(['owner', 'adult']);
 
 export class ForbiddenError extends Error {
@@ -26,6 +27,16 @@ export function isAdult(role: Role): boolean {
 export function canRead(role: Role, table: EntityName): boolean {
   if (FINANCE_TABLES.has(table)) return isAdult(role);
   return true;
+}
+
+/** Row level of the read policy: adults see every document, everybody else only those marked for the family (as the database does). */
+export function canReadRow(role: Role, table: EntityName, row: { access_level?: unknown }): boolean {
+  if (table !== 'documents') return true;
+  return isAdult(role) || row.access_level === 'family';
+}
+
+export function visibleRows<T extends { access_level?: unknown }>(role: Role, table: EntityName, rows: readonly T[]): T[] {
+  return table === 'documents' && !isAdult(role) ? rows.filter((row) => canReadRow(role, table, row)) : [...rows];
 }
 
 export function canWrite(role: Role, table: EntityName): boolean {

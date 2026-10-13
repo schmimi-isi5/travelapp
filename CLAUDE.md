@@ -10,7 +10,7 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0011 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0012 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure
@@ -61,7 +61,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Alle Schreibzugriffe laufen über `src/lib/db/repo.ts` (Validierung, Rollenprüfung, Mutationsqueue). Kein direktes Dexie-`put` in UI-Code.
 - Migrationen: bereits angewendete Dateien nie ändern (der Runner prüft die Prüfsumme), neue Datei anlegen. Neue Tabellen immer mit RLS und Test in `supabase/tests` und `tests/backend`.
 - Der Service-Role-Key wird nur in `src/lib/server/**` und Server-Routen verwendet, nie im Client oder in Build-Args.
-- Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten.
+- Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten; Ausnahme: Unterlagen, die Erwachsene ausdrücklich für die Familie freigeben (`documents.access_level = 'family'`, z. B. Bordkarten), nur lesend.
 - Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
 - Ortsfotos: Quellenzeilen nicht unter den Fotos, sondern gesammelt auf `/settings/credits` (Lizenzpflicht); nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
 - Postfach-Passwort: nur verschlüsselt in `mailbox_settings`, nie in Antworten, Logs oder Tests im Klartext; Servernamen nur öffentlich, Verbindung nur verschlüsselt.

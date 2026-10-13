@@ -290,6 +290,48 @@ test.describe('Buchungen', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), card.getByRole('button', { name: 'Exportieren' }).click()]);
     expect(download.suggestedFilename()).toMatch(/^buchung-.*\.json$/);
   });
+
+  test('Bordkarte und Mietvertrag mit Art hochladen, Übersicht für unterwegs, Kinder sehen nur die freigegebene Bordkarte', async ({ page }) => {
+    await open(page, '/bookings');
+    const flight = page.getByTestId('booking-card').filter({ hasText: 'Hinflug nach Windhoek' });
+    // the kind is preset by the booking type: boarding pass for flights, visible for the whole family
+    await expect(flight.getByLabel('Art der Unterlage')).toHaveValue('ticket');
+    await expect(flight.getByLabel(/Für die ganze Familie sichtbar/)).toBeChecked();
+    await flight.getByLabel('Nachweis hochladen für Hinflug nach Windhoek').setInputFiles({ name: 'bordkarte.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF boarding') });
+    const pass = flight.getByTestId('booking-document').filter({ hasText: 'bordkarte.pdf' });
+    await expect(pass).toContainText('Bordkarte / Ticket');
+    await expect(pass).toContainText('für alle sichtbar');
+
+    const car = page.getByTestId('booking-card').filter({ hasText: 'Mietwagen 4x4' });
+    await expect(car.getByLabel('Art der Unterlage')).toHaveValue('contract');
+    await expect(car.getByLabel(/Für die ganze Familie sichtbar/)).not.toBeChecked();
+    await car.getByLabel('Nachweis hochladen für Mietwagen 4x4').setInputFiles({ name: 'mietvertrag.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF contract') });
+    await expect(car.getByTestId('booking-document').filter({ hasText: 'mietvertrag.pdf' })).toContainText('Vertrag');
+    await expect(car.getByTestId('booking-document').filter({ hasText: 'mietvertrag.pdf' })).not.toContainText('für alle sichtbar');
+
+    // overview for the way: both, by trip day, with the booking they belong to; everything is on this device already
+    const overview = page.getByTestId('travel-documents');
+    await expect(overview.getByTestId('travel-document')).toHaveCount(2);
+    await expect(overview.getByTestId('travel-document').filter({ hasText: 'bordkarte.pdf' })).toContainText('Hinflug nach Windhoek');
+    await expect(overview.getByTestId('travel-document').filter({ hasText: 'mietvertrag.pdf' })).toContainText('Mietwagen 4x4');
+    await expect(page.getByTestId('travel-documents-status')).toContainText('alle ohne Netz auf diesem Handy');
+    await expect(overview.getByRole('button', { name: /Für unterwegs auf dieses Handy laden/ })).toBeDisabled();
+
+    // the adult can hand the contract to the family too, and take it back
+    await car.getByRole('button', { name: 'Für alle sichtbar machen' }).click();
+    await expect(car.getByTestId('booking-document')).toContainText('für alle sichtbar');
+    await car.getByRole('button', { name: 'Nur für Erwachsene' }).click();
+    await expect(car.getByTestId('booking-document')).not.toContainText('für alle sichtbar');
+
+    // a child sees the boarding pass only, no bookings, no contract
+    await switchUser(page, 'Demo-Kind B (child)');
+    await expect(page.getByTestId('travel-document')).toHaveCount(1);
+    await expect(page.getByTestId('travel-document')).toContainText('bordkarte.pdf');
+    await expect(page.getByText('mietvertrag.pdf')).toHaveCount(0);
+    await expect(page.getByTestId('booking-card')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Buchung anlegen' })).toHaveCount(0);
+    await expect(page.getByLabel('Art der Unterlage')).toHaveCount(0);
+  });
 });
 
 test.describe('Tagebuch, Medien, Rollen', () => {

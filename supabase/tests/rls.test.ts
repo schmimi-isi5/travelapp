@@ -157,6 +157,7 @@ beforeAll(async () => {
   await run('0009_correspondence', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
   await run('0010_mailbox', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
   await run('0011_mailbox_settings', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
+  await run('0012_travel_documents', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -687,6 +688,7 @@ describe('migration 0004 (app alignment)', () => {
   it('is idempotent when applied twice', async () => {
     await run('0004_again', readFileSync(join(MIGRATIONS, '0004_app_alignment.sql'), 'utf8'));
     await run('0009_after_0004_again', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8')); // 0004 resets the classification list; later migrations restore it
+    await run('0012_after_0004_again', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
     expect(await count(users.A.owner, `select 1 from public.wildlife_species where family_id is null and common_name_de='Elefant'`)).toBe(1);
   });
 });
@@ -866,6 +868,7 @@ describe('migration 0009 (correspondence at the stay)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0009_again', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
+    await run('0012_after_0009_again', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8')); // 0009 sets the classification list again; 0012 extends it
   });
 });
 
@@ -913,6 +916,49 @@ describe('migration 0011 (mailbox settings)', () => {
   it('rejects impossible ports and is idempotent when applied twice', async () => {
     await expect(admin(`insert into public.mailbox_settings(family_id,host,port,username,password_enc) values($1,'imap.example.test',0,'u','p')`, [fam.B])).rejects.toThrow();
     await run('0011_again', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0012 (travel documents for the family)', () => {
+  const insertDoc = (path: string, access: string, kind = 'ticket') =>
+    `insert into public.documents(family_id,storage_path,original_name,mime_type,classification,access_level) values($1,'${path}','x.pdf','application/pdf','${kind}','${access}')`;
+
+  it('lets adults file family-level documents and everybody in the family read them, but nobody outside', async () => {
+    expect((await as(users.A.adult, insertDoc(`${fam.A}/documents/bp1.pdf`, 'family'), [fam.A])).affectedRows).toBe(1);
+    expect((await as(users.A.owner, insertDoc(`${fam.A}/documents/bp2.pdf`, 'family', 'contract'), [fam.A])).affectedRows).toBe(1);
+    await admin(`insert into public.documents(family_id,storage_path,original_name,mime_type,classification,access_level) values($1,$2,'v.pdf','application/pdf','contract','adult')`, [fam.A, `${fam.A}/documents/adult-only.pdf`]);
+    for (const who of [users.A.owner, users.A.adult, users.A.member, users.A.child]) {
+      expect(await count(who, `select 1 from public.documents where storage_path=$1`, [`${fam.A}/documents/bp1.pdf`]), 'family-level').toBe(1);
+    }
+    for (const who of [users.A.member, users.A.child]) expect(await count(who, `select 1 from public.documents where storage_path=$1`, [`${fam.A}/documents/adult-only.pdf`]), 'adult-level').toBe(0);
+    for (const who of [users.B.owner, users.B.adult, users.B.child]) expect(await count(who, `select 1 from public.documents where storage_path=$1`, [`${fam.A}/documents/bp1.pdf`]), 'other family').toBe(0);
+  });
+
+  it('never lets members or children write documents, not even family-level ones', async () => {
+    for (const who of [users.A.member, users.A.child]) {
+      await expectDenied(as(who, insertDoc(`${fam.A}/documents/evil-${who.slice(0, 4)}.pdf`, 'family'), [fam.A]));
+      expect((await as(who, `update public.documents set title='x' where storage_path=$1`, [`${fam.A}/documents/bp1.pdf`])).affectedRows).toBe(0);
+      expect((await as(who, `delete from public.documents where storage_path=$1`, [`${fam.A}/documents/bp1.pdf`])).affectedRows).toBe(0);
+      expect((await as(who, `update public.documents set access_level='family' where storage_path=$1`, [`${fam.A}/documents/adult-only.pdf`])).affectedRows).toBe(0);
+    }
+    await expectDenied(as(users.A.adult, insertDoc(`${fam.A}/documents/bad.pdf`, 'everyone'), [fam.A]));
+    await expectDenied(as(users.A.adult, insertDoc(`${fam.A}/documents/bad2.pdf`, 'adult', 'boarding'), [fam.A]));
+  });
+
+  it('opens the stored file of a family-level document to the family, other files stay adults only', async () => {
+    const family = `${fam.A}/documents/bp1.pdf`;
+    const adultOnly = `${fam.A}/documents/adult-only.pdf`;
+    for (const name of [family, adultOnly]) await admin(`insert into storage.objects(bucket_id,name,owner_id) values('documents',$1,$2) on conflict do nothing`, [name, users.A.adult]);
+    for (const who of [users.A.owner, users.A.adult, users.A.member, users.A.child]) expect(await count(who, `select 1 from storage.objects where bucket_id='documents' and name=$1`, [family]), 'family file').toBe(1);
+    for (const who of [users.A.member, users.A.child, users.B.owner, users.B.adult]) {
+      if (who !== users.B.owner && who !== users.B.adult) expect(await count(who, `select 1 from storage.objects where bucket_id='documents' and name=$1`, [adultOnly]), 'adult file').toBe(0);
+      expect(await count(who, `select 1 from storage.objects where bucket_id='documents' and name=$1`, [family]) === 1, 'other family').toBe(who !== users.B.owner && who !== users.B.adult);
+      await expectDenied(as(who, `insert into storage.objects(bucket_id,name,owner_id) values('documents',$1,$2)`, [`${fam.A}/documents/x-${who.slice(0, 4)}.pdf`, who]));
+    }
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0012_again', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
   });
 });
 

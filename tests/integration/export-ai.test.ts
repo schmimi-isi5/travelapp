@@ -29,8 +29,8 @@ describe('export', () => {
   it('never exports finance tables for non-adult roles', async () => {
     const result = await buildExport('child');
     expect(result.data.payments).toBeUndefined();
-    expect(result.data.documents).toBeUndefined();
     expect(result.data.expenses).toBeUndefined();
+    expect((result.data.documents ?? []).filter((d) => (d as { access_level?: string }).access_level !== 'family')).toEqual([]);
     expect(result.data.trip_stops).toBeDefined();
   });
   it('escapes CSV and neutralizes spreadsheet formulas', () => {

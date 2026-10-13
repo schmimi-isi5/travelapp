@@ -418,7 +418,8 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     await child.sync();
     const childExport = await buildExport('child');
     expect(Object.keys(childExport.manifest.tables)).not.toContain('payments');
-    expect(Object.keys(childExport.manifest.tables)).not.toContain('documents');
+    // documents: only what the adults released for the family
+    expect((childExport.data.documents ?? []).filter((d) => (d as { access_level?: string }).access_level !== 'family')).toEqual([]);
     expect(activeLocalDatabaseName()).toBeTruthy();
   });
 });

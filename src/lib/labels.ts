@@ -3,7 +3,7 @@
  * stay as they are. Keep technical terms (provider, supabase, user_entered, unknown …) out of the user interface.
  */
 import { formatDuration } from './formatting';
-import type { Role } from './domain/schemas';
+import type { Booking, DocumentRecord, Role } from './domain/schemas';
 
 const plural = new Intl.PluralRules('de-DE');
 
@@ -31,4 +31,26 @@ export function driveSummary(distanceKm: number | null | undefined, minutes: num
   if (distanceKm !== null && distanceKm !== undefined) parts.push(`ca. ${Math.round(distanceKm)} km`);
   if (minutes !== null && minutes !== undefined) parts.push(`ca. ${formatDuration(minutes)}`);
   return parts.length ? parts.join(' · ') : null;
+}
+
+/** Names of the document kinds as people know them (the stored value stays technical). */
+export const documentKindLabel: Record<DocumentRecord['classification'], string> = {
+  invoice: 'Rechnung',
+  receipt: 'Quittung',
+  confirmation: 'Bestätigung',
+  correspondence: 'Schriftverkehr',
+  contract: 'Vertrag',
+  ticket: 'Bordkarte / Ticket',
+  passport: 'Reisepass / Ausweis',
+  insurance: 'Versicherung',
+  visa: 'Visum',
+  voucher: 'Voucher',
+  other: 'Sonstiges',
+};
+
+/** Kinds offered when a document is added to a booking, most likely one first for the booking type. */
+export const BOOKING_DOCUMENT_KINDS = ['ticket', 'contract', 'confirmation', 'invoice', 'voucher', 'other'] as const satisfies readonly DocumentRecord['classification'][];
+
+export function defaultDocumentKind(bookingKind: Booking['kind']): (typeof BOOKING_DOCUMENT_KINDS)[number] {
+  return bookingKind === 'flight' ? 'ticket' : bookingKind === 'car' ? 'contract' : 'confirmation';
 }
