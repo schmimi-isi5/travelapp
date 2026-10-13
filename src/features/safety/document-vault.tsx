@@ -12,7 +12,7 @@ import { isAdult } from '@/lib/domain/policy';
 import { DOCUMENT_CLASSIFICATIONS, type DocumentRecord } from '@/lib/domain/schemas';
 import { formatBytes } from '@/lib/formatting';
 
-const LABEL: Record<string, string> = { invoice: 'Rechnung', confirmation: 'Bestätigung', passport: 'Reisepass / Ausweis', insurance: 'Versicherung', voucher: 'Voucher', receipt: 'Quittung', ticket: 'Ticket', visa: 'Visum', other: 'Sonstiges' };
+const LABEL: Record<string, string> = { invoice: 'Rechnung', confirmation: 'Bestätigung', correspondence: 'Schriftverkehr', passport: 'Reisepass / Ausweis', insurance: 'Versicherung', voucher: 'Voucher', receipt: 'Quittung', ticket: 'Ticket', visa: 'Visum', other: 'Sonstiges' };
 
 export function DocumentVault() {
   const { role, familyId, remote } = useApp();

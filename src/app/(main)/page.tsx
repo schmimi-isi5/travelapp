@@ -50,7 +50,7 @@ export default function DashboardPage() {
   const me = currentUser?.id ?? '';
 
   const unclearBookings = bookings.filter((b) => b.booking_status === 'unknown').length + stays.filter((s) => s.booking_status === 'unknown').length;
-  const docsFor = new Set(documents.flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
+  const docsFor = new Set(documents.filter((d) => d.classification !== 'correspondence').flatMap((d) => [d.stay_id, d.booking_id].filter(Boolean)));
   const withoutReceipt = [...stays.filter((s) => s.booking_status !== 'cancelled').map((s) => s.id), ...bookings.filter((b) => b.booking_status !== 'cancelled').map((b) => b.id)].filter((id) => !docsFor.has(id)).length;
   const impressions = impressionsFor(library, stops);
   const planFindings = checkTripPlan({ stops, routes, stays, bookings, today }).length;

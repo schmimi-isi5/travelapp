@@ -5,7 +5,7 @@ import { create } from './repo';
 import type { DocumentRecord } from '../domain/schemas';
 import type { RemoteAdapter } from '../offline/remote';
 
-export const DOCUMENT_MIMES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const;
+export const DOCUMENT_MIMES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'text/plain'] as const;
 export const DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
@@ -22,7 +22,7 @@ export class DocumentError extends Error {
 
 export function validateDocument(file: { name: string; type: string; size: number }): void {
   if (file.size === 0) throw new DocumentError('EMPTY', `„${file.name}“ ist leer.`);
-  if (!(DOCUMENT_MIMES as readonly string[]).includes(file.type)) throw new DocumentError('TYPE_NOT_ALLOWED', `„${file.name}“: nur PDF, JPEG, PNG oder WebP erlaubt.`);
+  if (!(DOCUMENT_MIMES as readonly string[]).includes(file.type)) throw new DocumentError('TYPE_NOT_ALLOWED', `„${file.name}“: nur PDF, JPEG, PNG, WebP oder Text erlaubt.`);
   if (file.size > DOCUMENT_MAX_BYTES) throw new DocumentError('TOO_LARGE', `„${file.name}“ ist größer als ${DOCUMENT_MAX_BYTES / 1048576} MB.`);
 }
 

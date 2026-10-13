@@ -130,6 +130,63 @@ test.describe('Unterkünfte, Zahlungen, Aufgaben', () => {
     await expect(page.getByTestId('open-count')).toContainText('5 offen');
   });
 
+  test('Aufgabe auf dem Dashboard bearbeiten, löschen und Löschen abbrechen', async ({ page }) => {
+    await open(page);
+    const row = page.getByRole('listitem').filter({ hasText: 'Zahlungsbeleg hinzufügen' });
+    await row.getByRole('button', { name: 'Aufgabe bearbeiten' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Aufgabe bearbeiten' });
+    await dialog.getByLabel('Aufgabe', { exact: true }).fill('');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Titel');
+    await dialog.getByLabel('Aufgabe', { exact: true }).fill('Beleg der Lodge nachreichen');
+    await dialog.getByLabel('Zuständige Person').selectOption({ label: 'Demo-Erwachsene A' });
+    await dialog.getByLabel('Fällig am').fill('2026-10-30');
+    await dialog.getByLabel('Wichtigkeit').selectOption('high');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    const edited = page.getByRole('listitem').filter({ hasText: 'Beleg der Lodge nachreichen' });
+    await expect(edited).toContainText('Zuständig: Demo-Erwachsene A');
+    await expect(edited).toContainText('Fällig');
+    await expect(page.getByText('Zahlungsbeleg hinzufügen')).toHaveCount(0);
+
+    await edited.getByRole('button', { name: 'Aufgabe bearbeiten' }).click();
+    await page.getByRole('button', { name: 'Löschen', exact: true }).click();
+    await page.getByRole('button', { name: 'Abbrechen' }).click();
+    await page.getByRole('dialog', { name: 'Aufgabe bearbeiten' }).getByRole('button', { name: 'Löschen', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Aufgabe löschen?' }).getByRole('button', { name: 'Endgültig löschen' }).click();
+    await expect(page.getByText('Beleg der Lodge nachreichen')).toHaveCount(0);
+  });
+
+  test('Kinder sehen keine Bearbeiten-Schaltfläche an Aufgaben', async ({ page }) => {
+    await open(page);
+    await expect(page.getByRole('button', { name: 'Aufgabe bearbeiten' }).first()).toBeVisible();
+    await switchUser(page, 'Demo-Kind B (child)');
+    await expect(page.getByRole('button', { name: 'Aufgabe bearbeiten' })).toHaveCount(0);
+  });
+
+  test('Kommunikation mit der Unterkunft ablegen, lesen, löschen und nicht als Beleg zählen', async ({ page }) => {
+    await open(page, '/stays');
+    await page.getByTestId('stay-card').filter({ hasText: 'Demo-Unterkunft Chobe' }).click();
+    const section = page.getByRole('region', { name: 'Kommunikation Demo-Unterkunft Chobe' });
+    await expect(section).toContainText('Noch nichts abgelegt');
+    await section.getByRole('button', { name: 'Nachricht ablegen' }).click();
+    await expect(section.getByRole('alert')).toContainText('Betreff und Text');
+    await section.getByLabel('Art').selectOption('WhatsApp / Chat');
+    await section.getByLabel('Betreff').fill('Ankunftszeit');
+    await section.getByLabel('Text').fill('Wir kommen gegen 16 Uhr an.');
+    await section.getByRole('button', { name: 'Nachricht ablegen' }).click();
+    const item = section.getByTestId('correspondence-item');
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText('WhatsApp / Chat: Ankunftszeit');
+    await item.getByRole('button', { name: /Ankunftszeit/ }).click();
+    await expect(page.getByRole('dialog', { name: /Ankunftszeit/ })).toContainText('Wir kommen gegen 16 Uhr an.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
+    // a message is no receipt
+    await expect(page.getByRole('region', { name: 'Belege Demo-Unterkunft Chobe' })).toContainText('Kein Beleg hinterlegt');
+    await item.getByRole('button', { name: 'Nachricht löschen' }).click();
+    await page.getByRole('dialog', { name: 'Nachricht löschen?' }).getByRole('button', { name: 'Endgültig löschen' }).click();
+    await expect(section.getByTestId('correspondence-item')).toHaveCount(0);
+  });
+
   test('Ausgaben: Summen je Währung, keine EUR-Summe ohne Wechselkurs', async ({ page }) => {
     await open(page, '/expenses');
     await expect(page.getByTestId('total-NAD')).toContainText('850,00');

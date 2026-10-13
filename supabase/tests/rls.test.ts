@@ -154,6 +154,7 @@ beforeAll(async () => {
   await run('0006_follower_links', readFileSync(join(MIGRATIONS, '0006_follower_links.sql'), 'utf8'));
   await run('0007_destination_images', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
   await run('0008_profile_avatar', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
+  await run('0009_correspondence', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -276,6 +277,16 @@ describe('cross-family isolation', () => {
   it('cannot re-point an existing row to another family via UPDATE', async () => {
     await expectDenied(as(users.A.adult, `update public.payments set stay_id=$1 where id=$2`, [ids.B.stays, ids.A.payments]));
     await expectDenied(as(users.A.adult, `update public.payments set family_id=$1 where id=$2`, [fam.B, ids.A.payments]));
+  });
+
+  it('tasks: adults can edit and delete them, members, children and other families cannot', async () => {
+    const task = (await admin(`insert into public.action_items(family_id,trip_id,title) values($1,$2,'Wegwerf-Aufgabe') returning id`, [fam.A, ids.A.trips])).rows[0].id;
+    for (const who of [users.A.member, users.A.child, users.B.adult]) {
+      expect((await as(who, `update public.action_items set title='geändert' where id=$1`, [task])).affectedRows).toBe(0);
+      expect((await as(who, `delete from public.action_items where id=$1`, [task])).affectedRows).toBe(0);
+    }
+    expect((await as(users.A.adult, `update public.action_items set title='geändert', priority='high', due_at='2026-10-20' where id=$1`, [task])).affectedRows).toBe(1);
+    expect((await as(users.A.adult, `delete from public.action_items where id=$1`, [task])).affectedRows).toBe(1);
   });
 });
 
@@ -673,6 +684,7 @@ describe('migration 0004 (app alignment)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0004_again', readFileSync(join(MIGRATIONS, '0004_app_alignment.sql'), 'utf8'));
+    await run('0009_after_0004_again', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8')); // 0004 resets the classification list; later migrations restore it
     expect(await count(users.A.owner, `select 1 from public.wildlife_species where family_id is null and common_name_de='Elefant'`)).toBe(1);
   });
 });
@@ -837,6 +849,21 @@ describe('migration 0008 (profile photo)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0008_again', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0009 (correspondence at the stay)', () => {
+  it('accepts the new document kind and text notes in the documents bucket, only for adults', async () => {
+    const row = `insert into public.documents(family_id,stay_id,storage_path,original_name,mime_type,classification) values($1,$2,$3,'mail.txt','text/plain','correspondence')`;
+    expect((await as(users.A.adult, row, [fam.A, ids.A.stays, `${fam.A}/documents/c1-mail.txt`])).affectedRows).toBe(1);
+    await expectDenied(as(users.A.member, row, [fam.A, ids.A.stays, `${fam.A}/documents/c2-mail.txt`]));
+    await expectDenied(as(users.A.adult, `insert into public.documents(family_id,stay_id,storage_path,original_name,mime_type,classification) values($1,$2,$3,'x','text/plain','chat')`, [fam.A, ids.A.stays, `${fam.A}/documents/c3-x.txt`]), ['23514']);
+    expect((await admin(`select allowed_mime_types from storage.buckets where id='documents'`)).rows[0].allowed_mime_types).toContain('text/plain');
+    expect(await count(users.A.member, `select 1 from public.documents where classification='correspondence'`)).toBe(0);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0009_again', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
   });
 });
 
