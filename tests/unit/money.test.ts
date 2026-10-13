@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStayFinancials, consolidate, formatMinor, parseAmountToMinor, sumByCurrency } from '@/lib/domain/money';
+import { computeStayFinancials, consolidate, convertWithRate, formatMinor, parseAmountToMinor, sumByCurrency } from '@/lib/domain/money';
 import type { Payment } from '@/lib/domain/schemas';
 
 const payment = (over: Partial<Payment>): Payment => ({
@@ -78,5 +78,40 @@ describe('currency totals', () => {
   });
   it('passes only EUR through without rates', () => {
     expect(consolidate([{ currency: 'EUR', totalMinor: 10, count: 1 }], 'EUR', [])?.totalMinor).toBe(10);
+  });
+});
+
+describe('documented exchange rates for stay payments', () => {
+  const zarToNad = { from_currency: 'ZAR', to_currency: 'NAD', rate: 1, as_of: '2026-10-13', source: 'Feste Kopplung 1:1' };
+
+  it('does not count a payment in another currency without a rate, and keeps it visible', () => {
+    const fin = computeStayFinancials(stay, [payment({ amount_minor: 2_400_000, currency: 'ZAR' })]);
+    expect(fin.verifiedMinor).toBe(0);
+    expect(fin.remainingMinor).toBe(2_400_000);
+    expect(fin.foreignCurrencyPayments).toHaveLength(1);
+    expect(fin.reasons).toContain('Zahlungen in anderer Währung ohne belegte Umrechnung');
+  });
+
+  it('counts it with a documented rate, notes source and date, and the rest becomes 0', () => {
+    const fin = computeStayFinancials(stay, [payment({ amount_minor: 2_400_000, currency: 'ZAR' })], [zarToNad]);
+    expect(fin.state).toBe('paid');
+    expect(fin.verifiedMinor).toBe(2_400_000);
+    expect(fin.remainingMinor).toBe(0);
+    expect(fin.foreignCurrencyPayments).toEqual([]);
+    expect(fin.convertedPayments[0]?.note).toContain('Feste Kopplung 1:1');
+    expect(fin.convertedPayments[0]?.note).toContain('2026-10-13');
+  });
+
+  it('keeps the verification status of a converted payment: unverified stays out of "paid"', () => {
+    const fin = computeStayFinancials(stay, [payment({ amount_minor: 1_000_000, currency: 'ZAR', verification_status: 'unverified' })], [zarToNad]);
+    expect(fin.verifiedMinor).toBe(0);
+    expect(fin.unverifiedMinor).toBe(1_000_000);
+  });
+
+  it('uses the newest rate and an inverse rate when only the opposite direction is documented', () => {
+    const old = { ...zarToNad, rate: 2, as_of: '2026-01-01' };
+    expect(convertWithRate(1000, 'ZAR', 'NAD', [old, zarToNad])?.convertedMinor).toBe(1000);
+    expect(convertWithRate(1000, 'NAD', 'ZAR', [{ ...zarToNad, rate: 0.5 }])?.convertedMinor).toBe(2000);
+    expect(convertWithRate(1000, 'BWP', 'NAD', [zarToNad])).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { computeStayFinancials, formatMinor, sumByCurrency, type CurrencyTotal } from './money';
+import { computeStayFinancials, formatMinor, sumByCurrency, type CurrencyTotal, type FxRateLike } from './money';
 import type { Payment, Stay } from './schemas';
 
 export interface OpenPayment {
@@ -28,11 +28,11 @@ export interface PaymentOverview {
  * unknown price or booking, payments in another currency, unverified or surplus payments.
  * Cancelled stays are left out. Totals are per currency and never merged.
  */
-export function buildPaymentOverview(stays: readonly Stay[], payments: readonly Payment[], today: string): PaymentOverview {
+export function buildPaymentOverview(stays: readonly Stay[], payments: readonly Payment[], today: string, rates: readonly FxRateLike[] = []): PaymentOverview {
   const open: OpenPayment[] = [];
   const toClarify: PaymentToClarify[] = [];
   for (const stay of stays.filter((s) => s.booking_status !== 'cancelled')) {
-    const fin = computeStayFinancials(stay, payments.filter((p) => p.stay_id === stay.id));
+    const fin = computeStayFinancials(stay, payments.filter((p) => p.stay_id === stay.id), rates);
     if ((fin.state === 'open' || fin.state === 'partial') && fin.remainingMinor !== null && fin.currency) {
       open.push({
         stayId: stay.id,

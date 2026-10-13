@@ -108,6 +108,43 @@ test.describe('Unterkünfte, Zahlungen, Aufgaben', () => {
     await expect(page.getByRole('button', { name: /Test-Lodge Okavango/ }).getByTestId('payment-status')).toHaveText('teilbezahlt');
   });
 
+  test('Zahlung in anderer Währung zählt erst mit dokumentiertem Kurs, dann ist der Rest 0', async ({ page }) => {
+    await open(page, '/stays');
+    await page.getByRole('button', { name: 'Unterkunft anlegen' }).first().click();
+    await page.getByLabel('Name der Unterkunft').fill('Test-Camp Rand');
+    await page.getByLabel('Preisstatus').selectOption('confirmed');
+    await page.getByLabel('Bruttobetrag').fill('2.340,00');
+    await page.getByLabel('Währung').selectOption('NAD');
+    await page.getByRole('button', { name: 'Unterkunft anlegen' }).last().click();
+    await page.getByTestId('stay-card').filter({ hasText: 'Test-Camp Rand' }).click();
+    const section = page.getByRole('region', { name: 'Zahlungen Test-Camp Rand' });
+    await section.getByRole('button', { name: 'Zahlung hinzufügen' }).click();
+    const payDialog = page.getByRole('dialog', { name: 'Zahlung hinzufügen' });
+    await payDialog.getByLabel('Betrag').fill('2.340,00');
+    await payDialog.getByLabel('Währung').selectOption('ZAR');
+    await payDialog.getByLabel('Verifizierung').selectOption('verified');
+    await payDialog.getByRole('button', { name: 'Zahlung speichern' }).click();
+
+    await expect(section.getByTestId('verified')).toContainText('0,00');
+    await expect(section.getByTestId('remaining')).toContainText('2.340,00');
+    await expect(section).toContainText('ohne belegte Umrechnung');
+
+    await section.getByRole('button', { name: 'Kurs ZAR→NAD hinterlegen' }).click();
+    const rateDialog = page.getByRole('dialog', { name: 'Wechselkurs ZAR → NAD' });
+    await expect(rateDialog.getByLabel('Kurs', { exact: true })).toHaveValue('1');
+    await rateDialog.getByLabel('Quelle des Kurses').fill('');
+    await rateDialog.getByRole('button', { name: 'Kurs speichern' }).click();
+    await expect(rateDialog.getByRole('alert')).toContainText('Quelle');
+    await rateDialog.getByLabel('Quelle des Kurses').fill('Feste Kopplung 1:1, geprüft');
+    await rateDialog.getByRole('button', { name: 'Kurs speichern' }).click();
+
+    await expect(section.getByTestId('verified')).toContainText('2.340,00');
+    await expect(section.getByTestId('remaining')).toContainText('0,00');
+    await expect(section.getByTestId('converted-notes')).toContainText('Feste Kopplung 1:1, geprüft');
+    await expect(section.getByTestId('converted-amount')).toContainText('= 2.340,00');
+    await expect(page.getByRole('button', { name: /Test-Camp Rand/ }).getByTestId('payment-status')).toHaveText('bezahlt');
+  });
+
   test('unbekannte Demo-Unterkünfte zeigen unbekannt statt offen/unbezahlt', async ({ page }) => {
     await open(page, '/stays');
     await page.getByTestId('stay-card').filter({ hasText: 'Demo-Lodge Etosha' }).click();
