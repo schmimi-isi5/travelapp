@@ -22,6 +22,7 @@ export default function StaysPage() {
   const stops = useTable('trip_stops').rows;
   const payments = useTable('payments').rows;
   const documents = useTable('documents').rows;
+  const rates = useTable('fx_rates').rows;
   const items = useTable('action_items').rows;
   const [filter, setFilter] = useState<Filter>('all');
   const [adding, setAdding] = useState(false);
@@ -31,11 +32,11 @@ export default function StaysPage() {
     .map((stay) => {
       const p = payments.filter((x) => x.stay_id === stay.id);
       const d = documents.filter((x) => x.stay_id === stay.id);
-      return { stay, payments: p, docs: d, state: computeStayFinancials(stay, p).state, clarify: clarificationReasons(stay, p, d).length > 0 };
+      return { stay, payments: p, docs: d, state: computeStayFinancials(stay, p, rates).state, clarify: clarificationReasons(stay, p, d, rates).length > 0 };
     });
   const matches = (e: (typeof enriched)[number], f: Filter) =>
     f === 'all' ? true : f === 'clarify' ? e.clarify : f === 'open' ? e.state === 'open' : f === 'partial' ? e.state === 'partial' : e.state === 'paid' || e.state === 'overpaid';
-  const overview = buildPaymentOverview(stays, payments, today);
+  const overview = buildPaymentOverview(stays, payments, today, rates);
   const visible = enriched.filter((e) => matches(e, filter));
 
   return (

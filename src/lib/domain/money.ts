@@ -49,9 +49,17 @@ export interface StayFinancials {
   /** null = unknown (price unconfirmed, no currency, or mixed currencies). */
   remainingMinor: number | null;
   overpaidMinor: number;
-  /** Payments in another currency than the price: need a documented FX allocation. */
+  /** Payments in another currency than the price and without a documented rate: not counted. */
   foreignCurrencyPayments: Payment[];
+  /** Payments in another currency that were converted with a documented rate (source and date in the note). */
+  convertedPayments: ConvertedPayment[];
   reasons: string[];
+}
+
+export interface ConvertedPayment {
+  payment: Payment;
+  convertedMinor: number;
+  note: string;
 }
 
 interface PriceLike {
@@ -65,20 +73,31 @@ interface PriceLike {
  * remaining = max(0, confirmed_amount - verified_payments), only for equal currency and a confirmed price;
  * otherwise the remaining amount is unknown. Overpayment is reported separately, never clamped away.
  */
-export function computeStayFinancials(stay: PriceLike, payments: readonly Payment[]): StayFinancials {
+export function computeStayFinancials(stay: PriceLike, payments: readonly Payment[], rates: readonly FxRateLike[] = []): StayFinancials {
   const reasons: string[] = [];
   const currency = stay.currency;
-  const sameCurrency = payments.filter((p) => p.verification_status !== 'rejected' && p.currency === currency);
-  const foreign = payments.filter((p) => p.verification_status !== 'rejected' && currency !== null && p.currency !== currency);
-  const verifiedMinor = sameCurrency.filter((p) => p.verification_status === 'verified').reduce((s, p) => s + p.amount_minor, 0);
-  const unverifiedMinor = sameCurrency.filter((p) => p.verification_status === 'unverified').reduce((s, p) => s + p.amount_minor, 0);
+  const live = payments.filter((p) => p.verification_status !== 'rejected');
+  const converted: ConvertedPayment[] = [];
+  const foreign: Payment[] = [];
+  for (const payment of live.filter((p) => currency !== null && p.currency !== currency)) {
+    const result = currency ? convertWithRate(payment.amount_minor, payment.currency, currency, rates) : null;
+    if (result) converted.push({ payment, ...result });
+    else foreign.push(payment);
+  }
+  // Converted payments count like payments in the stay currency, with their own verification status.
+  const counted = [
+    ...live.filter((p) => p.currency === currency).map((p) => ({ status: p.verification_status, minor: p.amount_minor })),
+    ...converted.map((c) => ({ status: c.payment.verification_status, minor: c.convertedMinor })),
+  ];
+  const verifiedMinor = counted.filter((c) => c.status === 'verified').reduce((sum, c) => sum + c.minor, 0);
+  const unverifiedMinor = counted.filter((c) => c.status === 'unverified').reduce((sum, c) => sum + c.minor, 0);
 
   const priceConfirmed = stay.quote_status === 'confirmed' && stay.price_minor !== null && currency !== null;
   if (!priceConfirmed) reasons.push(stay.quote_status === 'quoted' ? 'Preis nur angeboten, nicht bestätigt' : 'Preis nicht erfasst');
   if (foreign.length > 0) reasons.push('Zahlungen in anderer Währung ohne belegte Umrechnung');
 
   if (!priceConfirmed) {
-    return { state: 'unknown', currency, confirmedPriceMinor: null, verifiedMinor, unverifiedMinor, remainingMinor: null, overpaidMinor: 0, foreignCurrencyPayments: foreign, reasons };
+    return { state: 'unknown', currency, confirmedPriceMinor: null, verifiedMinor, unverifiedMinor, remainingMinor: null, overpaidMinor: 0, foreignCurrencyPayments: foreign, convertedPayments: converted, reasons };
   }
   const price = stay.price_minor as number;
   const remaining = Math.max(0, price - verifiedMinor);
@@ -89,7 +108,21 @@ export function computeStayFinancials(stay: PriceLike, payments: readonly Paymen
   else if (verifiedMinor > 0) state = 'partial';
   else state = 'open';
   if (unverifiedMinor > 0) reasons.push('Es gibt nicht verifizierte Zahlungen');
-  return { state, currency, confirmedPriceMinor: price, verifiedMinor, unverifiedMinor, remainingMinor: remaining, overpaidMinor: overpaid, foreignCurrencyPayments: foreign, reasons };
+  return { state, currency, confirmedPriceMinor: price, verifiedMinor, unverifiedMinor, remainingMinor: remaining, overpaidMinor: overpaid, foreignCurrencyPayments: foreign, convertedPayments: converted, reasons };
+}
+
+/**
+ * Converts with the newest documented rate from -> to; a documented rate to -> from is used inverted.
+ * Returns null when no rate exists: nothing is converted without source and date.
+ */
+export function convertWithRate(amountMinor: number, from: string, to: string, rates: readonly FxRateLike[]): { convertedMinor: number; note: string } | null {
+  const newest = (list: readonly FxRateLike[]) => [...list].sort((a, b) => b.as_of.localeCompare(a.as_of))[0];
+  const direct = newest(rates.filter((r) => r.from_currency === from && r.to_currency === to));
+  const inverse = direct ? undefined : newest(rates.filter((r) => r.from_currency === to && r.to_currency === from));
+  const factor = 10 ** (minorDigits(to) - minorDigits(from));
+  if (direct) return { convertedMinor: Math.round(amountMinor * direct.rate * factor), note: `${from}→${to}: ${direct.rate} (${direct.source}, Stand ${direct.as_of})` };
+  if (inverse) return { convertedMinor: Math.round((amountMinor / inverse.rate) * factor), note: `${from}→${to}: 1/${inverse.rate} (${inverse.source}, Stand ${inverse.as_of})` };
+  return null;
 }
 
 export interface CurrencyTotal {

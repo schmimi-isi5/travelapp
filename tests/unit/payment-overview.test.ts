@@ -52,4 +52,13 @@ describe('buildPaymentOverview', () => {
     const o = buildPaymentOverview([stay({ id: 'a' })], [payment({ stay_id: 'a', amount_minor: 120_000 })], '2026-10-13');
     expect(o.toClarify[0]?.reasons.join()).toMatch(/Mehr bezahlt als der Preis/);
   });
+
+  it('treats a stay as settled when the foreign-currency payment is covered by a documented rate', () => {
+    const rate = { from_currency: 'ZAR', to_currency: 'NAD', rate: 1, as_of: '2026-10-13', source: 'Kopplung' };
+    const foreign = [payment({ stay_id: 'a', currency: 'ZAR', amount_minor: 100_000 })];
+    expect(buildPaymentOverview([stay({ id: 'a' })], foreign, '2026-10-13').open).toHaveLength(1);
+    const settled = buildPaymentOverview([stay({ id: 'a' })], foreign, '2026-10-13', [rate]);
+    expect(settled.open).toEqual([]);
+    expect(settled.toClarify).toEqual([]);
+  });
 });

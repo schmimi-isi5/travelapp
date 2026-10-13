@@ -9,17 +9,19 @@ import { CURRENCIES } from '@/features/finance/currency';
 import { PaymentStatusBadge } from '@/features/finance/payment-badge';
 import { addDocument, DocumentError, openDocument } from '@/lib/db/documents';
 import { create, remove, update } from '@/lib/db/repo';
-import { computeStayFinancials, formatMinor, parseAmountToMinor } from '@/lib/domain/money';
+import { useTable } from '@/lib/db/hooks';
+import { computeStayFinancials, formatMinor, parseAmountToMinor, type FxRateLike } from '@/lib/domain/money';
 import { StayRegionThumb } from '@/components/destination-image';
 import { isAdult } from '@/lib/domain/policy';
 import type { ActionItem, DocumentRecord, Payment, Stay, TripStop } from '@/lib/domain/schemas';
 import { formatDate } from '@/lib/formatting';
 import { nights as formatNights } from '@/lib/labels';
 import { CorrespondenceSection, isCorrespondence } from './correspondence';
+import { StayRateButton } from './stay-rate';
 import { StayForm, STATUS_LABEL } from './stay-form';
 
-export function clarificationReasons(stay: Stay, payments: Payment[], docs: DocumentRecord[]): string[] {
-  const fin = computeStayFinancials(stay, payments);
+export function clarificationReasons(stay: Stay, payments: Payment[], docs: DocumentRecord[], rates: readonly FxRateLike[] = []): string[] {
+  const fin = computeStayFinancials(stay, payments, rates);
   const reasons: string[] = [];
   if (stay.booking_status === 'unknown') reasons.push('Buchungsstatus unbekannt');
   if (stay.quote_status !== 'confirmed') reasons.push(stay.quote_status === 'quoted' ? 'Preis nur angeboten' : 'Preis nicht erfasst');
@@ -64,8 +66,9 @@ function PaymentForm({ stay, onDone }: { stay: Stay; onDone: () => void }) {
 export function AccommodationCard({ stay, stop, stops, payments, documents, items, defaultOpen }: { stay: Stay; stop?: TripStop; stops: TripStop[]; payments: Payment[]; documents: DocumentRecord[]; items: ActionItem[]; defaultOpen?: boolean }) {
   const { role, familyId, remote } = useApp();
   const adult = isAdult(role);
-  const fin = computeStayFinancials(stay, payments);
-  const reasons = clarificationReasons(stay, payments, documents);
+  const rates = useTable('fx_rates').rows;
+  const fin = computeStayFinancials(stay, payments, rates);
+  const reasons = clarificationReasons(stay, payments, documents, rates);
   const receipts = documents.filter((d) => !isCorrespondence(d));
   const [editing, setEditing] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -133,12 +136,15 @@ export function AccommodationCard({ stay, stop, stops, payments, documents, item
             </dl>
             {fin.overpaidMinor > 0 && stay.currency && <div className="mt-3"><Notice tone="info" title="Überzahlung">{formatMinor(fin.overpaidMinor, stay.currency)} mehr als der bestätigte Preis verifiziert gezahlt.</Notice></div>}
             {fin.reasons.length > 0 && <ul className="mt-3 list-disc pl-5 text-sm text-slate">{fin.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
+            {fin.convertedPayments.length > 0 && <ul className="mt-3 list-disc pl-5 text-sm text-slate" data-testid="converted-notes">{[...new Set(fin.convertedPayments.map((c) => c.note))].map((n) => <li key={n}>Umgerechnet mit Kurs {n}</li>)}</ul>}
+            {stay.currency && [...new Set(fin.foreignCurrencyPayments.map((p) => p.currency))].map((from) => <div key={from} className="mt-3"><StayRateButton from={from} to={stay.currency as string} /></div>)}
 
             <ul className="mt-4 divide-y divide-line" aria-label="Zahlungsbuchungen">
               {payments.length === 0 && <li className="py-2 text-sm text-muted">Keine Zahlungen erfasst.</li>}
               {payments.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center gap-3 py-2 text-sm" data-testid="payment-row">
                   <strong>{formatMinor(p.amount_minor, p.currency)}</strong>
+                  {fin.convertedPayments.filter((x) => x.payment.id === p.id).map((x) => <span key={x.payment.id} className="text-slate" data-testid="converted-amount">= {formatMinor(x.convertedMinor, stay.currency ?? p.currency)}</span>)}
                   <span className="text-slate">{formatDate(p.paid_at)}</span>
                   <Badge tone={p.verification_status === 'verified' ? 'ok' : p.verification_status === 'rejected' ? 'danger' : 'warn'}>{p.verification_status === 'verified' ? 'verifiziert' : p.verification_status === 'rejected' ? 'abgelehnt' : 'nicht verifiziert'}</Badge>
                   {p.sync_state === 'pending' && <Badge tone="info">ausstehend (nicht synchronisiert)</Badge>}
