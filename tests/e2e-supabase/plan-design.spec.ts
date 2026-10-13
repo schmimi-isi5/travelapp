@@ -45,7 +45,7 @@ test('Dashboard: ein Hauptmenü, illustrierte Karte ohne Anreise, Aufgaben mit D
 
   await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toHaveCount(1); // no second navigation in the header
   const order = await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link').allInnerTexts();
-  expect(order).toEqual(['Dashboard', 'Reiseplan', 'Karte', 'Unterkünfte', 'Buchungen', 'Tagebuch', 'Galerie', 'Safari-Tracker', 'Ausgaben', 'Sicherheit', 'Familie', 'Reiseführer', 'Offline & Sync', 'Einstellungen']);
+  expect(order).toEqual(['Dashboard', 'Reiseplan', 'Karte', 'Unterkünfte', 'Buchungen', 'Tagebuch', 'Galerie', 'Safari-Tracker', 'Postfach', 'Ausgaben', 'Sicherheit', 'Familie', 'Reiseführer', 'Offline & Sync', 'Einstellungen']);
 
   const hero = page.getByTestId('destination-hero');
   await expect(hero).toContainText('NAMIBIA & BOTSWANA');

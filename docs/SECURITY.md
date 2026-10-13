@@ -102,3 +102,12 @@ Stand `npm audit --omit=dev`: 2 Meldungen (1 moderat, 1 hoch), beide betreffen d
 - Kein Penetrationstest, keine Last- oder Missbrauchstests, keine Prüfung gegen eine öffentlich erreichbare Instanz.
 - Löschen entfernt Daten aus der Live-Datenbank; bereits erstellte Backups enthalten sie bis zum Ablauf der Aufbewahrungsfrist (siehe `docs/OPERATIONS.md`).
 - Follower-Links: Weitergabe eines Links ist nicht kontrollierbar, es gibt keine PIN und keine Zugriffsprotokolle pro Person (nur Zähler und letzter Abruf je Link).
+
+## 6h. Postfach (Mails der Reiseanbieter)
+
+- **Zugang:** IMAP-Zugangsdaten nur als Server-Variablen (`MAILBOX_IMAP_*`), nie im Browser, nie im Image, nie im Log. Der Ordner wird schreibgeschützt geöffnet.
+- **Wer darf:** Abruf, Liste, Zuordnen und Bestätigen nur Erwachsene der Familie (Prüfung in den Routen und per RLS auf `mail_ingest` und `mail_sync_state`; Mitglieder, Kinder und andere Familien sehen nichts). Geschrieben wird nur serverseitig mit dem Service-Role-Key; Clients haben keinen Schreibzugriff auf die Tabellen. Der zeitgesteuerte Abruf nutzt `MAILBOX_SYNC_SECRET` (mindestens 16 Zeichen, zeitkonstanter Vergleich) und nur bei genau einer Familie.
+- **Ablage:** Der Mailtext wird als Datei (`text/plain`) im privaten Bucket `documents` abgelegt (Zugriff nur Erwachsene) und als Dokument der Art `correspondence` an Unterkunft oder Buchung gehängt. Anhänge werden nicht gespeichert, nur ihre Namen stehen im Kopf der Datei.
+- **Vorschläge, keine Buchungen:** Zahlungen, Fristen und Buchungsnummern aus Mails sind Vorschläge mit wörtlichem Zitat. Eingetragen werden sie erst nach Klick eines Erwachsenen, über die normalen Schreibwege (`repo.ts`), Zahlungen immer als „nicht verifiziert“ mit der Mail als Beleg.
+- **KI-Auswertung:** Nur der Mailtext (höchstens 12.000 Zeichen, ohne Anhänge) geht serverseitig an den KI-Dienst, abschaltbar mit `MAILBOX_AI=off`. Die Mail steht in Datenmarkern und gilt als Daten, nicht als Anweisung. Jedes KI-Ergebnis wird gegen den Mailtext geprüft: das Zitat muss wörtlich vorkommen, Beträge müssen im Zitat stehen, Nummern in der Mail. Der Rest wird verworfen, das schützt vor erfundenen Werten und vor Mails, die das Modell umlenken wollen.
+- **Zuordnung:** Eindeutig oder gar nicht (Buchungsnummer, Kontaktadresse, Domain außer bei freien Mail-Anbietern, Name im Betreff). Bei Mehrdeutigkeit bleibt die Mail unzugeordnet und eine Person ordnet sie zu.

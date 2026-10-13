@@ -50,6 +50,12 @@ export interface ReceiptReading {
   generated_at: string;
 }
 
+export interface MailFactsInput {
+  from: string;
+  subject: string;
+  text: string;
+}
+
 /** Server-side contract for AI backends. Implementations never run in the browser (no keys client-side). */
 export interface AiProvider {
   readonly id: string;
@@ -57,4 +63,6 @@ export interface AiProvider {
   generate(request: AiRequest): Promise<AiResult>;
   /** Reads a receipt photo (JPEG, base64). Only providers that can see images implement it. */
   extractReceipt?(image: { mediaType: 'image/jpeg'; base64: string }): Promise<ReceiptReading>;
+  /** Reads one mail (text only, no attachments): short summary plus suggested payments, due dates, references. Verified against the mail text. */
+  extractMailFacts?(mail: MailFactsInput): Promise<import('./mail-types').MailFactsReading>;
 }

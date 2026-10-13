@@ -155,6 +155,7 @@ beforeAll(async () => {
   await run('0007_destination_images', readFileSync(join(MIGRATIONS, '0007_destination_images.sql'), 'utf8'));
   await run('0008_profile_avatar', readFileSync(join(MIGRATIONS, '0008_profile_avatar.sql'), 'utf8'));
   await run('0009_correspondence', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
+  await run('0010_mailbox', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -864,6 +865,34 @@ describe('migration 0009 (correspondence at the stay)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0009_again', readFileSync(join(MIGRATIONS, '0009_correspondence.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0010 (mailbox)', () => {
+  const insertIngest = (family: string, messageId: string) =>
+    admin(`insert into public.mail_ingest(family_id,message_id,from_address,subject) values($1,$2,'host@lodge.test','Anzahlung erhalten') returning id`, [family, messageId]);
+
+  it('lets adults of the family read mails, but not members, children or other families', async () => {
+    await insertIngest(fam.A, 'm-read-1');
+    expect(await count(users.A.owner, `select 1 from public.mail_ingest where message_id='m-read-1'`)).toBe(1);
+    expect(await count(users.A.adult, `select 1 from public.mail_ingest where message_id='m-read-1'`)).toBe(1);
+    for (const who of [users.A.member, users.A.child, users.B.owner, users.B.adult]) expect(await count(who, `select 1 from public.mail_ingest where message_id='m-read-1'`), who).toBe(0);
+    await admin(`insert into public.mail_sync_state(family_id,last_uid) values($1,5) on conflict do nothing`, [fam.A]);
+    expect(await count(users.A.adult, `select 1 from public.mail_sync_state`)).toBe(1);
+    expect(await count(users.A.member, `select 1 from public.mail_sync_state`)).toBe(0);
+  });
+
+  it('cannot be written through the API, not even by owners; the same mail is stored once per family', async () => {
+    await expectDenied(as(users.A.owner, `insert into public.mail_ingest(family_id,message_id,from_address,subject) values($1,'x','a@b.test','s')`, [fam.A]));
+    await insertIngest(fam.A, 'm-write-1');
+    await expectDenied(as(users.A.owner, `update public.mail_ingest set subject='x' where message_id='m-write-1'`));
+    await expectDenied(as(users.A.owner, `delete from public.mail_ingest where message_id='m-write-1'`));
+    await expect(insertIngest(fam.A, 'm-write-1')).rejects.toThrow();
+    await insertIngest(fam.B, 'm-write-1');
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0010_again', readFileSync(join(MIGRATIONS, '0010_mailbox.sql'), 'utf8'));
   });
 });
 

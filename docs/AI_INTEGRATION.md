@@ -73,3 +73,6 @@ Weicht der echte Vertrag ab, ist nur `KonturosProvider.generate` in `src/lib/ai/
 - Es werden nur die vom Nutzer gewählten Texte gesendet (Frage, Tagebuchtext), nie Dokumente, Ausweise oder Zahlungsdaten.
 - Antworten tragen Herkunft (`ai_generated` / `local_rule_based`), Anbieter, Zeitstempel und Verfügbarkeitshinweis.
 - Abschrift von Sprachmemos: mit eigenem Dienst (siehe oben) und Bestätigung je Aufnahme; ohne konfigurierten Dienst bleibt die Aufnahme ein Sprachmemo, und die UI sagt, dass die Abschrift nicht eingerichtet ist.
+
+## Mails der Reiseanbieter (Postfach)
+`AiProvider.extractMailFacts` liest eine Mail (nur Text, höchstens 12.000 Zeichen, keine Anhänge) und liefert eine kurze Zusammenfassung sowie Vorschläge (`payment_received`, `payment_due`, `booking_ref`, `cancellation`, `info`) als JSON. Der Mailtext steht in `<mail>`-Markern und gilt als Daten. Jedes Ergebnis wird in `verifySuggestions` (`src/lib/ai/mail-types.ts`) gegen den Mailtext geprüft: wörtliches Zitat, Betrag im Zitat, Nummer in der Mail, sonst verworfen. Die Ergebnisse werden mit der Mustererkennung (`src/lib/server/mailbox/extract.ts`) zusammengeführt. Ohne bereiten Provider oder mit `MAILBOX_AI=off` gilt nur die Mustererkennung. Nichts davon wird ohne Klick eines Erwachsenen eingetragen.

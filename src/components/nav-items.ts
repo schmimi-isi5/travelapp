@@ -1,4 +1,4 @@
-import { BedDouble, BookOpenText, CalendarCheck, CalendarDays, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive, Binoculars } from 'lucide-react';
+import { BedDouble, Mail, BookOpenText, CalendarCheck, CalendarDays, Image as ImageIcon, LayoutDashboard, Map, MoreHorizontal, PawPrint, Plane, Settings, ShieldCheck, Sparkles, Users, Wallet, WifiOff, Archive, Binoculars } from 'lucide-react';
 import type { Role } from '@/lib/domain/schemas';
 
 export interface NavItem {
@@ -23,6 +23,7 @@ export const MORE_NAV: NavItem[] = [
   { href: '/bookings', label: 'Buchungen', icon: Plane, description: 'Flüge, Mietwagen & Aktivitäten' },
   { href: '/guide', label: 'Reiseführer', icon: Sparkles, description: 'Tipps mit Herkunft & Stand' },
   { href: '/sightings', label: 'Safari-Tracker', icon: PawPrint, description: 'Unsere Tiersichtungen' },
+  { href: '/mailbox', label: 'Postfach', icon: Mail, description: 'Mails von Unterkünften & Anbietern', roles: ['owner', 'adult'] },
   { href: '/expenses', label: 'Ausgaben', icon: Wallet, description: 'Nach Währung & Kategorie', roles: ['owner', 'adult'] },
   { href: '/safety', label: 'Sicherheit', icon: ShieldCheck, description: 'Notfallkontakte & Dokumente' },
   { href: '/family', label: 'Familie', icon: Users, description: 'Mitglieder, Rollen & Einladungen' },
@@ -33,7 +34,7 @@ export const MORE_NAV: NavItem[] = [
 ];
 
 /** Sidebar order of the design plan; "Mitreisen" lives under Familie and "Erinnerungen" under Galerie (links on those pages). */
-const SIDEBAR_ORDER = ['/', '/route', '/map', '/stays', '/bookings', '/journal', '/gallery', '/sightings', '/expenses', '/safety', '/family', '/guide', '/offline', '/settings'];
+const SIDEBAR_ORDER = ['/', '/route', '/map', '/stays', '/bookings', '/journal', '/gallery', '/sightings', '/mailbox', '/expenses', '/safety', '/family', '/guide', '/offline', '/settings'];
 const ALL_NAV = [...PRIMARY_NAV, ...MORE_NAV];
 export const SIDEBAR_NAV: NavItem[] = SIDEBAR_ORDER.map((href) => ALL_NAV.find((item) => item.href === href)).filter((item): item is NavItem => Boolean(item));
 

@@ -41,7 +41,7 @@ Die Supabase-URL bestimmt auch die Content-Security-Policy (`next.config.ts`), s
 
 **Karte:** Das Dockerfile lädt beim Build einen OpenStreetMap-Auszug (Protomaps, ca. 58 MB) nach `data/map/` und legt ihn ins Image; die `pmtiles`-CLI wird per SHA-256 geprüft. Optionale Build-Args: `MAP_BUILD` (z. B. `20261009`, Standard: neuester Stand) und `PMTILES_VERSION`. Schlägt der Download fehl, bricht der Build nicht ab, die App zeigt dann die schematische Karte (Build-Log nach `WARNING: map tiles not built` durchsuchen). Eine eigene Datei lässt sich über `MAP_TILES_FILE` (Runtime-Variable, Pfad zur `.pmtiles`-Datei) einbinden, etwa als Coolify-Volume. Aktualisierung: Image neu bauen oder `scripts/build-map-assets.sh` lokal ausführen.
 
-**Runtime-Variablen der App (nie im Image):** `SUPABASE_SERVICE_ROLE_KEY` (Secret), `SUPABASE_INTERNAL_URL`, `AI_PROVIDER` (`disabled`, `anthropic`, `konturos`), `ANTHROPIC_API_KEY` (Secret), `ANTHROPIC_MODEL` (optional), `KONTUROS_BASE_URL`, `KONTUROS_API_KEY` (Secret), `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` (`SMTP_PASS` Secret; ohne `SMTP_HOST`+`SMTP_FROM` ist der Einladungs-Mailversand der App aus, der Link lässt sich dann manuell weitergeben), `REGISTER_RATE_LIMIT` (optional, Standard 10 Registrierungsversuche je Adresse und 10 Minuten; nur für Tests erhöhen). Verifiziert: `docker history` des Images enthält keine Schlüssel. Für die Abschrift von Sprachmemos: `TRANSCRIBE_PROVIDER` (`disabled`, `openai`), `TRANSCRIBE_API_KEY` (Secret; Rückfall `OPENAI_API_KEY`), optional `TRANSCRIBE_BASE_URL` und `TRANSCRIBE_MODEL` (siehe `docs/AI_INTEGRATION.md`).
+**Runtime-Variablen der App (nie im Image):** `SUPABASE_SERVICE_ROLE_KEY` (Secret), `SUPABASE_INTERNAL_URL`, `AI_PROVIDER` (`disabled`, `anthropic`, `konturos`), `ANTHROPIC_API_KEY` (Secret), `ANTHROPIC_MODEL` (optional), `KONTUROS_BASE_URL`, `KONTUROS_API_KEY` (Secret), `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` (`SMTP_PASS` Secret; ohne `SMTP_HOST`+`SMTP_FROM` ist der Einladungs-Mailversand der App aus, der Link lässt sich dann manuell weitergeben), `REGISTER_RATE_LIMIT` (optional, Standard 10 Registrierungsversuche je Adresse und 10 Minuten; nur für Tests erhöhen). Verifiziert: `docker history` des Images enthält keine Schlüssel. Für das Postfach (Mails der Anbieter, Seite „Postfach“): `MAILBOX_IMAP_HOST`, `MAILBOX_IMAP_USER` (z. B. `reise@schmeckseler.de`), `MAILBOX_IMAP_PASSWORD` (Secret), optional `MAILBOX_IMAP_PORT` (Standard 993) und `MAILBOX_IMAP_SECURE` (`false` nur für Port 143), `MAILBOX_AI` (`off` schaltet die KI-Auswertung der Mailtexte ab; sonst läuft sie, sobald `AI_PROVIDER` bereit ist) und `MAILBOX_SYNC_SECRET` (Secret, mindestens 16 Zeichen; nur für den zeitgesteuerten Abruf, siehe unten). Ohne die drei Zugangsdaten zeigt die Seite „Postfach noch nicht eingerichtet“. Migration 0010 legt die Tabellen an (Resource A zuerst deployen). Für die Abschrift von Sprachmemos: `TRANSCRIBE_PROVIDER` (`disabled`, `openai`), `TRANSCRIBE_API_KEY` (Secret; Rückfall `OPENAI_API_KEY`), optional `TRANSCRIBE_BASE_URL` und `TRANSCRIBE_MODEL` (siehe `docs/AI_INTEGRATION.md`).
 
 **Supabase-Compose (Resource A):**
 
@@ -112,3 +112,13 @@ scripts/stack.sh app-up    # zusaetzlich die App aus dem Dockerfile
 scripts/stack.sh down | reset | status | logs [dienst] | migrate
 ```
 Ports (nur 127.0.0.1): API/Kong `18000`, App `18080`, Mailpit-UI `18025`, Mailpit-SMTP `11025`, Postgres `54329`, Studio (Profil `admin`) `18323`.
+
+## Postfach (reise@schmeckseler.de)
+
+Die App liest das Postfach über IMAP, **nur lesend** (der Ordner wird schreibgeschützt geöffnet, nichts wird markiert, verschoben oder gelöscht). Zugangsdaten gehören ausschließlich als Variablen in Coolify (Resource B) und nie ins Repository. Abruf: Knopf „Postfach abrufen“ auf der Seite Postfach (nur Erwachsene) oder zeitgesteuert, z. B. als geplante Aufgabe in Coolify:
+
+```
+curl -fsS -X POST -H "x-mailbox-secret: $MAILBOX_SYNC_SECRET" https://reise.schmeckseler.de/api/mailbox/sync
+```
+
+Der zeitgesteuerte Abruf funktioniert nur mit genau einer Familie in der Datenbank. Pro Lauf werden höchstens 40 neue Mails verarbeitet, schon gespeicherte (nach Message-ID) werden übersprungen, Mails über 5 MB werden ausgelassen. Verbindungsfehler stehen auf der Seite („Letzter Abruf fehlgeschlagen“) und im Log (ohne Zugangsdaten und ohne Mailinhalt).
