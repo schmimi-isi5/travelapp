@@ -10,7 +10,7 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0009 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0010 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure
@@ -29,6 +29,7 @@ src/lib/domain/notifications.ts  Benachrichtigungen (Fristen, überfällige Aufg
 src/lib/map/**          Layout der illustrierten Dashboard-Karte (Pins, Beschriftungen)
 src/lib/share-inbox.ts  Android "Teilen mit …": Dateien im Posteingang (Cache) bis zum Import in die Galerie
 src/lib/mail/templates.mjs  Alle E-Mails (App und Auth-Dienst) in einem HTML-Layout; scripts/build-mail-templates.mjs erzeugt public/mail-templates
+src/lib/server/mailbox/**  Postfach: IMAP-Quelle (nur lesend), Zuordnung, Mustererkennung, Ablage; API unter src/app/api/mailbox/**, Seite /mailbox
 src/lib/tips/**         Regelbasierte Empfehlungen je Station (Wetter, Unterkunftsart, Ort)
 src/lib/weather/**      Wetterdaten je Station (Client, Zwischenspeicher); Server: src/lib/server/weather.ts
 src/lib/media/**        Bildbibliothek der Reiseziele (Zuordnung Station → Foto, Laden, Vorwärmen)
@@ -63,6 +64,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - Rollen (owner/adult/member/child) werden im Backend per RLS erzwungen, `src/lib/domain/policy.ts` spiegelt sie clientseitig. Kinder/Mitglieder sehen keine Finanz- und Ausweisdaten.
 - Follower-Links: Freigabe nur per Opt-in je Eintrag (`shared_with_followers`, nur owner/adult), Follower nie direkt an die Datenbank, Sichtbarkeit nur über `src/lib/follow/view.ts`; Fotos nur neu kodiert ohne EXIF/GPS.
 - Ortsfotos: Quellenzeilen nicht unter den Fotos, sondern gesammelt auf `/settings/credits` (Lizenzpflicht); nur über die Bibliothek (`destination_images`), nie ein Bildpfad im Seitencode; nur Bilder mit geprüfter Lizenz; ohne Ortsbeleg immer als „Regionsmotiv“ beschriftet; keine Unterkunftsfotos ohne Freigabe.
+- Postfach: Mails nur lesen (nie ändern, nie senden), Anhänge nicht speichern; Zahlungen, Fristen und Nummern aus Mails sind Vorschläge mit Zitat und werden erst nach Klick eines Erwachsenen eingetragen (Zahlungen „nicht verifiziert“); KI sieht nur den Mailtext und jedes Ergebnis wird am Text geprüft.
 - KI: Fakten entstehen regelbasiert, die KI formuliert nur und läuft nur auf Knopfdruck über `requestAi`; Fotos gehen nur über `/api/ai/receipt` und nur nach Bestätigung je Foto.
 - Sprachmemos: Aufnahmen gehen nur nach Bestätigung je Aufnahme an `/api/ai/transcribe`; die Abschrift ist immer bearbeitbar und wird nie ohne Knopfdruck gespeichert.
 - Profilfoto: nur als kleines JPEG (Data-URL, höchstens 60 KB) in `profiles.avatar_data`, jede Person ändert nur ihr eigenes; Initialen als Rückfall.

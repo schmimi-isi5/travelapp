@@ -12,3 +12,8 @@ services:
       SMTP_USER: ""
       SMTP_PASS: ""
       SMTP_FROM: "Reise-App <reise@example.test>"
+      # Local tests only: the mailbox reads a fixed stub mail instead of IMAP, without AI (never set in production).
+      MAILBOX_SOURCE: stub
+      MAILBOX_AI: "off"
+      MAILBOX_IMAP_USER: reise@example.test
+      MAILBOX_STUB_MAILS: '[{"uid":1,"messageId":"<e2e-paid@lodge.test>","from":"Rezeption <info@lodge.test>","subject":"Anzahlung erhalten","receivedAt":"2026-10-12T09:00:00.000Z","attachmentNames":[],"text":"Booking reference: UI-48151\nWe have received your deposit of NAD 2,340.00 on 12 October 2026. The balance of NAD 4,000.00 is due on 01.11.2026."}]'
