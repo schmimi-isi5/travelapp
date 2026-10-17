@@ -12,6 +12,8 @@ import type { Role } from '@/lib/domain/schemas';
 import { setSimulatedOffline } from '@/lib/offline/network';
 import type { RemoteAdapter } from '@/lib/offline/remote';
 import { resolveConflict, syncNow } from '@/lib/offline/sync';
+import { ETOSHA_GPS, jpegWithExif } from '../exif-fixture';
+import { scanExistingPhotos } from '@/lib/db/photo-metadata';
 import { admin, backendAvailable, createFamilyWithRoles, createUser, deleteCreatedUsers, remoteFor, signIn, uniq, type TestMember } from './harness';
 
 const available = await backendAvailable();
@@ -222,6 +224,41 @@ describe.skipIf(!available)('offline sync against real Supabase', () => {
     const result = await member.remote.apply({ id: crypto.randomUUID(), mutation_id: crypto.randomUUID(), device_id: 'x', entity_type: 'stays', entity_id: stay.id, operation: 'upsert', base_version: Number(row.version), payload: { ...row, name: 'Gehackt' }, status: 'pending', error: null, created_at: new Date().toISOString() });
     expect(result.status).toBe('rejected');
     expect((await admin.from('stays').select('name').eq('id', stay.id).single()).data).toEqual({ name: 'Nur Erwachsene' });
+  });
+
+  it('keeps a photo\'s position, camera and station through the queue and to the other devices, and reads stored photos later', async () => {
+    const { data: stop, error } = await fam.owner.client.from('trip_stops').insert({ trip_id: fam.family.tripId, title: 'Etosha Nationalpark', country: 'Namibia', latitude: -18.855, longitude: 16.3293, arrive_at: '2026-10-20', depart_at: '2026-10-24', sequence: 1 }).select('id').single();
+    expect(error).toBeNull();
+    const phone = new Device(fam.member, fam).on();
+    await phone.sync();
+    phone.offline();
+    const jpeg = (name: string) => new File([jpegWithExif({ make: 'Apple', model: 'iPhone 14', taken: '2026:10:21 17:30:00', gps: ETOSHA_GPS })], name, { type: 'image/jpeg' });
+    const photo = await addMedia({ file: jpeg('gps.jpg'), familyId: phone.familyId, tripId: phone.tripId, readExif: true });
+    expect(photo).toMatchObject({ stop_id: (stop as { id: string }).id, stop_source: 'gps', camera: 'Apple iPhone 14' });
+    const later = await addMedia({ file: jpeg('spaeter.jpg'), familyId: phone.familyId, tripId: phone.tripId });
+    expect(later).toMatchObject({ latitude: null, stop_id: null, exif_read_at: null });
+    phone.online();
+    expect(await syncNow(phone.remote)).toMatchObject({ uploaded: 2, failed: 0 });
+
+    const row = (await admin.from('media_assets').select('latitude,longitude,altitude_m,camera,stop_id,stop_source,exif_read_at,captured_at').eq('id', photo.id).single()).data;
+    expect(row).toMatchObject({ altitude_m: 1100, camera: 'Apple iPhone 14', stop_id: (stop as { id: string }).id, stop_source: 'gps' });
+    expect(row!.latitude).toBeCloseTo(-18.855, 3);
+    expect(row!.exif_read_at).not.toBeNull();
+
+    // photos stored earlier: read afterwards, the change reaches the database
+    const summary = await scanExistingPhotos(phone.remote);
+    expect(summary).toMatchObject({ checked: 1, withLocation: 1, assigned: 1, failed: 0 });
+    await syncNow(phone.remote);
+    const scanned = (await admin.from('media_assets').select('latitude,stop_id,stop_source,exif_read_at').eq('id', later.id).single()).data;
+    expect(scanned).toMatchObject({ stop_id: (stop as { id: string }).id, stop_source: 'gps' });
+    expect(scanned!.latitude).toBeCloseTo(-18.855, 3);
+
+    // another device sees position and station
+    const tablet = new Device(fam.owner, fam).on();
+    await tablet.sync();
+    const seen = (await list('media_assets')).find((m) => m.id === photo.id)!;
+    expect(seen).toMatchObject({ camera: 'Apple iPhone 14', stop_source: 'gps', stop_id: (stop as { id: string }).id });
+    expect(seen.latitude).toBeCloseTo(-18.855, 3);
   });
 
   it('uploads queued photos and voice memos after reconnecting; other devices view them through signed URLs', async () => {

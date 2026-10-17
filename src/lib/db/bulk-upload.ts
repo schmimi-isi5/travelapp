@@ -45,7 +45,10 @@ export function stageFiles(existing: readonly StagedFile[], picked: readonly Fil
 export interface BatchOptions {
   familyId: string;
   tripId: string;
+  /** A station chosen for the whole batch; without one the station is found from each photo's position and date. */
   stopId?: string | null;
+  /** false = "no station" was chosen on purpose: nothing is assigned automatically. */
+  autoAssignStop?: boolean;
   album?: string | null;
 }
 
@@ -53,6 +56,9 @@ export interface BatchResult {
   key: string;
   ok: boolean;
   error?: string;
+  /** What the metadata gave (only for stored photos). */
+  hasLocation?: boolean;
+  placedBy?: 'manual' | 'gps' | 'date' | null;
 }
 
 export interface BatchCallbacks {
@@ -79,8 +85,8 @@ export async function uploadBatch(files: readonly StagedFile[], options: BatchOp
     callbacks.onFileStart?.(key, index + 1, files.length);
     let result: BatchResult;
     try {
-      await addMedia({ file, familyId: options.familyId, tripId: options.tripId, stopId: options.stopId ?? null, album: options.album?.trim() || null, readExif: true, onProgress: (percent) => callbacks.onFileProgress?.(key, percent) });
-      result = { key, ok: true };
+      const asset = await addMedia({ file, familyId: options.familyId, tripId: options.tripId, stopId: options.stopId ?? null, autoAssignStop: options.autoAssignStop, album: options.album?.trim() || null, readExif: true, onProgress: (percent) => callbacks.onFileProgress?.(key, percent) });
+      result = { key, ok: true, hasLocation: asset?.latitude != null, placedBy: asset?.stop_source ?? null };
     } catch (error) {
       console.error(`Mehrfach-Upload von „${file.name}“ fehlgeschlagen`, error);
       result = { key, ok: false, error: describeFailure(file, error) };

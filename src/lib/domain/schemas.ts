@@ -228,6 +228,15 @@ export const mediaAssetSchema = z.object({
   caption: z.string().default(''),
   visibility: z.enum(['family', 'private']).default('family'),
   album: z.string().nullable().default(null),
+  /** Where the photo was taken, from the photo's own metadata (family-private; never given to follower links). */
+  latitude: z.number().min(-90).max(90).nullable().default(null),
+  longitude: z.number().min(-180).max(180).nullable().default(null),
+  altitude_m: z.number().nullable().default(null),
+  camera: z.string().max(120).nullable().default(null),
+  /** How `stop_id` was found: from the position, from the date, or chosen by a person. */
+  stop_source: z.enum(['manual', 'gps', 'date']).nullable().default(null),
+  /** When the metadata of an already stored photo was read (so it is not read again). */
+  exif_read_at: z.string().nullable().default(null),
   is_favorite: z.boolean().default(false),
   /** Published to read-only follower links. Opt-in per item; only owner/adult may set it, never for private items. */
   shared_with_followers: z.boolean().default(false),
