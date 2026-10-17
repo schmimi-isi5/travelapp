@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, PNG_1PX, setDemoDate, switchUser } from './helpers';
+import { open, pickAndUpload, PNG_1PX, setDemoDate, switchUser } from './helpers';
 
 test.describe('Demo, Route und Dashboard', () => {
   test('startet ohne API-Schlüssel, kennzeichnet Demo und behauptet keine echten Buchungen', async ({ page }) => {
@@ -367,9 +367,10 @@ test.describe('Tagebuch, Medien, Rollen', () => {
 
   test('Upload validiert Dateityp und zeigt Fehler', async ({ page }) => {
     await open(page, '/gallery');
-    await page.getByLabel('Medien hochladen').setInputFiles({ name: 'virus.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('MZ') });
+    await page.getByLabel('Fotos und Videos zum Hochladen auswählen').setInputFiles({ name: 'virus.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('MZ') });
     await expect(page.getByText(/Dateityp .* ist nicht erlaubt/)).toBeVisible();
-    await page.getByLabel('Medien hochladen').setInputFiles({ name: 'ok.png', mimeType: 'image/png', buffer: PNG_1PX });
+    await expect(page.getByTestId('bulk-panel')).toHaveCount(0); // a refused file is never staged
+    await pickAndUpload(page, [{ name: 'ok.png', mimeType: 'image/png', buffer: PNG_1PX }]);
     await expect(page.getByTestId('media-tile')).toHaveCount(5);
   });
 
