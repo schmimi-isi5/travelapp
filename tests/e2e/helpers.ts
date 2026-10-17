@@ -17,3 +17,9 @@ export async function setDemoDate(page: Page, date: string) {
 
 /** Desktop viewport tests use the top select; the select is hidden below 640px. */
 export const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+/** Gallery: picks files and uploads the selection (the gallery stages files first, then uploads the marked ones). */
+export async function pickAndUpload(page: Page, files: { name: string; mimeType: string; buffer: Buffer }[]): Promise<void> {
+  await page.getByLabel('Fotos und Videos zum Hochladen auswählen').setInputFiles(files);
+  await page.getByRole('button', { name: /^\d+ (Foto|Fotos|Datei|Dateien) hochladen$/ }).click();
+}

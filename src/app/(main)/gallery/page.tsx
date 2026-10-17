@@ -1,10 +1,11 @@
 'use client';
 
-import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2, Upload } from 'lucide-react';
+import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Toolbar } from '@/components/ui';
+import { BulkUploadPanel, BulkUploadPicker, useBulkUpload } from '@/features/media/bulk-upload';
 import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
@@ -31,7 +32,7 @@ export default function GalleryPage() {
   const [progress, setProgress] = useState<number | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const bulk = useBulkUpload({ familyId, tripId });
   const me = currentUser?.id ?? '';
 
   const visible = media.filter((m) => canSeeMedia(m, me));
@@ -57,8 +58,6 @@ export default function GalleryPage() {
     setErrors(problems);
     setProgress(null);
   }
-
-  const onFiles = (list: FileList | null) => (list ? uploadFiles(Array.from(list)) : Promise.resolve());
 
   // Files shared from another app (Android "Teilen mit …") wait in the inbox until this page imports them.
   useEffect(() => {
@@ -87,7 +86,8 @@ export default function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<><input ref={fileRef} type="file" multiple accept="image/*,video/*,audio/*" className="sr-only" aria-label="Medien hochladen" onChange={(e) => { void onFiles(e.target.files); e.target.value = ''; }} /><Button onClick={() => fileRef.current?.click()}><Upload size={18} aria-hidden /> Hochladen</Button></>} />
+      <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<BulkUploadPicker batch={bulk} hasItems={bulk.items.length > 0} />} />
+      <BulkUploadPanel batch={bulk} stops={[...stops].sort((a, b) => a.sequence - b.sequence)} albums={albums} />
       {shareNotice && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="share-notice">{shareNotice}</span></Notice></div>}
       {progress !== null && <div className="mb-4"><ProgressBar value={progress} label="Upload-Fortschritt" /></div>}
       {errors.length > 0 && <div className="mb-4 space-y-2">{errors.map((e) => <Notice key={e} tone="danger">{e}</Notice>)}</div>}
