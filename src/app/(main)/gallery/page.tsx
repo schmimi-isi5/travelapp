@@ -10,7 +10,7 @@ import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
 import { loadBlob } from '@/lib/db/blob-store';
-import { scanExistingPhotos } from '@/lib/db/photo-metadata';
+import { needsMetadataScan, scanExistingPhotos } from '@/lib/db/photo-metadata';
 import { describeDistance, mapLink, stopSourceLabel } from '@/lib/domain/photo-location';
 import { haversineKm } from '@/lib/domain/geo';
 import { addMedia, MediaError } from '@/lib/db/media';
@@ -51,7 +51,7 @@ export default function GalleryPage() {
     .sort((a, b) => (b.captured_at ?? b.created_at).localeCompare(a.captured_at ?? a.created_at));
   const sortedStops = [...stops].sort((a, b) => a.sequence - b.sequence);
   // photos stored before their metadata could be read (only those this person may edit)
-  const pendingScan = media.filter((m) => m.kind === 'photo' && m.exif_read_at === null && /jpe?g/i.test(m.mime_type) && currentUser && canEditOwnedRow(role, m.uploaded_by, currentUser.id)).length;
+  const pendingScan = media.filter((m) => needsMetadataScan(m) && currentUser && canEditOwnedRow(role, m.uploaded_by, currentUser.id)).length;
   const index = filtered.findIndex((m) => m.id === openId);
   // a photo stays open when a change (e.g. its station) makes it leave the current filter
   const current = index >= 0 ? filtered[index] : visible.find((m) => m.id === openId);
@@ -114,6 +114,7 @@ export default function GalleryPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<><BulkUploadPicker batch={bulk} hasItems={bulk.items.length > 0} />{pendingScan > 0 && <Button variant="secondary" disabled={scan !== null} onClick={() => void readExisting()}>Vorhandene Fotos auswerten ({pendingScan})</Button>}</>} />
       <BulkUploadPanel batch={bulk} stops={[...stops].sort((a, b) => a.sequence - b.sequence)} albums={albums} />
+      {pendingScan === 0 && scan === null && media.some((m) => m.kind === 'photo' && /jpe?g/i.test(m.mime_type)) && <p className="mb-3 text-sm text-muted" data-testid="scan-status">Aufnahmeort und Kamera aller hochgeladenen Fotos sind ausgewertet (soweit die Dateien sie enthalten).</p>}
       {scan && <div className="mb-4"><ProgressBar value={scan.total ? (scan.done / scan.total) * 100 : 0} label={`Fotos auswerten: ${scan.done} von ${scan.total}`} /></div>}
       {scanNote && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="scan-note">{scanNote}</span></Notice></div>}
       {shareNotice && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="share-notice">{shareNotice}</span></Notice></div>}

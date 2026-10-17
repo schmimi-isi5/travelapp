@@ -178,6 +178,7 @@ test.describe('Fotos vom Handy', () => {
     await expect(note).toContainText('1 einer Station zugeordnet');
     await expect(note).toContainText('1 ohne Ort und Datum in der Datei');
     await expect(page.getByRole('button', { name: /Vorhandene Fotos auswerten/ })).toHaveCount(0); // nothing is read twice
+    await expect(page.getByTestId('scan-status')).toContainText('sind ausgewertet'); // and the page says why the button is gone
 
     await page.getByLabel('Nach Station filtern').selectOption({ label: 'Etosha Nationalpark' });
     await page.getByTestId('media-tile').filter({ has: page.getByLabel(/alt-mit-ort\.jpg/) }).getByRole('button', { name: /Öffnen/ }).click();
