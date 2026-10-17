@@ -22,7 +22,12 @@ export interface MetadataScanSummary {
   failed: number;
 }
 
-const isScannable = (m: MediaAsset) => m.kind === 'photo' && m.exif_read_at === null && /jpe?g/i.test(m.mime_type);
+/**
+ * A photo whose metadata was never read. Photos stored on a device before the field existed do not have it at all (undefined),
+ * so "not read" means null or missing, never only null.
+ */
+export const needsMetadataScan = (m: Pick<MediaAsset, 'kind' | 'mime_type' | 'exif_read_at'>) => m.kind === 'photo' && m.exif_read_at == null && /jpe?g/i.test(m.mime_type);
+const isScannable = needsMetadataScan;
 
 /** Photos of the current person that were stored without reading their metadata (everything uploaded before this was possible). */
 export async function pendingMetadataPhotos(): Promise<MediaAsset[]> {

@@ -3,7 +3,7 @@ import { setActor } from '@/lib/db/actor';
 import { DEMO_FAMILY_ID, DEMO_TRIP_ID, DEMO_USERS } from '@/lib/db/demo-data';
 import { getLocalDb } from '@/lib/db/local';
 import { addMedia } from '@/lib/db/media';
-import { pendingMetadataPhotos, scanExistingPhotos } from '@/lib/db/photo-metadata';
+import { needsMetadataScan, pendingMetadataPhotos, scanExistingPhotos } from '@/lib/db/photo-metadata';
 import { get, list } from '@/lib/db/repo';
 import { ETOSHA_GPS, jpegWithExif } from '../exif-fixture';
 import { freshWorld } from './helpers';
@@ -80,6 +80,26 @@ describe('reading the metadata of photos that are already stored', () => {
     // nothing is read twice
     expect(await pendingMetadataPhotos()).toEqual([]);
     expect(await scanExistingPhotos(noRemote)).toEqual({ checked: 0, withLocation: 0, assigned: 0, withoutMetadata: 0, failed: 0 });
+  });
+
+  it('also reads photos stored before the metadata fields existed (the field is missing, not null)', async () => {
+    const photo = await upload(jpeg('alt.jpg', { gps: ETOSHA_GPS }));
+    // what an old device holds: the row without any of the new fields
+    const NEW_FIELDS = ['exif_read_at', 'latitude', 'longitude', 'altitude_m', 'camera', 'stop_source'];
+    const old = Object.fromEntries(Object.entries((await get('media_assets', photo.id))!).filter(([key]) => !NEW_FIELDS.includes(key)));
+    expect(Object.keys(old)).not.toContain('exif_read_at');
+    await getLocalDb().entity('media_assets').put(old as never);
+    expect(needsMetadataScan(old as never)).toBe(true);
+    expect((await pendingMetadataPhotos()).map((m) => m.id)).toEqual([photo.id]);
+    expect(await scanExistingPhotos(noRemote)).toMatchObject({ checked: 1, withLocation: 1, assigned: 1 });
+    expect(await pendingMetadataPhotos()).toEqual([]);
+  });
+
+  it('does not count photos that are not JPEG, not photos, or already read', () => {
+    expect(needsMetadataScan({ kind: 'photo', mime_type: 'image/jpeg', exif_read_at: null })).toBe(true);
+    expect(needsMetadataScan({ kind: 'video', mime_type: 'video/mp4', exif_read_at: null })).toBe(false);
+    expect(needsMetadataScan({ kind: 'photo', mime_type: 'image/png', exif_read_at: null })).toBe(false);
+    expect(needsMetadataScan({ kind: 'photo', mime_type: 'image/jpeg', exif_read_at: '2026-10-17T10:00:00Z' })).toBe(false);
   });
 
   it('fetches a file that is not on this device and counts it as failed, to be tried again, when that is not possible', async () => {
