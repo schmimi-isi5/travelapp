@@ -37,7 +37,7 @@ function Editor() {
   const [stopId, setStopId] = useState('');
   const [visibility, setVisibility] = useState<'family' | 'private'>('family');
   const [files, setFiles] = useState<PendingFile[]>([]);
-  const [readExif, setReadExif] = useState(false);
+  const [readExif, setReadExif] = useState(true);
   const [shareLocation, setShareLocation] = useState(false);
   const [shareWithFollowers, setShareWithFollowers] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -143,7 +143,7 @@ function Editor() {
               </li>
             ))}
           </ul>
-          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={readExif} onChange={(e) => setReadExif(e.target.checked)} /><span>Aufnahmedatum aus Foto-Metadaten (EXIF) lesen. Standortdaten im Foto werden nie ausgelesen.</span></label>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={readExif} onChange={(e) => setReadExif(e.target.checked)} /><span>Aufnahmezeit, Aufnahmeort (GPS) und Kamera aus den Foto-Metadaten übernehmen und die Fotos dem passenden Reiseziel zuordnen. Die Angaben bleiben in der Familie, Follower sehen sie nie.</span></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={shareLocation} onChange={(e) => setShareLocation(e.target.checked)} /><span>Aktuellen Standort einmalig zu diesem Eintrag speichern (Einwilligung, kein Hintergrund-Tracking).</span></label>
           <p className="text-sm text-muted">Zu jedem Sprachmemo kannst du eine Abschrift erstellen lassen, lesen, korrigieren, glätten und in den Text übernehmen.</p>
         </fieldset>

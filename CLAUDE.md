@@ -10,7 +10,7 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0013 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0014 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure
@@ -69,6 +69,7 @@ docker/                 Supabase-Compose, App-Compose, Backup-Tooling; scripts/ 
 - KI: Fakten entstehen regelbasiert, die KI formuliert nur und läuft nur auf Knopfdruck über `requestAi`; Fotos gehen nur über `/api/ai/receipt` und nur nach Bestätigung je Foto.
 - Sprachmemos: Aufnahmen gehen nur nach Bestätigung je Aufnahme an `/api/ai/transcribe`; die Abschrift ist immer bearbeitbar und wird nie ohne Knopfdruck gespeichert.
 - Profilfoto: nur als kleines JPEG (Data-URL, höchstens 60 KB) in `profiles.avatar_data`, jede Person ändert nur ihr eigenes; Initialen als Rückfall.
+- Foto-Metadaten (Aufnahmeort/GPS, Höhe, Kamera, Aufnahmezeit) werden beim Hochladen aus dem Originalfoto gelesen (vor dem Verkleinern) und als Felder in `media_assets` gespeichert, nur für die Familie sichtbar; Follower-Ansicht und Follower-Fotos tragen sie nie (`src/lib/follow/view.ts`, Neukodierung ohne EXIF). Station je Foto: `assignStop` (Position, sonst eindeutiges Aufnahmedatum), Zuordnung von Hand geht immer vor.
 - Offline: stabile UUIDs, Mutation-IDs, Versionsprüfung, Konflikte nie still überschreiben (Journal: append-first).
 - KI-Ausgaben tragen immer Herkunft und Stand; ohne Freigabe oder Provider antwortet nur der als „regelbasiert, keine KI“ gelabelte Fallback.
 - Demo-Daten sind fiktiv, `is_demo = true`, `source_type = 'demo'`. Keine Fremdbilder, nur eigene SVG-Illustrationen.

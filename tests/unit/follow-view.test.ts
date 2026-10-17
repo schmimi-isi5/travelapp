@@ -79,6 +79,15 @@ describe('follower view: published content', () => {
     expect(view.sightings[0]).toMatchObject({ species: 'Elefant', count: 4, stop: 'Ort a' });
   });
 
+  it('never passes on where a photo was taken, its camera or its altitude', () => {
+    const view = buildFollowerView(source({
+      media: [{ id: 'm1', stop_id: 'a', kind: 'photo', captured_at: '2026-10-14T10:00:00Z', caption: 'Düne', visibility: 'family', shared_with_followers: true, latitude: -24.7, longitude: 15.3, altitude_m: 812, camera: 'Apple iPhone 14', stop_source: 'gps', exif_read_at: '2026-10-14T11:00:00Z' } as never],
+    }));
+    expect(view.photos).toEqual([{ id: 'm1', caption: 'Düne', captured_at: '2026-10-14T10:00:00Z', stop: 'Ort a' }]);
+    const text = JSON.stringify(view.photos); // the stations themselves are shown (as before); the photo carries none of its own data
+    for (const secret of ['-24.7', '15.3', '812', 'iPhone', 'latitude', 'longitude', 'altitude', 'camera']) expect(text, secret).not.toContain(secret);
+  });
+
   it('shows only the author first name and never journal GPS', () => {
     const view = buildFollowerView(source({ entries: [{ ...entry(), location: { latitude: 1, longitude: 2 } } as never] }));
     expect(view.entries[0]!.author).toBe('Anna');

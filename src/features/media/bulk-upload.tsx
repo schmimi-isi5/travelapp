@@ -19,6 +19,10 @@ export interface StagedItem extends StagedFile {
 
 export interface BatchSummary {
   stored: number;
+  withLocation: number;
+  placedByGps: number;
+  placedByDate: number;
+  placedByHand: number;
   failed: number;
   wasCancelled: boolean;
   wasOffline: boolean;
@@ -54,7 +58,8 @@ export function useBulkUpload(target: { familyId: string; tripId: string }) {
   };
   const cancel = () => abortRef.current?.abort();
 
-  async function upload(options: { stopId: string | null; album: string }) {
+  /** `stopId`: a station for all, '' = find it from each photo (position, date), 'none' = no station on purpose. */
+  async function upload(options: { stopId: string; album: string }) {
     const chosen = items.filter((i) => i.isSelected);
     if (chosen.length === 0 || isUploading) return;
     const controller = new AbortController();
@@ -63,7 +68,7 @@ export function useBulkUpload(target: { familyId: string; tripId: string }) {
     setSummary(null);
     setNotices([]);
     const patch = (key: string, change: Partial<StagedItem>) => setItems((c) => c.map((i) => (i.key === key ? { ...i, ...change } : i)));
-    const { results, wasCancelled } = await uploadBatch(chosen, { ...target, stopId: options.stopId, album: options.album }, {
+    const { results, wasCancelled } = await uploadBatch(chosen, { ...target, stopId: options.stopId && options.stopId !== 'none' ? options.stopId : null, autoAssignStop: options.stopId !== 'none', album: options.album }, {
       signal: controller.signal,
       onFileStart: (key, current, total) => {
         setPosition({ current, total });
@@ -79,7 +84,8 @@ export function useBulkUpload(target: { familyId: string; tripId: string }) {
     setPosition(null);
     setIsUploading(false);
     abortRef.current = null;
-    setSummary({ stored: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, wasCancelled, wasOffline: !isOnline() });
+    const stored = results.filter((r) => r.ok);
+    setSummary({ stored: stored.length, withLocation: stored.filter((r) => r.hasLocation).length, placedByGps: stored.filter((r) => r.placedBy === 'gps').length, placedByDate: stored.filter((r) => r.placedBy === 'date').length, placedByHand: stored.filter((r) => r.placedBy === 'manual').length, failed: results.filter((r) => !r.ok).length, wasCancelled, wasOffline: !isOnline() });
   }
 
   return { items, notices, isUploading, position, summary, addFiles, toggle, selectAll, clear, cancel, upload };
@@ -126,6 +132,19 @@ function Thumb({ file }: { file: File }) {
   return <div className="grid size-full place-items-center bg-sand-50 text-slate" aria-hidden>{kind === 'video' ? <Film size={28} /> : kind === 'audio' ? <Mic size={28} /> : <ImagePlus size={28} />}</div>;
 }
 
+/** One sentence on what the photos' own data gave: position found, stations assigned. */
+export function placementText(summary: Pick<BatchSummary, 'stored' | 'withLocation' | 'placedByGps' | 'placedByDate' | 'placedByHand'>): string {
+  const placed = summary.placedByGps + summary.placedByDate + summary.placedByHand;
+  const parts = [
+    summary.withLocation > 0 ? `${summary.withLocation} mit Aufnahmeort` : null,
+    summary.placedByGps > 0 ? `${summary.placedByGps} nach Aufnahmeort einer Station zugeordnet` : null,
+    summary.placedByDate > 0 ? `${summary.placedByDate} nach Aufnahmedatum` : null,
+    summary.placedByHand > 0 ? `${summary.placedByHand} der gewählten Station` : null,
+  ].filter(Boolean);
+  const open = summary.stored - placed;
+  return `${parts.length ? `${parts.join(', ')}` : 'Keine Standortdaten in den Fotos gefunden'}${open > 0 && placed > 0 ? `, ${open} ohne Station` : ''}.`;
+}
+
 function itemNoun(items: readonly StagedItem[], count: number): string {
   const allPhotos = items.every((i) => detectKind(i.file.type) === 'photo');
   return allPhotos ? (count === 1 ? 'Foto' : 'Fotos') : count === 1 ? 'Datei' : 'Dateien';
@@ -148,6 +167,7 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
           <span role="status" data-testid="bulk-summary">
             {summary.stored} {summary.stored === 1 ? 'Datei' : 'Dateien'} hochgeladen{summary.failed > 0 ? `, ${summary.failed} nicht (Grund steht am jeweiligen Bild, mit „erneut versuchen“ geht es weiter)` : ''}
             {summary.wasCancelled ? '. Der Rest wurde nicht hochgeladen und bleibt in der Auswahl' : ''}.
+            {summary.stored > 0 ? ` ${placementText(summary)}` : ''}
             {summary.wasOffline && summary.stored > 0 ? ' Du bist offline: Die Dateien liegen auf dem Gerät und werden automatisch übertragen, sobald wieder Netz da ist.' : ''}
           </span>
         </Notice>
@@ -175,7 +195,8 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
             <label className="block text-sm font-semibold">
               Station für alle (optional)
               <Select className="mt-1 font-normal" value={stopId} onChange={(e) => setStopId(e.target.value)} disabled={isUploading}>
-                <option value="">Keine Station</option>
+                <option value="">Automatisch nach Aufnahmeort und -datum</option>
+                <option value="none">Keine Station</option>
                 {stops.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
               </Select>
             </label>
@@ -209,7 +230,7 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <Button disabled={isUploading || selected.length === 0} onClick={() => void batch.upload({ stopId: stopId || null, album })}>
+              <Button disabled={isUploading || selected.length === 0} onClick={() => void batch.upload({ stopId, album })}>
                 {isUploading ? 'Wird hochgeladen …' : failed.length > 0 && failed.length === selected.length ? 'Fehlgeschlagene erneut versuchen' : `${selected.length} ${itemNoun(selected, selected.length)} hochladen`}
               </Button>
               {isUploading && <Button variant="secondary" onClick={batch.cancel}>Abbrechen</Button>}

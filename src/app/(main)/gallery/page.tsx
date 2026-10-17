@@ -4,12 +4,15 @@ import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2 } from 'lucide-r
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
-import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Toolbar } from '@/components/ui';
+import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Select, Toolbar } from '@/components/ui';
 import { BulkUploadPanel, BulkUploadPicker, useBulkUpload } from '@/features/media/bulk-upload';
 import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
 import { loadBlob } from '@/lib/db/blob-store';
+import { scanExistingPhotos } from '@/lib/db/photo-metadata';
+import { describeDistance, mapLink, stopSourceLabel } from '@/lib/domain/photo-location';
+import { haversineKm } from '@/lib/domain/geo';
 import { addMedia, MediaError } from '@/lib/db/media';
 import { getLocalDb } from '@/lib/db/local';
 import { useTable } from '@/lib/db/hooks';
@@ -21,11 +24,14 @@ import { formatDateTime } from '@/lib/formatting';
 import { clearSharedInbox, readSharedFiles } from '@/lib/share-inbox';
 
 export default function GalleryPage() {
-  const { familyId, tripId, currentUser, role } = useApp();
+  const { familyId, tripId, currentUser, role, remote } = useApp();
   const media = useTable('media_assets').rows;
   const stops = useTable('trip_stops').rows;
   const [album, setAlbum] = useState('all');
   const [kind, setKind] = useState('all');
+  const [stopFilter, setStopFilter] = useState('all');
+  const [scan, setScan] = useState<{ done: number; total: number } | null>(null);
+  const [scanNote, setScanNote] = useState<string | null>(null);
   const [onlyFav, setOnlyFav] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<MediaAsset | null>(null);
@@ -40,10 +46,15 @@ export default function GalleryPage() {
   const filtered = visible
     .filter((m) => (album === 'all' ? true : m.album === album))
     .filter((m) => (kind === 'all' ? true : m.kind === kind))
+    .filter((m) => (stopFilter === 'all' ? true : stopFilter === 'none' ? !m.stop_id : m.stop_id === stopFilter))
     .filter((m) => (onlyFav ? m.is_favorite : true))
     .sort((a, b) => (b.captured_at ?? b.created_at).localeCompare(a.captured_at ?? a.created_at));
+  const sortedStops = [...stops].sort((a, b) => a.sequence - b.sequence);
+  // photos stored before their metadata could be read (only those this person may edit)
+  const pendingScan = media.filter((m) => m.kind === 'photo' && m.exif_read_at === null && /jpe?g/i.test(m.mime_type) && currentUser && canEditOwnedRow(role, m.uploaded_by, currentUser.id)).length;
   const index = filtered.findIndex((m) => m.id === openId);
-  const current = index >= 0 ? filtered[index] : undefined;
+  // a photo stays open when a change (e.g. its station) makes it leave the current filter
+  const current = index >= 0 ? filtered[index] : visible.find((m) => m.id === openId);
 
   async function uploadFiles(files: File[]) {
     const problems: string[] = [];
@@ -78,6 +89,21 @@ export default function GalleryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function readExisting() {
+    setScanNote(null);
+    setScan({ done: 0, total: pendingScan });
+    const result = await scanExistingPhotos(remote, (done, total) => setScan({ done, total }));
+    setScan(null);
+    const parts = [
+      `${result.checked} ${result.checked === 1 ? 'Foto' : 'Fotos'} geprüft`,
+      `${result.withLocation} mit Aufnahmeort`,
+      `${result.assigned} einer Station zugeordnet`,
+      result.withoutMetadata > 0 ? `${result.withoutMetadata} ohne Ort und Datum in der Datei (beim Hochladen verkleinert oder vom Handy entfernt, das lässt sich nicht nachholen)` : null,
+      result.failed > 0 ? `${result.failed} konnten gerade nicht gelesen werden (kein Netz?), ein nächster Versuch holt sie nach` : null,
+    ].filter(Boolean);
+    setScanNote(`${parts.join(', ')}.`);
+  }
+
   async function download(asset: MediaAsset) {
     const record = await loadBlob(getLocalDb(), asset.id);
     if (record) downloadBlob(record.blob, asset.original_name ?? 'medium');
@@ -86,8 +112,10 @@ export default function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<BulkUploadPicker batch={bulk} hasItems={bulk.items.length > 0} />} />
+      <PageHeader title="Galerie" subtitle="Fotos, Videos und Sprachmemos. Nichts wird öffentlich geteilt." actions={<><BulkUploadPicker batch={bulk} hasItems={bulk.items.length > 0} />{pendingScan > 0 && <Button variant="secondary" disabled={scan !== null} onClick={() => void readExisting()}>Vorhandene Fotos auswerten ({pendingScan})</Button>}</>} />
       <BulkUploadPanel batch={bulk} stops={[...stops].sort((a, b) => a.sequence - b.sequence)} albums={albums} />
+      {scan && <div className="mb-4"><ProgressBar value={scan.total ? (scan.done / scan.total) * 100 : 0} label={`Fotos auswerten: ${scan.done} von ${scan.total}`} /></div>}
+      {scanNote && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="scan-note">{scanNote}</span></Notice></div>}
       {shareNotice && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="share-notice">{shareNotice}</span></Notice></div>}
       {progress !== null && <div className="mb-4"><ProgressBar value={progress} label="Upload-Fortschritt" /></div>}
       {errors.length > 0 && <div className="mb-4 space-y-2">{errors.map((e) => <Notice key={e} tone="danger">{e}</Notice>)}</div>}
@@ -98,6 +126,12 @@ export default function GalleryPage() {
         <span className="mx-1 h-6 w-px bg-line" aria-hidden />
         {(['all', 'photo', 'video', 'audio'] as const).map((k) => <Chip key={k} active={kind === k} onClick={() => setKind(k)}>{k === 'all' ? 'Alle Arten' : k === 'photo' ? 'Fotos' : k === 'video' ? 'Videos' : 'Audio'}</Chip>)}
         <Chip active={onlyFav} onClick={() => setOnlyFav(!onlyFav)}><Heart size={14} aria-hidden /> Favoriten</Chip>
+        <span className="mx-1 h-6 w-px bg-line" aria-hidden />
+        <Select aria-label="Nach Station filtern" value={stopFilter} onChange={(e) => setStopFilter(e.target.value)} className="min-h-10 w-auto py-1.5 text-sm">
+          <option value="all">Alle Stationen</option>
+          {sortedStops.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+          <option value="none">Ohne Station</option>
+        </Select>
       </Toolbar>
       {filtered.length === 0 ? (
         <EmptyState icon={<ImageIcon />} title="Keine Medien" text="Lade Fotos, Videos oder Audio hoch. Sie bleiben privat und werden mit Rechten der Familie geteilt." />
@@ -123,6 +157,28 @@ export default function GalleryPage() {
           <div className="space-y-4">
             <div className="max-h-[55vh] overflow-hidden rounded-lg bg-black/5"><div className="aspect-[4/3] max-h-[55vh] w-full"><MediaBody asset={current} controls /></div></div>
             <p className="text-sm text-slate">{formatDateTime(current.captured_at)} · {stops.find((s) => s.id === current.stop_id)?.title ?? 'Keine Station'} · {current.album ?? 'Kein Album'}</p>
+            {current.latitude != null && current.longitude != null && (
+              <p className="text-sm text-slate" data-testid="photo-location">
+                Aufnahmeort:{' '}
+                <a href={mapLink(current.latitude, current.longitude)} target="_blank" rel="noopener noreferrer" className="font-semibold text-deep underline">{current.latitude.toFixed(4)}, {current.longitude.toFixed(4)}</a>
+                {(() => {
+                  const near = stops.filter((s): s is typeof s & { latitude: number; longitude: number } => s.latitude !== null && s.longitude !== null).map((s) => ({ s, km: haversineKm({ latitude: current.latitude!, longitude: current.longitude! }, s) })).sort((a, b) => a.km - b.km)[0];
+                  return near ? ` · ${describeDistance(current.latitude!, current.longitude!, near.s)}` : '';
+                })()}
+                {current.altitude_m != null ? ` · ${Math.round(current.altitude_m)} m Höhe` : ''}
+              </p>
+            )}
+            {current.camera && <p className="text-sm text-slate" data-testid="photo-camera">Kamera: {current.camera}</p>}
+            {currentUser && canEditOwnedRow(role, current.uploaded_by, currentUser.id) && (
+              <Field label="Station" hint={current.stop_id && current.stop_source ? stopSourceLabel[current.stop_source] : undefined}>
+                {(p) => (
+                  <Select {...p} value={current.stop_id ?? ''} onChange={(e) => void update('media_assets', current.id, { stop_id: e.target.value || null, stop_source: e.target.value ? 'manual' : null })}>
+                    <option value="">Keine Station</option>
+                    {sortedStops.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </Select>
+                )}
+              </Field>
+            )}
             {current.kind === 'photo' && (
               <FollowerShareToggle
                 checked={current.shared_with_followers}
@@ -135,7 +191,7 @@ export default function GalleryPage() {
               <Field label="Bildunterschrift">{(p) => <Input {...p} defaultValue={current.caption} key={current.id} onBlur={(e) => e.target.value !== current.caption && void update('media_assets', current.id, { caption: e.target.value })} />}</Field>
             )}
             <div className="flex flex-wrap justify-between gap-2">
-              <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={index <= 0} onClick={() => setOpenId(filtered[index - 1]?.id ?? null)}>Zurück</Button><Button variant="secondary" size="sm" disabled={index >= filtered.length - 1} onClick={() => setOpenId(filtered[index + 1]?.id ?? null)}>Weiter</Button></div>
+              <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={index <= 0} onClick={() => setOpenId(filtered[index - 1]?.id ?? null)}>Zurück</Button><Button variant="secondary" size="sm" disabled={index < 0 || index >= filtered.length - 1} onClick={() => setOpenId(filtered[index + 1]?.id ?? null)}>Weiter</Button></div>
               <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => void download(current)}><Download size={14} aria-hidden /> Download</Button>{currentUser && canEditOwnedRow(role, current.uploaded_by, currentUser.id) && <Button variant="ghost" size="sm" onClick={() => setDeleting(current)}><Trash2 size={14} aria-hidden /> Löschen</Button>}</div>
             </div>
           </div>

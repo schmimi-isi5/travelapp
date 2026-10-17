@@ -159,6 +159,7 @@ beforeAll(async () => {
   await run('0011_mailbox_settings', readFileSync(join(MIGRATIONS, '0011_mailbox_settings.sql'), 'utf8'));
   await run('0012_travel_documents', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
   await run('0013_mailbox_folder', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
+  await run('0014_photo_metadata', readFileSync(join(MIGRATIONS, '0014_photo_metadata.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -974,6 +975,34 @@ describe('migration 0013 (mailbox folder)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0013_again', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0014 (photo metadata)', () => {
+  const photo = () => ids.A.media_assets;
+
+  it('stores a position with altitude, camera and how the station was found', async () => {
+    await admin(`update public.media_assets set latitude=-18.855, longitude=16.3293, altitude_m=1100, camera='Apple iPhone 14', stop_source='gps', exif_read_at=now() where id=$1`, [photo()]);
+    const row = (await admin(`select latitude, longitude, altitude_m, camera, stop_source from public.media_assets where id=$1`, [photo()])).rows[0];
+    expect(row).toMatchObject({ latitude: -18.855, longitude: 16.3293, altitude_m: 1100, camera: 'Apple iPhone 14', stop_source: 'gps' });
+  });
+
+  it('refuses half or impossible positions and unknown station sources', async () => {
+    await expect(admin(`update public.media_assets set latitude=-18.8, longitude=null where id=$1`, [photo()])).rejects.toThrow();
+    await expect(admin(`update public.media_assets set latitude=91, longitude=10 where id=$1`, [photo()])).rejects.toThrow();
+    await expect(admin(`update public.media_assets set latitude=10, longitude=181 where id=$1`, [photo()])).rejects.toThrow();
+    await expect(admin(`update public.media_assets set stop_source='magic' where id=$1`, [photo()])).rejects.toThrow();
+    await expect(admin(`update public.media_assets set camera=$2 where id=$1`, [photo(), 'x'.repeat(121)])).rejects.toThrow();
+  });
+
+  it('shows the position only where the photo itself is visible: the family, never another family', async () => {
+    expect(await count(users.A.child, `select 1 from public.media_assets where id=$1 and latitude is not null`, [photo()])).toBe(1);
+    expect(await count(users.B.owner, `select 1 from public.media_assets where id=$1`, [photo()])).toBe(0);
+    expect(await count(users.B.adult, `select 1 from public.media_assets where latitude is not null and family_id=$1`, [fam.A])).toBe(0);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0014_again', readFileSync(join(MIGRATIONS, '0014_photo_metadata.sql'), 'utf8'));
   });
 });
 
