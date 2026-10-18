@@ -25,7 +25,7 @@ interface MediaRow {
   stop_id: string | null;
   kind: string;
   visibility: string;
-  shared_with_followers: boolean;
+  hidden_from_followers: boolean;
   storage_path: string;
   captured_at: string | null;
 }
@@ -52,11 +52,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     }
     const { data } = await admin
       .from('media_assets')
-      .select('id, family_id, trip_id, stop_id, kind, visibility, shared_with_followers, storage_path, captured_at')
+      .select('id, family_id, trip_id, stop_id, kind, visibility, hidden_from_followers, storage_path, captured_at')
       .eq('id', id)
       .maybeSingle();
     const media = data as MediaRow | null;
-    if (!media || media.family_id !== link.family_id || media.trip_id !== link.trip_id || !media.shared_with_followers || media.visibility !== 'family' || media.kind !== 'photo') return NOT_FOUND();
+    if (!media || media.family_id !== link.family_id || media.trip_id !== link.trip_id || media.hidden_from_followers || media.visibility !== 'family' || media.kind !== 'photo') return NOT_FOUND();
     if (media.stop_id) {
       const [trip, stop] = await Promise.all([loadTrip(admin, link.trip_id), admin.from('trip_stops').select('arrive_at').eq('id', media.stop_id).maybeSingle()]);
       const arrive = (stop.data as { arrive_at: string | null } | null)?.arrive_at ?? null;

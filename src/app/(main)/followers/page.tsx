@@ -43,11 +43,13 @@ function statusOf(link: LinkRow): { label: string; tone: 'ok' | 'warn' | 'neutra
 
 function ShareSummary() {
   const entries = useTable('journal_entries').rows.filter((e) => e.shared_with_followers).length;
-  const photos = useTable('media_assets').rows.filter((m) => m.shared_with_followers).length;
+  const familyPhotos = useTable('media_assets').rows.filter((m) => m.kind === 'photo' && m.visibility === 'family');
+  const photos = familyPhotos.filter((m) => !m.hidden_from_followers).length;
+  const hidden = familyPhotos.length - photos;
   const sightings = useTable('wildlife_sightings').rows.filter((s) => s.shared_with_followers).length;
   return (
     <p className="text-sm text-slate" data-testid="share-summary">
-      Aktuell freigegeben: <strong>{entries}</strong> {entries === 1 ? 'Bericht' : 'Berichte'}, <strong>{photos}</strong> {photos === 1 ? 'Foto' : 'Fotos'}, <strong>{sightings}</strong> {sightings === 1 ? 'Tiersichtung' : 'Tiersichtungen'}. Freigeben könnt ihr im Tagebuch, in der Galerie und im Safari-Tracker.
+      Aktuell sichtbar: <strong>{photos}</strong> {photos === 1 ? 'Foto' : 'Fotos'}{hidden > 0 && <> ({hidden} ausgeblendet)</>}. Freigegeben: <strong>{entries}</strong> {entries === 1 ? 'Bericht' : 'Berichte'}, <strong>{sightings}</strong> {sightings === 1 ? 'Tiersichtung' : 'Tiersichtungen'}. Freigeben könnt ihr im Tagebuch, in der Galerie und im Safari-Tracker.
     </p>
   );
 }
@@ -217,7 +219,7 @@ export default function FollowersPage() {
       <PageHeader title="Mitreisen von zuhause" subtitle="Familie und Freunde verfolgen die Reise über einen privaten Link, ohne Konto." />
       <div className="mb-6 space-y-3">
         <Notice tone="info" title="Was Follower sehen">
-          Wo ihr gerade seid (Stationen bis heute, keine künftigen), dazu nur die Berichte, Fotos und Tiersichtungen, die ein Erwachsener ausdrücklich freigegeben hat. Fotos werden ohne Ortsdaten ausgeliefert. Nie zu sehen: Buchungen, Preise, Zahlungen, Dokumente, Unterkunftsadressen, private Einträge.
+          Wo ihr gerade seid (Stationen bis heute, keine künftigen), dazu alle Familienfotos, außer denen, die ihr ausblendet (in der Galerie am Auge-Symbol des Fotos), sowie die Berichte und Tiersichtungen, die ein Erwachsener ausdrücklich freigegeben hat. Fotos werden ohne Ortsdaten ausgeliefert, private Fotos nie gezeigt. Nie zu sehen: Buchungen, Preise, Zahlungen, Dokumente, Unterkunftsadressen, private Einträge.
         </Notice>
         <ShareSummary />
       </div>

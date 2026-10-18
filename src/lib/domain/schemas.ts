@@ -238,8 +238,10 @@ export const mediaAssetSchema = z.object({
   /** When the metadata of an already stored photo was read (so it is not read again). */
   exif_read_at: z.string().nullable().default(null),
   is_favorite: z.boolean().default(false),
-  /** Published to read-only follower links. Opt-in per item; only owner/adult may set it, never for private items. */
+  /** Legacy opt-in flag of photos; follower links no longer read it. */
   shared_with_followers: z.boolean().default(false),
+  /** Held back from follower links. Photos are shown to followers by default (never private ones); hiding is the exception. */
+  hidden_from_followers: z.boolean().default(false),
   /** Upload state in the local queue; remote objects are always `uploaded`. */
   upload_state: z.enum(['uploaded', 'queued']).default('uploaded'),
 });

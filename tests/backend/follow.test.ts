@@ -41,7 +41,7 @@ const media = (token: string, id: string, w = 1600) => getMedia(new Request(`htt
 describe.skipIf(!available)('follower links (real Supabase + app routes)', () => {
   let a: Fam;
   let b: Fam;
-  const ids = { sharedEntry: '', privateEntry: '', openEntry: '', sharedPhoto: '', hiddenPhoto: '', futurePhoto: '', sharedSighting: '', otherSighting: '', futureStop: '', species: '' };
+  const ids = { sharedEntry: '', privateEntry: '', openEntry: '', sharedPhoto: '', hiddenPhoto: '', privatePhoto: '', futurePhoto: '', sharedSighting: '', otherSighting: '', futureStop: '', species: '' };
 
   beforeAll(async () => {
     a = await createFamilyWithRoles();
@@ -69,14 +69,16 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     ids.privateEntry = String((priv as { id: string }).id);
 
     const jpeg = await jpegWithGps();
-    const photo = async (name: string, stopId: string, visibility = 'family') => {
+    const photo = async (name: string, stopId: string, visibility = 'family', extra: Record<string, unknown> = {}) => {
       const path = `${a.family.id}/${trip}/${randomUUID()}-${name}.jpg`;
       const up = await admin.storage.from('media').upload(path, jpeg, { contentType: 'image/jpeg' });
       if (up.error) throw new Error(`upload: ${up.error.message}`);
-      return mk('media_assets', { family_id: a.family.id, trip_id: trip, stop_id: stopId, uploaded_by: a.owner.id, kind: 'photo', storage_path: path, original_name: `${name}.jpg`, mime_type: 'image/jpeg', size_bytes: jpeg.length, caption: name, visibility });
+      return mk('media_assets', { family_id: a.family.id, trip_id: trip, stop_id: stopId, uploaded_by: a.owner.id, kind: 'photo', storage_path: path, original_name: `${name}.jpg`, mime_type: 'image/jpeg', size_bytes: jpeg.length, caption: name, visibility, ...extra });
     };
-    ids.sharedPhoto = await photo('geteilt', stop2);
-    ids.hiddenPhoto = await photo('nicht-geteilt', stop2);
+    // photos are shown by default: nobody released these; one is hidden on purpose, one is private, one belongs to a stop still ahead
+    ids.sharedPhoto = await photo('sichtbar', stop2);
+    ids.hiddenPhoto = await photo('ausgeblendet', stop2, 'family', { hidden_from_followers: true });
+    ids.privatePhoto = await photo('privat', stop2, 'private');
     ids.futurePhoto = await photo('zukunft', ids.futureStop);
     ids.sharedSighting = await mk('wildlife_sightings', { trip_id: trip, stop_id: stop2, species_id: species, recorded_by: a.owner.id, count: 4, notes: 'Herde' });
     ids.otherSighting = await mk('wildlife_sightings', { trip_id: trip, stop_id: stop2, species_id: species, recorded_by: a.owner.id, count: 1, notes: 'nicht geteilt' });
@@ -87,8 +89,6 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
       if (shareError) throw new Error(`share ${table}: ${shareError.message}`);
     };
     await share('journal_entries', ids.sharedEntry);
-    await share('media_assets', ids.sharedPhoto);
-    await share('media_assets', ids.futurePhoto);
     await share('wildlife_sightings', ids.sharedSighting);
   }, 120_000);
   afterAll(deleteCreatedUsers);
@@ -101,7 +101,7 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect(v.stops.map((s) => s.title)).toEqual(['Windhoek', 'Etosha']);
     expect(v.stops.find((s) => s.id === v.currentStopId)?.title).toBe('Etosha');
     expect(v.entries.map((e) => e.title)).toEqual(['Geteilt']);
-    expect(v.photos.map((p) => p.id)).toEqual([ids.sharedPhoto]); // the photo of the future stop is held back
+    expect(v.photos.map((p) => p.id)).toEqual([ids.sharedPhoto]); // visible by default; hidden, private and the future stop's photo are held back
     expect(v.sightings).toHaveLength(1);
     expect(v.sightings[0]).toMatchObject({ species: 'Elefant-Test', count: 4 });
     const json = JSON.stringify(v);
@@ -129,6 +129,25 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     } finally {
       await admin.from('destination_images').delete().in('content_hash', [`${tag}windhoek`, `${tag}chobe`]);
     }
+  });
+
+  it('shows a photo a family member just uploaded without anyone releasing it, until the uploader or an adult hides it', async () => {
+    const { token } = await createLink(a, a.adult, 'Standard');
+    const path = `${a.family.id}/${a.family.tripId}/${randomUUID()}-kind.jpg`;
+    await admin.storage.from('media').upload(path, await jpegWithGps(), { contentType: 'image/jpeg' });
+    const { data, error } = await a.child.client.from('media_assets').insert({ family_id: a.family.id, trip_id: a.family.tripId, uploaded_by: a.child.id, kind: 'photo', storage_path: path, original_name: 'kind.jpg', mime_type: 'image/jpeg', size_bytes: 1000, caption: 'Foto vom Kind' }).select('id').single();
+    expect(error).toBeNull();
+    const id = (data as { id: string }).id;
+    expect(((await view(token)).body as FollowerView).photos.map((p) => p.id)).toContain(id);
+    expect((await media(token, id)).status).toBe(200);
+    // the child hides its own photo; nobody else's
+    expect((await a.child.client.from('media_assets').update({ hidden_from_followers: true }).eq('id', id).select('id')).data).toHaveLength(1);
+    expect(((await view(token)).body as FollowerView).photos.map((p) => p.id)).not.toContain(id);
+    expect((await a.child.client.from('media_assets').update({ hidden_from_followers: true }).eq('id', ids.sharedPhoto).select('id')).data ?? []).toEqual([]);
+    // a private photo of the child stays hidden whatever the flag says
+    await a.child.client.from('media_assets').update({ hidden_from_followers: false, visibility: 'private' }).eq('id', id);
+    expect(((await view(token)).body as FollowerView).photos.map((p) => p.id)).not.toContain(id);
+    expect((await media(token, id)).status).toBe(404);
   });
 
   it('counts visits on the link', async () => {
@@ -226,10 +245,11 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect(futureStop.status).toBe(404);
   });
 
-  it('refuses photos that are not published, belong to a future stop, another family, or use an invalid size', async () => {
+  it('refuses photos that are hidden, private, belong to a future stop, another family, or use an invalid size', async () => {
     const mine = await createLink(a, a.owner, 'Fremde');
     const theirs = await createLink(b, b.owner, 'Andere Familie');
     expect((await media(mine.token, ids.hiddenPhoto)).status).toBe(404);
+    expect((await media(mine.token, ids.privatePhoto)).status).toBe(404);
     expect((await media(mine.token, ids.futurePhoto)).status).toBe(404);
     expect((await media(theirs.token, ids.sharedPhoto)).status).toBe(404);
     expect((await media(mine.token, ids.sharedPhoto, 999)).status).toBe(404);
@@ -237,12 +257,13 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect((await media(mine.token, ids.sharedPhoto)).status).toBe(200);
   });
 
-  it('stops serving a photo as soon as it is unpublished', async () => {
+  it('stops serving a photo as soon as it is hidden, and serves it again when shown', async () => {
     const { token } = await createLink(a, a.owner, 'Zurückgezogen');
     expect((await media(token, ids.sharedPhoto)).status).toBe(200);
-    await a.adult.client.from('media_assets').update({ shared_with_followers: false }).eq('id', ids.sharedPhoto);
+    await a.adult.client.from('media_assets').update({ hidden_from_followers: true }).eq('id', ids.sharedPhoto);
     expect((await media(token, ids.sharedPhoto)).status).toBe(404);
     expect(((await view(token)).body as FollowerView).photos).toEqual([]);
-    await a.adult.client.from('media_assets').update({ shared_with_followers: true }).eq('id', ids.sharedPhoto);
+    await a.adult.client.from('media_assets').update({ hidden_from_followers: false }).eq('id', ids.sharedPhoto);
+    expect((await media(token, ids.sharedPhoto)).status).toBe(200);
   });
 });

@@ -1,12 +1,11 @@
 'use client';
 
-import { Download, Film, Heart, Image as ImageIcon, Mic, Trash2 } from 'lucide-react';
+import { Download, Eye, EyeOff, Film, Heart, Image as ImageIcon, Mic, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Select, Toolbar } from '@/components/ui';
 import { BulkUploadPanel, BulkUploadPicker, useBulkUpload } from '@/features/media/bulk-upload';
-import { FollowerShareToggle } from '@/features/follow/share-toggle';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
 import { loadBlob } from '@/lib/db/blob-store';
@@ -22,6 +21,33 @@ import { canEditOwnedRow } from '@/lib/domain/policy';
 import type { MediaAsset } from '@/lib/domain/schemas';
 import { formatDateTime } from '@/lib/formatting';
 import { clearSharedInbox, readSharedFiles } from '@/lib/share-inbox';
+
+/** "Für Mitreisende sichtbar": the box flips at once and settles when the stored state catches up. */
+function FollowerVisibility({ asset, canEdit }: { asset: MediaAsset; canEdit: boolean }) {
+  const isShown = asset.visibility === 'family' && !asset.hidden_from_followers;
+  const [pending, setPending] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (pending !== null && pending === isShown) setPending(null);
+  }, [isShown, pending]);
+  return (
+    <label className="flex items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        className="mt-1 size-5 accent-deep"
+        checked={pending ?? isShown}
+        disabled={asset.visibility === 'private' || !canEdit}
+        onChange={(e) => {
+          setPending(e.target.checked);
+          void update('media_assets', asset.id, { hidden_from_followers: !e.target.checked }).catch(() => setPending(null));
+        }}
+      />
+      <span>
+        <strong>Für Mitreisende sichtbar</strong> (ohne Ortsdaten)
+        {asset.visibility === 'private' && <span className="block text-slate">Private Fotos sehen Mitreisende nie.</span>}
+      </span>
+    </label>
+  );
+}
 
 export default function GalleryPage() {
   const { familyId, tripId, currentUser, role, remote } = useApp();
@@ -147,7 +173,13 @@ export default function GalleryPage() {
                 {m.kind === 'video' && <Badge><Film size={12} aria-hidden /> Video</Badge>}
                 {m.kind === 'audio' && <Badge><Mic size={12} aria-hidden /> Audio</Badge>}
                 {m.upload_state === 'queued' && <Badge tone="warn">Wartet auf Upload</Badge>}
+                {m.kind === 'photo' && m.visibility === 'family' && m.hidden_from_followers && <Badge><EyeOff size={12} aria-hidden /> Nicht für Mitreisende</Badge>}
               </div>
+              {m.kind === 'photo' && m.visibility === 'family' && currentUser && canEditOwnedRow(role, m.uploaded_by, currentUser.id) && (
+                <button type="button" aria-pressed={Boolean(m.hidden_from_followers)} aria-label={m.hidden_from_followers ? 'Für Mitreisende wieder einblenden' : 'Vor Mitreisenden verbergen'} onClick={() => void update('media_assets', m.id, { hidden_from_followers: !m.hidden_from_followers })} className="absolute bottom-2 right-2 grid size-10 place-items-center rounded-full bg-white/90">
+                  {m.hidden_from_followers ? <EyeOff size={18} aria-hidden className="text-clay" /> : <Eye size={18} aria-hidden className="text-slate" />}
+                </button>
+              )}
               <button type="button" aria-pressed={m.is_favorite} aria-label={m.is_favorite ? 'Favorit entfernen' : 'Als Favorit markieren'} onClick={() => void update('media_assets', m.id, { is_favorite: !m.is_favorite })} className="absolute right-2 top-2 grid size-10 place-items-center rounded-full bg-white/90"><Heart size={18} aria-hidden className={m.is_favorite ? 'fill-clay text-clay' : 'text-slate'} /></button>
             </li>
           ))}
@@ -180,14 +212,7 @@ export default function GalleryPage() {
                 )}
               </Field>
             )}
-            {current.kind === 'photo' && (
-              <FollowerShareToggle
-                checked={current.shared_with_followers}
-                label="Für Follower freigeben (Foto ohne Ortsdaten)"
-                blockedReason={current.visibility === 'private' ? 'Private Fotos lassen sich nicht freigeben.' : null}
-                onChange={async (next) => void (await update('media_assets', current.id, { shared_with_followers: next }))}
-              />
-            )}
+            {current.kind === 'photo' && <FollowerVisibility key={current.id} asset={current} canEdit={Boolean(currentUser && canEditOwnedRow(role, current.uploaded_by, currentUser.id))} />}
             {currentUser && canEditOwnedRow(role, current.uploaded_by, currentUser.id) && (
               <Field label="Bildunterschrift">{(p) => <Input {...p} defaultValue={current.caption} key={current.id} onBlur={(e) => e.target.value !== current.caption && void update('media_assets', current.id, { caption: e.target.value })} />}</Field>
             )}

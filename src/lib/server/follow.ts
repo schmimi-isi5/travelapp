@@ -60,8 +60,8 @@ export async function loadFollowerSource(admin: SupabaseClient, link: FollowerLi
       'journal',
     ),
     rows<FollowSource['media'][number]>(
-      admin.from('media_assets').select('id, stop_id, kind, captured_at, caption, visibility, shared_with_followers')
-        .eq('trip_id', link.trip_id).eq('shared_with_followers', true).eq('visibility', 'family').eq('kind', 'photo').order('captured_at', { ascending: false }).limit(MAX_PHOTOS),
+      admin.from('media_assets').select('id, stop_id, kind, captured_at, caption, visibility, hidden_from_followers')
+        .eq('trip_id', link.trip_id).eq('hidden_from_followers', false).eq('visibility', 'family').eq('kind', 'photo').order('captured_at', { ascending: false }).limit(MAX_PHOTOS),
       'media',
     ),
     rows<FollowSource['sightings'][number]>(

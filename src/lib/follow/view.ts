@@ -1,6 +1,7 @@
 /**
  * What a follower (someone with a private link, no account) may see. This module is the single place that decides it:
- * the server route feeds it database rows, the demo preview feeds it local data. It picks fields explicitly and
+ * the server route feeds it database rows, the demo preview feeds it local data. Photos are shown unless hidden (opt-out); journal
+ * entries and sightings only when shared (opt-in). It picks fields explicitly and
  * drops everything that is not meant for followers (bookings, prices, documents, addresses, GPS, private items).
  */
 
@@ -43,7 +44,8 @@ export interface FollowMediaInput {
   captured_at: string | null;
   caption: string | null;
   visibility: string;
-  shared_with_followers: boolean;
+  /** Photos are shown unless this is set (and never when private). */
+  hidden_from_followers: boolean;
 }
 
 export interface FollowSightingInput {
@@ -200,7 +202,7 @@ export function buildFollowerView(source: FollowSource): FollowerView {
       .sort(byDateDesc((e) => e.entry_date))
       .map((e) => ({ id: e.id, title: e.title?.trim() || 'Ohne Titel', body: e.body, entry_date: e.entry_date, author: firstName(source.authorNames[e.author_user_id]), stop: stopTitle(e.stop_id) })),
     photos: source.media
-      .filter((m) => m.shared_with_followers && m.visibility === 'family' && m.kind === 'photo' && isReachable(m.stop_id))
+      .filter((m) => !m.hidden_from_followers && m.visibility === 'family' && m.kind === 'photo' && isReachable(m.stop_id))
       .sort(byDateDesc((m) => m.captured_at ?? ''))
       .map((m) => ({ id: m.id, caption: m.caption ?? '', captured_at: m.captured_at, stop: stopTitle(m.stop_id) })),
     sightings: source.sightings

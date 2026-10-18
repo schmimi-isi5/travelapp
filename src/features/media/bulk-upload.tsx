@@ -59,7 +59,7 @@ export function useBulkUpload(target: { familyId: string; tripId: string }) {
   const cancel = () => abortRef.current?.abort();
 
   /** `stopId`: a station for all, '' = find it from each photo (position, date), 'none' = no station on purpose. */
-  async function upload(options: { stopId: string; album: string }) {
+  async function upload(options: { stopId: string; album: string; isHiddenFromFollowers: boolean }) {
     const chosen = items.filter((i) => i.isSelected);
     if (chosen.length === 0 || isUploading) return;
     const controller = new AbortController();
@@ -68,7 +68,7 @@ export function useBulkUpload(target: { familyId: string; tripId: string }) {
     setSummary(null);
     setNotices([]);
     const patch = (key: string, change: Partial<StagedItem>) => setItems((c) => c.map((i) => (i.key === key ? { ...i, ...change } : i)));
-    const { results, wasCancelled } = await uploadBatch(chosen, { ...target, stopId: options.stopId && options.stopId !== 'none' ? options.stopId : null, autoAssignStop: options.stopId !== 'none', album: options.album }, {
+    const { results, wasCancelled } = await uploadBatch(chosen, { ...target, stopId: options.stopId && options.stopId !== 'none' ? options.stopId : null, autoAssignStop: options.stopId !== 'none', album: options.album, hiddenFromFollowers: options.isHiddenFromFollowers }, {
       signal: controller.signal,
       onFileStart: (key, current, total) => {
         setPosition({ current, total });
@@ -155,6 +155,7 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
   const { items, notices, isUploading, position, summary } = batch;
   const [album, setAlbum] = useState('');
   const [stopId, setStopId] = useState('');
+  const [isHidden, setIsHidden] = useState(false);
   const selected = items.filter((i) => i.isSelected);
   const failed = items.filter((i) => i.status === 'failed');
   const overall = position ? ((position.current - 1) / position.total) * 100 + (items.find((i) => i.status === 'uploading')?.percent ?? 0) / position.total : null;
@@ -186,6 +187,10 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
             </div>
           </div>
 
+          <label className="mt-3 flex min-h-11 items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 size-5 accent-deep" checked={isHidden} disabled={isUploading} onChange={(e) => setIsHidden(e.target.checked)} />
+            <span><strong>Vor Mitreisenden verbergen:</strong> Diese Fotos erscheinen nicht auf der Seite für Familie und Freunde (sonst sehen sie alle Familienfotos).</span>
+          </label>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-semibold">
               Album für alle (optional)
@@ -230,7 +235,7 @@ export function BulkUploadPanel({ batch, stops, albums }: { batch: BulkUpload; s
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <Button disabled={isUploading || selected.length === 0} onClick={() => void batch.upload({ stopId, album })}>
+              <Button disabled={isUploading || selected.length === 0} onClick={() => void batch.upload({ stopId, album, isHiddenFromFollowers: isHidden })}>
                 {isUploading ? 'Wird hochgeladen …' : failed.length > 0 && failed.length === selected.length ? 'Fehlgeschlagene erneut versuchen' : `${selected.length} ${itemNoun(selected, selected.length)} hochladen`}
               </Button>
               {isUploading && <Button variant="secondary" onClick={batch.cancel}>Abbrechen</Button>}

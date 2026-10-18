@@ -160,6 +160,7 @@ beforeAll(async () => {
   await run('0012_travel_documents', readFileSync(join(MIGRATIONS, '0012_travel_documents.sql'), 'utf8'));
   await run('0013_mailbox_folder', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
   await run('0014_photo_metadata', readFileSync(join(MIGRATIONS, '0014_photo_metadata.sql'), 'utf8'));
+  await run('0015_photos_visible_to_followers', readFileSync(join(MIGRATIONS, '0015_photos_visible_to_followers.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -1003,6 +1004,27 @@ describe('migration 0014 (photo metadata)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0014_again', readFileSync(join(MIGRATIONS, '0014_photo_metadata.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0015 (photos visible to followers unless hidden)', () => {
+  it('shows existing and new photos by default; hiding is a flag the uploader or an adult can set', async () => {
+    expect((await admin(`select count(*)::int c from public.media_assets where hidden_from_followers`)).rows[0].c).toBe(0);
+    const childsPrivate = ids.A.media_private;
+    const membersFamilyPhoto = ids.A.media_assets;
+    // the uploader may flip the flag on their own photo; an adult may on any family photo, but never reaches a private one
+    expect((await as(users.A.child, `update public.media_assets set hidden_from_followers=true where id=$1`, [childsPrivate])).affectedRows).toBe(1);
+    expect((await as(users.A.adult, `update public.media_assets set hidden_from_followers=false where id=$1`, [childsPrivate])).affectedRows).toBe(0);
+    expect((await as(users.A.adult, `update public.media_assets set hidden_from_followers=true where id=$1`, [membersFamilyPhoto])).affectedRows).toBe(1);
+    expect((await as(users.A.member, `update public.media_assets set hidden_from_followers=false where id=$1`, [membersFamilyPhoto])).affectedRows).toBe(1);
+    // another member's photo cannot be hidden by a child, other families cannot touch it at all
+    expect((await as(users.A.child, `update public.media_assets set hidden_from_followers=true where id=$1`, [membersFamilyPhoto])).affectedRows).toBe(0);
+    expect((await as(users.B.adult, `update public.media_assets set hidden_from_followers=true where id=$1`, [membersFamilyPhoto])).affectedRows).toBe(0);
+    await admin(`update public.media_assets set hidden_from_followers=false where id=$1`, [childsPrivate]);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0015_again', readFileSync(join(MIGRATIONS, '0015_photos_visible_to_followers.sql'), 'utf8'));
   });
 });
 
