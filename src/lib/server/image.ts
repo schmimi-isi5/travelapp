@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 
-export const FOLLOWER_IMAGE_WIDTHS = [480, 1600] as const;
+/** 480 and 960 for the grid, 1600 for the full-screen view, 2400 for the download. */
+export const FOLLOWER_IMAGE_WIDTHS = [480, 960, 1600, 2400] as const;
 export type FollowerImageWidth = (typeof FOLLOWER_IMAGE_WIDTHS)[number];
 
 const MAX_INPUT_PIXELS = 100_000_000;
@@ -30,7 +31,7 @@ export function sanitizeImage(input: Buffer, width: FollowerImageWidth): Promise
     sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .jpeg({ quality: 78, mozjpeg: true })
+      .jpeg({ quality: width >= 1600 ? 82 : 78, mozjpeg: true })
       .toBuffer(),
   );
 }

@@ -196,6 +196,36 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect(meta.icc).toBeUndefined();
   });
 
+  it('offers four sizes (grid, full screen, download) and none without metadata, even the largest', async () => {
+    const { token } = await createLink(a, a.owner, 'Größen');
+    const widths: number[] = [];
+    for (const w of [480, 960, 1600, 2400]) {
+      const res = await media(token, ids.sharedPhoto, w);
+      expect(res.status, `w=${w}`).toBe(200);
+      const meta = await sharp(Buffer.from(await res.arrayBuffer())).metadata();
+      expect(meta.exif, `w=${w}`).toBeUndefined();
+      widths.push(meta.width ?? 0);
+    }
+    expect(widths).toEqual([...widths].sort((x, y) => x - y)); // never enlarged, so a small original stays as wide as it is
+    for (const w of [0, 100, 1200, 4800]) expect((await media(token, ids.sharedPhoto, w)).status, `w=${w}`).toBe(404);
+  });
+
+  it('lets the browser save a photo (download header with a plain name), and shows it inline otherwise', async () => {
+    const { token } = await createLink(a, a.owner, 'Download');
+    const inline = await media(token, ids.sharedPhoto, 2400);
+    expect(inline.headers.get('content-disposition')).toBeNull();
+    const saved = await getMedia(new Request(`http://localhost/api/follow/${token}/media/${ids.sharedPhoto}?w=2400&d=1`), { params: Promise.resolve({ token, id: ids.sharedPhoto }) });
+    expect(saved.status).toBe(200);
+    expect(saved.headers.get('content-type')).toBe('image/jpeg');
+    expect(saved.headers.get('content-disposition')).toMatch(new RegExp(`^attachment; filename="Namibia-Botswana-(\\d{4}-\\d{2}-\\d{2}-)?${ids.sharedPhoto.slice(0, 8)}\\.jpg"$`));
+    expect(saved.headers.get('x-robots-tag')).toContain('noindex');
+    // the same checks apply as for viewing: a photo that is not published cannot be downloaded
+    const hidden = await getMedia(new Request(`http://localhost/api/follow/${token}/media/${ids.hiddenPhoto}?w=2400&d=1`), { params: Promise.resolve({ token, id: ids.hiddenPhoto }) });
+    expect(hidden.status).toBe(404);
+    const futureStop = await getMedia(new Request(`http://localhost/api/follow/${token}/media/${ids.futurePhoto}?w=2400&d=1`), { params: Promise.resolve({ token, id: ids.futurePhoto }) });
+    expect(futureStop.status).toBe(404);
+  });
+
   it('refuses photos that are not published, belong to a future stop, another family, or use an invalid size', async () => {
     const mine = await createLink(a, a.owner, 'Fremde');
     const theirs = await createLink(b, b.owner, 'Andere Familie');
