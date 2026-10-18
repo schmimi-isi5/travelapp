@@ -95,10 +95,22 @@ export interface FollowerStopImage {
   alt: string;
   /** True when the photo shows the region rather than proven this exact place. */
   isRegionMotif: boolean;
+  /** Larger variants for a full-width picture (mobile 800, tablet 1200, desktop 1920 px wide), as far as they exist. */
+  variantPaths: Partial<Record<'mobile' | 'tablet' | 'desktop', string>>;
 }
 
 export interface FollowerView {
-  trip: { title: string; countries: string[]; status: 'upcoming' | 'ongoing' | 'finished' };
+  trip: {
+    title: string;
+    countries: string[];
+    status: 'upcoming' | 'ongoing' | 'finished';
+    /** Travel day number (1 = departure day) while the trip runs, else null. */
+    day: number | null;
+    /** Length of the trip in days, when start and end date are known. */
+    totalDays: number | null;
+    /** Days until departure while the trip has not begun, else null. */
+    daysUntilStart: number | null;
+  };
   generatedAt: string;
   stops: FollowerStop[];
   currentStopId: string | null;
@@ -107,6 +119,19 @@ export interface FollowerView {
   sightings: { id: string; species: string; seen_at: string; count: number | null; notes: string; stop: string | null }[];
   /** Credits (author, licence, source) of the library photos shown above. */
   imageCredits: { place: string; text: string; url: string }[];
+}
+
+const dayNumber = (iso: string) => Math.floor(Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / 86_400_000);
+
+/** Counters for the page header: which day it is, how long the trip is, how many days are left until departure. */
+export function tripDays(trip: FollowTrip, today: string, status: FollowerView['trip']['status']): Pick<FollowerView['trip'], 'day' | 'totalDays' | 'daysUntilStart'> {
+  const total = trip.start_date && trip.end_date ? dayNumber(trip.end_date) - dayNumber(trip.start_date) + 1 : null;
+  const day = status === 'ongoing' && trip.start_date ? dayNumber(today) - dayNumber(trip.start_date) + 1 : null;
+  return {
+    day: day !== null && day >= 1 ? (total !== null ? Math.min(day, total) : day) : null,
+    totalDays: total !== null && total > 0 ? total : null,
+    daysUntilStart: status === 'upcoming' && trip.start_date ? Math.max(0, dayNumber(trip.start_date) - dayNumber(today)) : null,
+  };
 }
 
 function tripStatus(trip: FollowTrip, visibleStops: number, today: string): FollowerView['trip']['status'] {
@@ -160,12 +185,13 @@ export function buildFollowerView(source: FollowSource): FollowerView {
     const path = picked.variants.card ?? picked.variants.tablet ?? picked.variants.full ?? Object.values(picked.variants)[0];
     if (!path) return null;
     credits.set(picked.id, { place: picked.place_label, text: picked.attribution_text, url: picked.source_url });
-    return { path, thumbPath: picked.variants.thumb ?? null, alt: picked.alt_text, isRegionMotif: !picked.location_verified };
+    const variantPaths = Object.fromEntries((['mobile', 'tablet', 'desktop'] as const).flatMap((key) => (picked.variants[key] ? [[key, picked.variants[key]]] : [])));
+    return { path, thumbPath: picked.variants.thumb ?? null, alt: picked.alt_text, isRegionMotif: !picked.location_verified, variantPaths };
   };
   const stopViews = stops.map((s) => ({ id: s.id, sequence: s.sequence, title: s.title, country: s.country, latitude: s.latitude, longitude: s.longitude, arrive_at: s.arrive_at, depart_at: s.depart_at, image: imageOf(s) }));
 
   return {
-    trip: { title: trip.title, countries: trip.countries, status },
+    trip: { title: trip.title, countries: trip.countries, status, ...tripDays(trip, today, status) },
     generatedAt: source.generatedAt,
     stops: stopViews,
     currentStopId: current?.id ?? null,

@@ -75,3 +75,94 @@ test.describe('Mitreisen von zuhause (Follower-Vorschau im Demo-Modus)', () => {
     });
   }
 });
+
+test.describe('Mitreisen-Seite: Kopf, Fotos in Vollbild, Neues', () => {
+  async function shareTwoPhotos(page: import('@playwright/test').Page) {
+    await open(page, '/journal');
+    await setDemoDate(page, '2026-10-23');
+    const card = page.getByTestId('journal-card').filter({ hasText: 'Sonnenaufgang auf der Düne' });
+    await card.getByLabel('Bericht und Fotos für Follower freigeben').check();
+    await expect(card.getByText('Für Follower freigegeben')).toBeVisible(); // saved before the page is left
+  }
+
+  test('vor der Reise: Titel, Countdown und Hinweis, keine künftigen Stationen', async ({ page }) => {
+    await open(page, '/followers');
+    await setDemoDate(page, '2026-10-01');
+    await page.goto('/f/demo');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('color', 'rgb(255, 255, 255)');
+    await expect(page.getByTestId('follower-status')).toContainText('Noch 12 Tage bis zur Abreise');
+    await expect(page.getByText('Die Reise hat noch nicht begonnen')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Abschnitte' })).toHaveCount(0); // nothing to jump to yet
+  });
+
+  test('während der Reise: Tageszähler, Überblick und Sprungleiste, die oben haften bleibt', async ({ page }) => {
+    await shareTwoPhotos(page);
+    await page.goto('/f/demo');
+    await expect(page.getByTestId('follower-status')).toContainText('Tag 11 · gerade in Etosha Nationalpark');
+    const overview = page.getByRole('list', { name: 'Überblick' });
+    await expect(overview).toContainText('4 Stationen');
+    await expect(overview).toContainText('2 Fotos');
+    await expect(overview).toContainText('2 Berichte');
+    const nav = page.getByRole('navigation', { name: 'Abschnitte' });
+    await expect(nav.getByRole('link')).toHaveText([/Fotos/, /Berichte/, /Route/, /Tiere/]);
+    await nav.getByRole('link', { name: /Route/ }).click();
+    await expect(page.getByRole('region', { name: 'Unsere Route' })).toBeInViewport();
+    // the bar stays at the top while the page scrolls
+    expect(await nav.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
+    await expect(page.getByRole('list', { name: 'Stationen' }).getByRole('listitem')).toHaveCount(4);
+  });
+
+  test('Fotos: Vollbildansicht mit Zähler, Tasten, Wischen, Vergrößern und Schließen; Filter nach Ort', async ({ page }) => {
+    await shareTwoPhotos(page);
+    await page.goto('/f/demo');
+    await page.getByRole('button', { name: /Foto öffnen/ }).first().click();
+    const box = page.getByTestId('lightbox');
+    await expect(box).toBeVisible();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('1 von 2');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('2 von 2');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('1 von 2'); // wraps around
+    // a swipe to the left shows the next picture, to the right the previous one
+    const stage = await box.locator('div.relative.min-h-0').boundingBox();
+    const y = stage!.y + stage!.height / 2;
+    await page.mouse.move(stage!.x + stage!.width * 0.8, y);
+    await page.mouse.down();
+    await page.mouse.move(stage!.x + stage!.width * 0.2, y, { steps: 6 });
+    await page.mouse.up();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('2 von 2');
+    await page.mouse.move(stage!.x + stage!.width * 0.2, y);
+    await page.mouse.down();
+    await page.mouse.move(stage!.x + stage!.width * 0.8, y, { steps: 6 });
+    await page.mouse.up();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('1 von 2');
+    // zoom on and off
+    const zoom = page.getByRole('button', { name: 'Vergrößern' });
+    await zoom.click();
+    await expect(page.getByRole('button', { name: 'Verkleinern' })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Verkleinern' }).click();
+    await expect(page.getByRole('button', { name: 'Vergrößern' })).toHaveAttribute('aria-pressed', 'false');
+    await page.keyboard.press('Escape');
+    await expect(box).toBeHidden();
+
+    // filter by place: only that place's photos, and the full-screen view follows the filter
+    const places = page.getByRole('group', { name: 'Fotos nach Ort filtern' });
+    await places.getByRole('button', { name: /Sossusvlei/ }).click();
+    await expect(page.getByRole('button', { name: /Foto öffnen/ })).toHaveCount(1);
+    await page.getByRole('button', { name: /Foto öffnen/ }).click();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText('1 von 1');
+  });
+
+  test('Neues seit dem letzten Besuch: beim ersten Mal nichts, danach alles Unbekannte', async ({ page }) => {
+    await shareTwoPhotos(page);
+    await page.goto('/f/demo');
+    await expect(page.getByTestId('follower-status')).toBeVisible();
+    await expect(page.getByTestId('follower-new')).toHaveCount(0); // first visit: everything would be new
+    // a visitor who has been here before and saw nothing yet
+    await page.evaluate(() => localStorage.setItem('nb-follow-seen:demo', '[]'));
+    await page.reload();
+    await expect(page.getByTestId('follower-new')).toContainText(/\d+ neu seit deinem letzten Besuch/);
+    await expect(page.getByText('Neu', { exact: true }).first()).toBeVisible();
+  });
+});
+

@@ -178,8 +178,29 @@ test('Follower-Link: Bericht und Foto freigeben, eine Person ohne Konto sieht nu
   await expect(page.getByText('Wir sind gelandet.')).toBeVisible();
   const photos = page.getByRole('region', { name: 'Fotos' }).locator('img');
   await expect(photos).toHaveCount(2);
-  await expect.poll(() => photos.first().evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  // decode(): with a srcset the browser reports the size in CSS pixels, which rounds a 1-pixel test picture to 0 wide
+  await expect.poll(() => photos.first().evaluate((img: HTMLImageElement) => img.decode().then(() => true, () => false))).toBe(true);
   expect(await photos.first().getAttribute('src')).toMatch(/^\/api\/follow\/.+\/media\//); // never a storage URL
+  expect(await photos.first().getAttribute('srcset')).toMatch(/w=480 480w, .*w=960 960w, .*w=1600 1600w/); // the phone loads the size it needs
+  // without place photos the title picture is our latest photo
+  await expect.poll(() => page.locator('header img').first().evaluate((img: HTMLImageElement) => img.decode().then(() => true, () => false))).toBe(true);
+  // full screen: the real picture, the counter, and a download that comes as a file with a plain name
+  await page.getByRole('button', { name: /Foto öffnen/ }).first().click();
+  await expect(page.getByTestId('lightbox')).toBeVisible();
+  await expect(page.getByTestId('lightbox-counter')).toHaveText('1 von 2');
+  await expect.poll(() => page.getByTestId('lightbox').locator('img').evaluate((img: HTMLImageElement) => img.decode().then(() => true, () => false))).toBe(true);
+  const save = page.getByRole('link', { name: 'Herunterladen' });
+  const href = (await save.getAttribute('href'))!;
+  expect(href).toMatch(/^\/api\/follow\/.+\/media\/.+\?w=2400&d=1$/);
+  const file = await page.request.get(href);
+  expect(file.status()).toBe(200);
+  expect(file.headers()['content-disposition']).toMatch(/^attachment; filename="Namibia-Botswana-.*\.jpg"$/);
+  expect(file.headers()['content-type']).toBe('image/jpeg');
+  const [download] = await Promise.all([page.waitForEvent('download'), save.click()]);
+  expect(download.suggestedFilename()).toMatch(/^Namibia-Botswana-.*\.jpg$/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('lightbox')).toBeHidden();
+  await expect(page.getByRole('button', { name: /Alle 2 Fotos herunterladen/ })).toBeVisible();
   await expect(page.locator('body')).not.toContainText(/€|EUR|Preis|Buchung|Unterkunft/);
   await expect(page).not.toHaveURL(/\/login/);
   const res = await page.request.get(new URL(link).pathname.replace('/f/', '/api/follow/'));

@@ -121,6 +121,12 @@ Stand `npm audit --omit=dev`: 2 Meldungen (1 moderat, 1 hoch), beide betreffen d
 - Im Client filtert `visibleRows` (Repository, Listen, Export) dieselbe Regel, damit auch im Demo-Modus Kinder nur freigegebene Unterlagen sehen. Die Buchungen selbst (Preise, Referenzen) bleiben für Kinder unsichtbar.
 - Offline: „Für unterwegs auf dieses Handy laden“ legt die Dateien im Gerätespeicher (IndexedDB) ab; sensible Dateien bleiben dabei verschlüsselt.
 
+## 6k. Mitreisen-Seite: Fotos in groß, Herunterladen, Teilen
+
+- Die Follower-Fotos kommen weiter nur über `/api/follow/<token>/media/<id>` und werden **immer neu kodiert ohne EXIF/GPS** (sharp). Neu sind die Breiten 960 und 2400 (neben 480 und 1600) und `?d=1`: dann sendet der Server `Content-Disposition: attachment` mit einem schlichten Namen (`Namibia-Botswana-<Tag>-<8 Zeichen der ID>.jpg`), ohne Ort, Kamera oder Namen. Für Anzeige und Download gelten dieselben Prüfungen (Link gültig, Foto freigegeben und `family`, Station erreicht, gleiche Familie und Reise, Rate-Limit).
+- „Alle Fotos als ZIP“ baut das Paket im Browser aus den 2400-Pixel-Dateien, es entsteht nichts auf dem Server; bei mehr als 150 Fotos wird der Knopf nicht angeboten. „Teilen“ nutzt das Teilen-Menü des Handys (Fotos sichern), wenn der Browser es kann.
+- Was Besucher:innen auf dem Gerät speichern: nur die Liste der schon gesehenen Beiträge (IDs) unter `nb-follow-seen:<Anfang des Links>`, für „neu seit deinem letzten Besuch“. Keine Cookies, keine Weitergabe.
+
 ## 6j. Foto-Metadaten (Aufnahmeort)
 
 - Beim Hochladen liest die App aus dem **Originalfoto** (vor dem Verkleinern, das die Daten aus der Datei entfernt) Aufnahmezeit, GPS-Position, Höhe und Kamera und speichert sie als Felder in `media_assets` (Migration 0014). Sichtbar ist das für dieselben Personen wie das Foto selbst (RLS unverändert: Familie, bei privaten Fotos nur die Person; andere Familien nie). Die Position steht nur in der Datenbank, die Bilddatei bleibt wie bisher.

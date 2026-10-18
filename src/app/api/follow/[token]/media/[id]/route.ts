@@ -12,6 +12,12 @@ export const runtime = 'nodejs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NOT_FOUND = () => NextResponse.json({ error: 'NOT_FOUND' }, { status: 404, headers: { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow' } });
 
+/** "Namibia-Botswana-2026-10-21-1a2b3c4d.jpg": date of the shot (or none) and a piece of the id to keep names apart. */
+function downloadFileName(capturedAt: string | null, id: string): string {
+  const day = capturedAt && /^\d{4}-\d{2}-\d{2}/.test(capturedAt) ? `${capturedAt.slice(0, 10)}-` : '';
+  return `Namibia-Botswana-${day}${id.slice(0, 8)}.jpg`;
+}
+
 interface MediaRow {
   id: string;
   family_id: string;
@@ -21,6 +27,7 @@ interface MediaRow {
   visibility: string;
   shared_with_followers: boolean;
   storage_path: string;
+  captured_at: string | null;
 }
 
 /**
@@ -45,7 +52,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     }
     const { data } = await admin
       .from('media_assets')
-      .select('id, family_id, trip_id, stop_id, kind, visibility, shared_with_followers, storage_path')
+      .select('id, family_id, trip_id, stop_id, kind, visibility, shared_with_followers, storage_path, captured_at')
       .eq('id', id)
       .maybeSingle();
     const media = data as MediaRow | null;
@@ -64,9 +71,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
       log('warn', 'follower image not convertible', { requestId: reqId, mediaId: id, detail: cause instanceof Error ? cause.message : String(cause) });
       return NextResponse.json({ error: 'UNSUPPORTED_IMAGE' }, { status: 415, headers: { 'Cache-Control': 'private, no-store' } });
     }
-    return new Response(new Uint8Array(body), {
-      headers: { 'Content-Type': 'image/jpeg', 'Content-Length': String(body.length), 'Cache-Control': 'private, max-age=3600', 'X-Robots-Tag': 'noindex, nofollow', 'X-Content-Type-Options': 'nosniff' },
-    });
+    const headers: Record<string, string> = { 'Content-Type': 'image/jpeg', 'Content-Length': String(body.length), 'Cache-Control': 'private, max-age=3600', 'X-Robots-Tag': 'noindex, nofollow', 'X-Content-Type-Options': 'nosniff' };
+    // ?d=1: the browser saves the file instead of showing it (a plain name, no metadata anywhere in the file or the header)
+    if (new URL(request.url).searchParams.get('d') === '1') headers['Content-Disposition'] = `attachment; filename="${downloadFileName(media.captured_at, id)}"`;
+    return new Response(new Uint8Array(body), { headers });
   } catch (cause) {
     log('error', 'follower media failed', { requestId: reqId, mediaId: id, detail: cause instanceof Error ? cause.message : String(cause) });
     return NextResponse.json({ error: 'SERVER_ERROR' }, { status: 500 });
