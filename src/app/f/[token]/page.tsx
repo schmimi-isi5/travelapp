@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw } from 'lucide-react';
+import { ArrowLeft, Eye, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Notice, Skeleton } from '@/components/ui';
@@ -8,6 +8,7 @@ import { FollowerHero } from '@/features/follow/follower-hero';
 import { CurrentPlaceCard, RouteSection, Section, SectionNav, SightingsSection, StoriesSection } from '@/features/follow/follower-sections';
 import { PhotoGallery } from '@/features/follow/photo-gallery';
 import { findNewIds, readSeenIds, writeSeenIds } from '@/features/follow/photo-url';
+import { PREVIEW_QUERY } from '@/features/follow/preview';
 import { DEMO_FOLLOW_TOKEN, useFollowerView } from '@/features/follow/use-follower-view';
 import { formatDateTime } from '@/lib/formatting';
 import type { FollowerView } from '@/lib/follow/view';
@@ -15,17 +16,17 @@ import type { FollowerView } from '@/lib/follow/view';
 const SEEN_AFTER_MS = 6000;
 
 /** What is new since the last visit on this device (nothing on a first visit); the list of seen items is saved a few seconds after the page opened. */
-function useNewItems(token: string, view: FollowerView | null): Set<string> {
+function useNewItems(token: string, view: FollowerView | null, isEnabled: boolean): Set<string> {
   const baseline = useRef<string[] | null | undefined>(undefined);
   const ids = useMemo(() => (view ? [...view.photos.map((p) => p.id), ...view.entries.map((e) => e.id), ...view.sightings.map((s) => s.id)] : []), [view]);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (!view) return;
+    if (!view || !isEnabled) return; // the family's own preview neither flags nor remembers anything
     if (baseline.current === undefined) baseline.current = readSeenIds(token);
     setNewIds(new Set(findNewIds(baseline.current, ids)));
     const timer = window.setTimeout(() => writeSeenIds(token, ids), SEEN_AFTER_MS);
     return () => window.clearTimeout(timer);
-  }, [token, view, ids]);
+  }, [token, view, ids, isEnabled]);
   return newIds;
 }
 
@@ -43,7 +44,9 @@ export default function FollowerPage() {
   const { token } = useParams<{ token: string }>();
   const state = useFollowerView(token);
   const view = state.status === 'ready' ? state.view : null;
-  const newIds = useNewItems(token, view);
+  const [isPreview, setIsPreview] = useState(false);
+  useEffect(() => setIsPreview(new URLSearchParams(window.location.search).get(PREVIEW_QUERY) === '1'), []);
+  const newIds = useNewItems(token, view, !isPreview);
 
   if (state.status === 'loading') {
     return (
@@ -84,6 +87,14 @@ export default function FollowerPage() {
 
   return (
     <main className="pb-[max(2rem,env(safe-area-inset-bottom))]">
+      {isPreview && (
+        <div className="bg-deep text-white" data-testid="preview-banner">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 text-sm">
+            <p className="flex items-center gap-2 font-semibold"><Eye size={16} aria-hidden /> Vorschau: So sehen Mitreisende diese Seite.</p>
+            <a href="/followers" className="inline-flex min-h-11 items-center gap-1.5 font-semibold underline"><ArrowLeft size={16} aria-hidden /> Zurück zur App</a>
+          </div>
+        </div>
+      )}
       {token === DEMO_FOLLOW_TOKEN && (
         <div className="bg-sand px-4 py-3">
           <div className="mx-auto max-w-4xl"><Notice tone="warn" title="Vorschau (Demo)">So sehen Daheimgebliebene die Reise. Die Inhalte sind fiktiv.</Notice></div>

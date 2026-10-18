@@ -95,7 +95,7 @@ test.describe('Mitreisen von zuhause (Follower-Vorschau im Demo-Modus)', () => {
     await expect(page.getByTestId('share-summary')).toContainText('1 Bericht');
     await expect(page.getByTestId('share-summary')).toContainText('3 Fotos (1 ausgeblendet)');
     await expect(page.getByText(/alle Familienfotos, außer denen, die ihr ausblendet/)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Vorschau öffnen' })).toHaveAttribute('href', '/f/demo');
+    await expect(page.getByRole('link', { name: 'Vorschau öffnen' })).toHaveAttribute('href', '/f/demo?vorschau=1');
   });
 
   for (const path of ['/followers', '/f/demo']) {
@@ -199,6 +199,36 @@ test.describe('Mitreisen-Seite: Kopf, Fotos in Vollbild, Neues', () => {
     await page.reload();
     await expect(page.getByTestId('follower-new')).toContainText(/\d+ neu seit deinem letzten Besuch/);
     await expect(page.getByText('Neu', { exact: true }).first()).toBeVisible();
+  });
+});
+
+test.describe('Vorschau für Mitreisende in der App', () => {
+  test('von der Galerie und von der Mitreisen-Seite öffnen; das Banner führt zurück, und die Vorschau merkt sich nichts', async ({ page }) => {
+    await open(page, '/gallery');
+    await setDemoDate(page, '2026-10-23');
+    await page.getByRole('link', { name: 'Vorschau für Mitreisende' }).click();
+    await expect(page).toHaveURL(/\/f\/demo\?vorschau=1$/);
+    const banner = page.getByTestId('preview-banner');
+    await expect(banner).toContainText('Vorschau: So sehen Mitreisende diese Seite');
+    await expect(page.getByTestId('follower-status')).toContainText('gerade in Etosha Nationalpark');
+    // the family's own look never flags anything as new and does not remember it
+    await page.evaluate(() => localStorage.setItem('nb-follow-seen:demo', '[]'));
+    await page.reload();
+    await expect(page.getByTestId('follower-status')).toBeVisible();
+    await expect(page.getByTestId('follower-new')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Zurück zur App' }).click();
+    await expect(page).toHaveURL(/\/followers$/);
+    await expect(page.getByRole('link', { name: 'Vorschau öffnen' })).toBeVisible();
+    // without the marker the page has no banner (so real followers never see it)
+    await page.goto('/f/demo');
+    await expect(page.getByTestId('preview-banner')).toHaveCount(0);
+  });
+
+  test('nur Erwachsene sehen den Vorschau-Link', async ({ page }) => {
+    await open(page, '/gallery');
+    await expect(page.getByRole('link', { name: 'Vorschau für Mitreisende' })).toBeVisible();
+    await switchUser(page, 'Demo-Kind B (child)');
+    await expect(page.getByRole('link', { name: 'Vorschau für Mitreisende' })).toHaveCount(0);
   });
 });
 
