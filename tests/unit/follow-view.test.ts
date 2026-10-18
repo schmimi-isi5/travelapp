@@ -63,10 +63,10 @@ describe('follower view: published content', () => {
     const view = buildFollowerView(source({
       entries: [entry(), entry({ id: 'e2', shared_with_followers: false }), entry({ id: 'e3', visibility: 'private' }), entry({ id: 'e4', status: 'draft' })],
       media: [
-        { id: 'm1', stop_id: 'a', kind: 'photo', captured_at: '2026-10-14T10:00:00Z', caption: 'Düne', visibility: 'family', shared_with_followers: true },
-        { id: 'm2', stop_id: 'a', kind: 'photo', captured_at: null, caption: '', visibility: 'family', shared_with_followers: false },
-        { id: 'm3', stop_id: 'a', kind: 'video', captured_at: null, caption: '', visibility: 'family', shared_with_followers: true },
-        { id: 'm4', stop_id: 'a', kind: 'photo', captured_at: null, caption: '', visibility: 'private', shared_with_followers: true },
+        { id: 'm1', stop_id: 'a', kind: 'photo', captured_at: '2026-10-14T10:00:00Z', caption: 'Düne', visibility: 'family', hidden_from_followers: false },
+        { id: 'm2', stop_id: 'a', kind: 'photo', captured_at: null, caption: '', visibility: 'family', hidden_from_followers: true },
+        { id: 'm3', stop_id: 'a', kind: 'video', captured_at: null, caption: '', visibility: 'family', hidden_from_followers: false },
+        { id: 'm4', stop_id: 'a', kind: 'photo', captured_at: null, caption: '', visibility: 'private', hidden_from_followers: false },
       ],
       sightings: [
         { id: 's-1', stop_id: 'a', species_id: 's1', seen_at: '2026-10-14T17:00:00Z', count: 4, notes: 'Herde', shared_with_followers: true },

@@ -40,6 +40,7 @@ function Editor() {
   const [readExif, setReadExif] = useState(true);
   const [shareLocation, setShareLocation] = useState(false);
   const [shareWithFollowers, setShareWithFollowers] = useState(false);
+  const [hidePhotos, setHidePhotos] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -98,7 +99,7 @@ function Editor() {
       const item = files[i]!;
       if (item.progress === 100) continue;
       try {
-        await addMedia({ file: item.file, familyId, tripId, stopId: stopId || null, journalEntryId: entry.id, visibility, sharedWithFollowers: publishToFollowers, readExif, onProgress: (p) => setFiles((f) => f.map((x, j) => (j === i ? { ...x, progress: p } : x))) });
+        await addMedia({ file: item.file, familyId, tripId, stopId: stopId || null, journalEntryId: entry.id, visibility, hiddenFromFollowers: hidePhotos, readExif, onProgress: (p) => setFiles((f) => f.map((x, j) => (j === i ? { ...x, progress: p } : x))) });
       } catch (e) {
         failed = true;
         setFiles((f) => f.map((x, j) => (j === i ? { ...x, error: e instanceof MediaError ? e.message : 'Datei konnte nicht gespeichert werden.' } : x)));
@@ -150,7 +151,13 @@ function Editor() {
         {isAdult(role) && (
           <label className="flex items-start gap-2 rounded-lg border border-line bg-white p-4 text-sm">
             <input type="checkbox" className="mt-1 size-4" checked={canShare && shareWithFollowers} disabled={visibility !== 'family'} onChange={(e) => setShareWithFollowers(e.target.checked)} />
-            <span><strong>Für Follower freigeben:</strong> Bericht und Fotos sind für Daheimgebliebene mit privatem Link sichtbar (Fotos ohne Ortsdaten). {visibility !== 'family' ? 'Private Einträge lassen sich nicht freigeben.' : 'Entwürfe werden erst beim Veröffentlichen freigegeben.'}</span>
+            <span><strong>Bericht für Follower freigeben:</strong> Der Text ist für Daheimgebliebene mit privatem Link sichtbar. {visibility !== 'family' ? 'Private Einträge lassen sich nicht freigeben.' : 'Entwürfe werden erst beim Veröffentlichen freigegeben.'}</span>
+          </label>
+        )}
+        {files.some((f) => f.file.type.startsWith('image/')) && visibility === 'family' && (
+          <label className="flex items-start gap-2 rounded-lg border border-line bg-white p-4 text-sm">
+            <input type="checkbox" className="mt-1 size-4" checked={hidePhotos} onChange={(e) => setHidePhotos(e.target.checked)} />
+            <span><strong>Fotos vor Mitreisenden verbergen:</strong> Familienfotos sind für Daheimgebliebene sonst automatisch sichtbar (ohne Ortsdaten).</span>
           </label>
         )}
         {errors.files && <Notice tone="warn">{errors.files}</Notice>}

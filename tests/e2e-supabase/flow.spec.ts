@@ -160,7 +160,7 @@ test('Follower-Link: Bericht und Foto freigeben, eine Person ohne Konto sieht nu
   await owner.goto('/journal');
   const card = owner.getByTestId('journal-card').filter({ hasText: 'Erster Tag in Windhoek' });
   await expect(card).toBeVisible({ timeout: 30_000 });
-  await card.getByLabel('Bericht und Fotos für Follower freigeben').check();
+  await card.getByLabel('Bericht für Follower freigeben').check();
   await expect(card.getByText('Für Follower freigegeben')).toBeVisible();
   await waitSynced(owner);
 

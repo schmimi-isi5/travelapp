@@ -133,7 +133,7 @@ export default function FollowerPage() {
         )}
 
         <footer className="mt-12 border-t border-line pt-4 text-sm text-slate">
-          Dies ist eine private Ansicht, nur für dich gedacht. Bitte gib den Link nicht weiter. Gezeigt wird nur, was die Familie freigegeben hat.
+          Dies ist eine private Ansicht, nur für dich gedacht. Bitte gib den Link nicht weiter. Gezeigt werden unsere Fotos und die Berichte, die die Familie freigegeben hat.
         </footer>
       </div>
     </main>

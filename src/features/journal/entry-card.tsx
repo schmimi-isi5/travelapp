@@ -46,9 +46,6 @@ export function JournalEntryCard({ entry, media, stop, authorName }: { entry: Jo
 
   async function setShared(next: boolean) {
     await update('journal_entries', entry.id, { shared_with_followers: next });
-    for (const photo of media.filter((m) => m.kind === 'photo' && m.visibility === 'family' && m.shared_with_followers !== next)) {
-      await update('media_assets', photo.id, { shared_with_followers: next });
-    }
   }
   const shareBlocked = entry.visibility === 'private' ? 'Private Einträge lassen sich nicht freigeben.' : entry.status === 'draft' ? 'Entwürfe lassen sich nicht freigeben.' : null;
 
@@ -82,7 +79,7 @@ export function JournalEntryCard({ entry, media, stop, authorName }: { entry: Jo
           </div>
         )}
         {note && <div className="mt-2"><Notice tone="info">{note}</Notice></div>}
-        <FollowerShareToggle checked={entry.shared_with_followers} label="Bericht und Fotos für Follower freigeben" blockedReason={shareBlocked} onChange={setShared} />
+        <FollowerShareToggle checked={entry.shared_with_followers} label="Bericht für Follower freigeben" blockedReason={shareBlocked} onChange={setShared} />
         {editable && (
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href={`/journal/new?id=${entry.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-deep"><Pencil size={14} aria-hidden /> Bearbeiten</Link>

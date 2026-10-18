@@ -53,7 +53,7 @@ test.describe('Smartphone', () => {
     await open(page, '/journal');
     await setDemoDate(page, '2026-10-23');
     const card = page.getByTestId('journal-card').filter({ hasText: 'Sonnenaufgang auf der Düne' });
-    await card.getByLabel('Bericht und Fotos für Follower freigeben').check();
+    await card.getByLabel('Bericht für Follower freigeben').check();
     await expect(card.getByText('Für Follower freigegeben')).toBeVisible();
     await page.goto('/f/demo');
     await expect(page.getByTestId('follower-status')).toContainText('Tag 11');
