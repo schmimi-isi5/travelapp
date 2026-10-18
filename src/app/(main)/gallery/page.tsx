@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Chip, ConfirmationDialog, Dialog, EmptyState, Field, Input, Notice, PageHeader, ProgressBar, Select, Toolbar } from '@/components/ui';
+import { FollowerPreviewButton } from '@/features/follow/preview-button';
 import { BulkUploadPanel, BulkUploadPicker, useBulkUpload } from '@/features/media/bulk-upload';
 import { canSeeMedia } from '@/features/journal/visibility';
 import { MediaBody } from '@/features/media/media-tile';
@@ -146,7 +147,7 @@ export default function GalleryPage() {
       {shareNotice && <div className="mb-4"><Notice tone="info"><span role="status" data-testid="share-notice">{shareNotice}</span></Notice></div>}
       {progress !== null && <div className="mb-4"><ProgressBar value={progress} label="Upload-Fortschritt" /></div>}
       {errors.length > 0 && <div className="mb-4 space-y-2">{errors.map((e) => <Notice key={e} tone="danger">{e}</Notice>)}</div>}
-      <p className="mb-3 text-sm"><Link href="/archive" className="font-semibold text-deep underline">Erinnerungen durchsuchen und exportieren</Link></p>
+      <p className="mb-3 flex flex-wrap items-center gap-x-6 text-sm"><Link href="/archive" className="font-semibold text-deep underline">Erinnerungen durchsuchen und exportieren</Link><FollowerPreviewButton variant="link" /></p>
       <Toolbar>
         <Chip active={album === 'all'} onClick={() => setAlbum('all')}>Alle Alben</Chip>
         {albums.map((a) => <Chip key={a} active={album === a} onClick={() => setAlbum(a)}>{a}</Chip>)}

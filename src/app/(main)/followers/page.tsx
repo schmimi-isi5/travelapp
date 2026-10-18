@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, ExternalLink, Link2, Share2, Trash2 } from 'lucide-react';
+import { Copy, Link2, Share2, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '@/components/app-provider';
 import { Badge, Button, Card, ConfirmationDialog, EmptyState, Field, Input, Notice, PageHeader, Select } from '@/components/ui';
@@ -8,6 +8,8 @@ import { createInviteToken, sha256Hex } from '@/lib/auth/token';
 import { useTable } from '@/lib/db/hooks';
 import { formatDate, formatDateTime, todayIso } from '@/lib/formatting';
 import { isAdult } from '@/lib/domain/policy';
+import { FollowerPreviewButton } from '@/features/follow/preview-button';
+import { PREVIEW_LABEL } from '@/features/follow/preview';
 import { getSupabase } from '@/lib/supabase/client';
 
 interface LinkRow {
@@ -109,7 +111,7 @@ function FollowerLinks() {
     if (loadError) setError(`Die Links konnten nicht geladen werden: ${loadError.message}`);
     else {
       setError(null);
-      setLinks((data ?? []) as LinkRow[]);
+      setLinks(((data ?? []) as LinkRow[]).filter((l) => l.label !== PREVIEW_LABEL));
     }
   }, [tripId]);
 
@@ -165,6 +167,11 @@ function FollowerLinks() {
   return (
     <>
       {error && <div className="mb-4"><Notice tone="danger">{error}</Notice></div>}
+      <Card className="mb-6 p-5" data-testid="preview-card">
+        <h2 className="text-lg font-bold">Vorschau</h2>
+        <p className="mb-3 mt-1 text-sm text-slate">So sehen Mitreisende die Seite, mit euren echten Fotos und Berichten. Dafür entsteht ein eigener Link, der nach zwei Stunden von selbst endet und hier nicht aufgelistet wird.</p>
+        <FollowerPreviewButton />
+      </Card>
       <Card className="mb-6 p-5">
         <h2 className="text-lg font-bold">Neuen Link erstellen</h2>
         <form onSubmit={create} className="mt-3 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -230,9 +237,7 @@ export default function FollowersPage() {
       ) : (
         <Card className="p-5">
           <p>Im Demo-Modus gibt es keine echten Links. So sieht die Ansicht für Follower aus:</p>
-          <a className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-deep px-5 py-2 font-semibold text-white hover:bg-deep-700" href="/f/demo" target="_blank" rel="noopener">
-            <ExternalLink size={18} aria-hidden /> Vorschau öffnen
-          </a>
+          <div className="mt-3"><FollowerPreviewButton /></div>
           <p className="mt-3 text-sm text-slate">Stand der Vorschau: {formatDate(todayIso())} (Demo-Datum der App).</p>
         </Card>
       )}

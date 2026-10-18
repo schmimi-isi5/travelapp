@@ -164,6 +164,19 @@ test('Follower-Link: Bericht und Foto freigeben, eine Person ohne Konto sieht nu
   await expect(card.getByText('Für Follower freigegeben')).toBeVisible();
   await waitSynced(owner);
 
+  // the preview: the real page for the family itself, behind a short-lived link that does not clutter the list
+  await owner.goto('/followers');
+  await owner.getByRole('button', { name: 'Vorschau öffnen' }).click();
+  await expect(owner).toHaveURL(/\/f\/[A-Za-z0-9_-]{40,}\?vorschau=1$/, { timeout: 30_000 });
+  const previewUrl = owner.url();
+  await expect(owner.getByTestId('preview-banner')).toBeVisible({ timeout: 30_000 });
+  await expect(owner.getByRole('heading', { level: 1, name: 'Namibia & Botswana' })).toBeVisible();
+  await expect(owner.getByRole('region', { name: 'Fotos' }).locator('img')).toHaveCount(2);
+  await owner.getByRole('link', { name: 'Zurück zur App' }).click();
+  await expect(owner).toHaveURL(/\/followers$/);
+  await expect(owner.getByTestId('follower-link').filter({ hasText: 'Vorschau' })).toHaveCount(0);
+  await owner.getByRole('button', { name: 'Vorschau öffnen' }).click();
+  await expect(owner).toHaveURL(previewUrl); // the same short-lived link is reused
   await owner.goto('/followers');
   await owner.getByLabel('Für wen ist der Link?').fill('Oma');
   await owner.getByRole('button', { name: 'Link erstellen' }).click();
