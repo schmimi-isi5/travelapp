@@ -140,6 +140,11 @@ Stand `npm audit --omit=dev`: 2 Meldungen (1 moderat, 1 hoch), beide betreffen d
 - **Wirkung:** Beim Deploy wurden alle vorhandenen Familienfotos sichtbar, ebenso alle künftigen, auch die von Kindern und Mitgliedern. Wer ein Foto nicht zeigen will, blendet es aus (Auge in der Galerie, Schalter im Foto, Haken beim Hochladen) oder macht es privat. Ausblenden dürfen die Person, die das Foto hochgeladen hat, und Erwachsene (Datenbank: dieselbe Update-Berechtigung wie für das Foto selbst).
 - **Unverändert:** Bilder gehen nur neu kodiert ohne EXIF/GPS und Namen hinaus, nur über gültige Links, nur für erreichte Stationen, mit Rate-Limit. Ein Foto, das ausgeblendet oder privat gemacht wird, ist sofort nicht mehr abrufbar (Test).
 
+## 6n. Links nachträglich verwalten
+
+- Wieder freischalten, neu ausstellen, umbenennen und löschen laufen über `SECURITY DEFINER`-RPCs (Migration 0016), die wie `create`/`revoke` nur Inhaber und Erwachsene der Familie des Links zulassen; andere Familien, Mitglieder und Kinder bekommen `42501`. Die Ausführung ist `anon` und `public` entzogen.
+- „Neuen Link ausstellen“ ersetzt den Token-Hash und setzt Zähler zurück: Die alte Adresse ist sofort tot, es entsteht kein zweiter gültiger Zugang. Eine Ablaufzeit in der Vergangenheit wird abgelehnt (`22023`). Klartext-Token gibt es weiterhin nur im Browser des Erstellers; Versand per `mailto:`/`wa.me` geschieht im Gerät, der Server sieht ihn nicht.
+
 ## 6m. Vorschau der Mitreisen-Seite
 
 - „Vorschau öffnen“ (Mitreisen-Seite) und „Vorschau für Mitreisende“ (Galerie) zeigen Erwachsenen die echte Seite. Es gibt dafür **keinen Sonderzugang**: Die App erzeugt mit dem normalen Weg (`create_follower_link`, nur Inhaber und Erwachsene) einen eigenen Link mit der Bezeichnung „Vorschau (nur für euch)“, der **nach zwei Stunden von selbst endet**, und öffnet `/f/<token>?vorschau=1`. Der Link wird bis kurz vor Ablauf wiederverwendet, damit nicht bei jedem Klick ein neuer entsteht.
