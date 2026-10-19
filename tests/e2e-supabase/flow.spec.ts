@@ -235,6 +235,33 @@ test('Follower-Link: Bericht und Foto freigeben, eine Person ohne Konto sieht nu
   await expect(owner.getByTestId('follower-link').filter({ hasText: 'Oma' }).getByText('Beendet')).toBeVisible();
   await page.goto(new URL(link).pathname);
   await expect(page.getByRole('heading', { name: 'Dieser Link ist nicht (mehr) gültig' })).toBeVisible();
+
+  // an ended link can be switched on again: the same address works, nothing has to be sent anew
+  const oma = () => owner.getByTestId('follower-link').filter({ hasText: 'Oma' });
+  await oma().getByRole('button', { name: 'Reaktivieren und erneut senden' }).click();
+  await owner.getByRole('dialog').getByRole('button', { name: 'Freischalten' }).click();
+  await expect(oma().getByText('Aktiv')).toBeVisible({ timeout: 30_000 });
+  await expect(owner.getByTestId('created-link')).toHaveText(link);
+  await expect(owner.getByRole('link', { name: 'WhatsApp' }).first()).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=.*%2Ff%2F/);
+  await page.goto(new URL(link).pathname);
+  await expect(page.getByRole('heading', { level: 1, name: 'Namibia & Botswana' })).toBeVisible({ timeout: 30_000 });
+
+  // renaming keeps the link; issuing a new address makes the old one stop working
+  await oma().getByRole('button', { name: /umbenennen/ }).click();
+  await owner.getByRole('dialog').getByLabel('Für wen ist der Link?').fill('Oma Ruth');
+  await owner.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+  await expect(owner.getByTestId('follower-link').filter({ hasText: 'Oma Ruth' })).toBeVisible({ timeout: 30_000 });
+  const ruth = () => owner.getByTestId('follower-link').filter({ hasText: 'Oma Ruth' });
+  await ruth().getByRole('button', { name: 'Beenden' }).click();
+  await owner.getByRole('dialog').getByRole('button', { name: 'Link beenden' }).click();
+  await expect(ruth().getByText('Beendet')).toBeVisible();
+
+  // deleting removes the entry for good
+  await ruth().getByRole('button', { name: 'Löschen' }).click();
+  await owner.getByRole('dialog').getByRole('button', { name: 'Endgültig löschen' }).click();
+  await expect(owner.getByTestId('follower-link').filter({ hasText: 'Oma Ruth' })).toHaveCount(0, { timeout: 30_000 });
+  await page.goto(new URL(link).pathname);
+  await expect(page.getByRole('heading', { name: 'Dieser Link ist nicht (mehr) gültig' })).toBeVisible();
   await context.close();
 });
 

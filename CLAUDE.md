@@ -10,7 +10,7 @@
 
 - **Language**: TypeScript (strict, `noUncheckedIndexedAccess`)
 - **Framework**: Next.js 15 App Router, React 19, Tailwind CSS 4, Lucide, Zod 4
-- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0014 in `supabase/migrations`, RLS auf allen Tabellen.
+- **Database**: Demo-Modus: IndexedDB (Dexie) plus simulierter Server. Produktiv: selbst gehostetes Supabase (Postgres 15, Auth, PostgREST, Storage, Kong) in Docker, Migrationen 0001–0016 in `supabase/migrations`, RLS auf allen Tabellen.
 - **Infrastructure**: PWA (Service Worker `public/sw.js`), Docker (`Dockerfile`, `docker/`), Coolify-Deployment (`docs/DEPLOYMENT.md`), KI über serverseitigen `AiProvider` (Konturos zurückgestellt, `AI_PROVIDER=disabled`).
 
 ## Project Structure

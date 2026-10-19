@@ -201,6 +201,25 @@ describe.skipIf(!available)('follower links (real Supabase + app routes)', () =>
     expect((await view(expiring.token)).status).toBe(404);
   });
 
+  it('reactivates an ended link under the same address, renews the address on request, and deletes for good', async () => {
+    const { id, token } = await createLink(a, a.owner, 'Wiederbelebt');
+    await a.adult.client.rpc('revoke_follower_link', { p_link_id: id });
+    expect((await view(token)).status).toBe(404);
+    expect((await a.member.client.rpc('reactivate_follower_link', { p_link_id: id })).error?.code).toBe('42501');
+    expect((await b.owner.client.rpc('delete_follower_link', { p_link_id: id })).error?.code).toBe('42501');
+    expect((await a.adult.client.rpc('reactivate_follower_link', { p_link_id: id, p_expires_at: new Date(Date.now() + 3_600_000).toISOString() })).error).toBeNull();
+    expect((await view(token)).status).toBe(200);
+
+    const fresh = randomBytes(32).toString('base64url');
+    expect((await a.adult.client.rpc('rotate_follower_link', { p_link_id: id, p_token_hash: await sha256Hex(fresh) })).error).toBeNull();
+    expect((await view(token)).status).toBe(404); // the old address is dead
+    expect((await view(fresh)).status).toBe(200);
+
+    expect((await a.adult.client.rpc('delete_follower_link', { p_link_id: id })).error).toBeNull();
+    expect((await view(fresh)).status).toBe(404);
+    expect((await admin.from('follower_links').select('id').eq('id', id)).data).toHaveLength(0);
+  });
+
   it('serves a shared photo as a re-encoded JPEG without camera data or GPS, scaled down', async () => {
     const { token } = await createLink(a, a.owner, 'Foto');
     const original = await sharp(await jpegWithGps()).metadata();

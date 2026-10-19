@@ -161,6 +161,7 @@ beforeAll(async () => {
   await run('0013_mailbox_folder', readFileSync(join(MIGRATIONS, '0013_mailbox_folder.sql'), 'utf8'));
   await run('0014_photo_metadata', readFileSync(join(MIGRATIONS, '0014_photo_metadata.sql'), 'utf8'));
   await run('0015_photos_visible_to_followers', readFileSync(join(MIGRATIONS, '0015_photos_visible_to_followers.sql'), 'utf8'));
+  await run('0016_follower_link_management', readFileSync(join(MIGRATIONS, '0016_follower_link_management.sql'), 'utf8'));
   await admin('insert into auth.users(id,email) values($1,$2)', [outsider, 'outsider@example.test']);
   await seed('A');
   await seed('B');
@@ -1025,6 +1026,35 @@ describe('migration 0015 (photos visible to followers unless hidden)', () => {
 
   it('is idempotent when applied twice', async () => {
     await run('0015_again', readFileSync(join(MIGRATIONS, '0015_photos_visible_to_followers.sql'), 'utf8'));
+  });
+});
+
+describe('migration 0016 (manage follower links)', () => {
+  const hash = (c: string) => c.repeat(32);
+  it('reactivates, renews, renames and deletes links only for owner/adult of the family', async () => {
+    const id = (await as(users.A.adult, `select public.create_follower_link($1, 'Opa', $2) as id`, [ids.A.trip, hash('a1')])).rows[0].id as string;
+    await as(users.A.owner, `select public.revoke_follower_link($1)`, [id]);
+    for (const user of [users.A.member, users.A.child, users.B.owner]) {
+      await expectDenied(as(user, `select public.reactivate_follower_link($1)`, [id]));
+      await expectDenied(as(user, `select public.rotate_follower_link($1, $2)`, [id, hash('b2')]));
+      await expectDenied(as(user, `select public.rename_follower_link($1, 'x')`, [id]));
+      await expectDenied(as(user, `select public.delete_follower_link($1)`, [id]));
+    }
+    await expectDenied(as(users.A.adult, `select public.reactivate_follower_link($1, now() - interval '1 day')`, [id]), ['22023']);
+    await as(users.A.adult, `select public.reactivate_follower_link($1, now() + interval '5 days')`, [id]);
+    expect((await admin(`select revoked_at, expires_at from public.follower_links where id=$1`, [id])).rows[0].revoked_at).toBeNull();
+    await as(users.A.adult, `select public.rotate_follower_link($1, $2)`, [id, hash('c3')]);
+    expect((await admin(`select token_hash, expires_at from public.follower_links where id=$1`, [id])).rows[0]).toMatchObject({ token_hash: hash('c3'), expires_at: null });
+    await expectDenied(as(users.A.adult, `select public.rotate_follower_link($1, 'bad')`, [id]), ['23514']);
+    await as(users.A.adult, `select public.rename_follower_link($1, '  Opa Hans ')`, [id]);
+    expect((await admin(`select label from public.follower_links where id=$1`, [id])).rows[0].label).toBe('Opa Hans');
+    await expectDenied(as(users.A.adult, `select public.rename_follower_link($1, '  ')`, [id]), ['23514']);
+    await as(users.A.adult, `select public.delete_follower_link($1)`, [id]);
+    expect((await admin(`select count(*)::int c from public.follower_links where id=$1`, [id])).rows[0].c).toBe(0);
+  });
+
+  it('is idempotent when applied twice', async () => {
+    await run('0016_again', readFileSync(join(MIGRATIONS, '0016_follower_link_management.sql'), 'utf8'));
   });
 });
 
